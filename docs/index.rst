@@ -11,6 +11,8 @@ Welcome to ADTOF's documentation!
    :caption: Contents:
    
    introduction
+   datasets
+   usage
 
 
 Indices and tables

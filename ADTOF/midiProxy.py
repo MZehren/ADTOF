@@ -5,7 +5,6 @@ import os
 
 # Load notes dictionaries
 # when the 112 is played, the 100 is played too but shouldn't
-# I think it is an artefact from the pads used to tab the musics
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShifterArtefacts.json"), 'r') as outfile:
     PADARTEFACTS = {int(key): int(value) for key, value in json.load(outfile).items()}
 # see https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
@@ -16,12 +15,39 @@ with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/Sta
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShifterMidiToStandard.json"), 'r') as outfile:
     PHASEMIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
-# def readEofIni(iniPath):
-#     with open(iniPath, "r") as iniFile:
-#         rows = iniFile.read().split("\n")
-#         return {row[0], row[1] for  }
+INI_NAME = "song.ini"
+MIDI_NAME = "notes.mid"
 
-def convertMidi(phaseShiftMidiPath, outputMidiPath):
+
+
+def convertFolder(folderPath):
+    """
+    Read the ini file and try to convert the midi file to the standard events
+    """
+    metadata = readPSIni(os.path.join(folderPath , INI_NAME)) 
+    delay = int(metadata["delay"]) if "delay" in metadata else 0
+
+    convertMidi(os.path.join(folderPath,MIDI_NAME), os.path.join(folderPath,"clean.mid"), delay=delay)
+    
+
+
+def readPSIni(iniPath):
+    """
+    the ini file is of shape:
+
+    [song]
+    delay = 0
+    multiplier_note = 116
+    artist = Acid Bath
+    ...
+
+    """
+    with open(iniPath, "r") as iniFile:
+        rows = iniFile.read().split("\n")
+        items = [row.split(" = ") for row in rows]
+        return {item[0]: item[1] for item in items if len(item) == 2}
+
+def convertMidi(phaseShiftMidiPath, outputMidiPath, delay = 0):
     """
     TODO
     """
@@ -73,4 +99,4 @@ def convertSimultaneousEvents(events):
     return events
 
 
-convertMidi("notes.mid", 'result.mid')
+convertFolder("../ADTSets/sodamlazy/alter bridge/Alter Bridge - Addicted To Pain (rd1.0)")
