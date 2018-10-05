@@ -1,1 +1,2 @@
 python-midi
+sphinx_rtd_theme

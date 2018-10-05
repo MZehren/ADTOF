@@ -1,2 +1,9 @@
+#Visual Studio Code files
 .vscode
 .style.yapf
+
+# Compiled Python files
+*.pyc
+
+# Sphinx documentation
+/docs/_build/

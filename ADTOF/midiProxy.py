@@ -16,8 +16,12 @@ with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/Sta
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShifterMidiToStandard.json"), 'r') as outfile:
     PHASEMIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
+# def readEofIni(iniPath):
+#     with open(iniPath, "r") as iniFile:
+#         rows = iniFile.read().split("\n")
+#         return {row[0], row[1] for  }
 
-def main(phaseShiftMidiPath, outputMidiPath):
+def convertMidi(phaseShiftMidiPath, outputMidiPath):
     """
     TODO
     """
@@ -29,7 +33,7 @@ def main(phaseShiftMidiPath, outputMidiPath):
         Exception("ERROR midi format not implemented")
 
     # Change the note of each event to the standard midi notation
-    for i, track in enumerate(pattern):
+    for i,track in enumerate(pattern):
         # remove the first track which is the tempo track
         if i == 0: continue
 
@@ -58,15 +62,15 @@ def convertSimultaneousEvents(events):
     for event in events:
         # remove the notes wich shouldn't be there
         if event.data[0] in PADARTEFACTS and PADARTEFACTS[event.data[0]] in allnotes:
-            event.data[0] = None
+            event.data[0] = 0
         # Convert to standard midi pitch
         event.data[0] = PHASEMIDI[event.data[0]] if event.data[0] in PHASEMIDI else event.data[0]
         # Reduce the number of pitches by converting to base classes
-        event.data[0] = MIDIREDUCED[event.data[0]] if event.data[0] in MIDIREDUCED else event.data[0]
+        event.data[0] = MIDIREDUCED[event.data[0]] if event.data[0] in MIDIREDUCED else 0
 
     # # remove duplicated notes
     # return list(set(events))
     return events
 
 
-main("notes.mid", 'result.mid')
+convertMidi("notes.mid", 'result.mid')
