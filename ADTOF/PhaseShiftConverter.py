@@ -7,20 +7,23 @@ import warnings
 import argparse
 
 # Load static variables
-# when the 112 is played, the 100 is played too but shouldn't
+INI_NAME = "song.ini"
+PS_MIDI_NAME = "notes.mid"
+PS_DRUM_TRACK_NAME = "PART DRUMS"
+
+# When the 112 is played, the 100 is played too but shouldn't
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftArtefacts.json"), 'r') as outfile:
     PS_CYMBAL_DETECTION = {int(key): int(value) for key, value in json.load(outfile).items()}
-# see https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
+
+# Convert the redondant classes of midi to the same base (ie.: the bass drum 35 or 36 are converted to 36)
+# See https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/StandardMidiToReduced.json"), 'r') as outfile:
     REDUCED_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
+
 # midi notes used by the game Phase Shifter
 # the controller doesn't have a precise representation of each drums
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
     PS_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
-
-INI_NAME = "song.ini"
-PS_MIDI_NAME = "notes.mid"
-PS_DRUM_TRACK_NAME = "PART DRUMS"
 
 
 def main():
