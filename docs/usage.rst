@@ -51,7 +51,7 @@ Format
 ~~~~~~
 
 Rock Band is a serie of video games released on multiples consoles such as the PlayStation 3 or the Xbox 360.
-The format used is either in **con** or **rb3con** which are binary files encapsulating the audio file as well as . 
+The format used is either in **con** or **rb3con** which are binary files encapsulating the audio file as well as midi events. 
 
 Conversion
 ~~~~~~~~~~
