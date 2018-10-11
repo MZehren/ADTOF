@@ -9,7 +9,7 @@ import argparse
 # Load static variables
 INI_NAME = "song.ini"
 PS_MIDI_NAME = "notes.mid"
-PS_DRUM_TRACK_NAMES = ["PART DRUMS_2X","PART DRUMS"]
+PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X","PART DRUMS"]
 
 # When the 112 is played, the 100 is played too but shouldn't
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftArtefacts.json"), 'r') as outfile:
