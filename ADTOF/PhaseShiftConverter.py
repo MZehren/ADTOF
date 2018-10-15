@@ -1,29 +1,26 @@
 # from python-midi in vendors
 import midi
-import mido
 import json
 import os
 import warnings
 import argparse
 
 # Load static variables
+# For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
 INI_NAME = "song.ini"
 PS_MIDI_NAME = "notes.mid"
 PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X","PART DRUMS"]
+TOMS_MODIFIER = {98: 110, 99: 111, 100: 112} #ie.: When the 110 is played, changes the note 98 from hi-hat to high tom.
 
-# When the 112 is played, the 100 is played too but shouldn't
-with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftArtefacts.json"), 'r') as outfile:
-    PS_CYMBAL_DETECTION = {int(key): int(value) for key, value in json.load(outfile).items()}
+# midi notes used by the game PhaseShift and RockBand
+with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
+    PS_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
-# Convert the redondant classes of midi to the same base (ie.: the bass drum 35 or 36 are converted to 36)
+
+# Convert the redundant classes of midi to the more general one (ie.: the bass drum 35 and 36 are converted to 36)
 # See https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/StandardMidiToReduced.json"), 'r') as outfile:
     REDUCED_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
-
-# midi notes used by the game Phase Shifter
-# the controller doesn't have a precise representation of each drums
-with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
-    PS_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
 
 def main():
@@ -96,7 +93,7 @@ def cleanMidi(pattern, delay=0):
 
     # Remove the non-drum tracks
     # I delete them instead of creating a new pattern because pattern is more than a list and list comprehension wouldn't work
-    tracksToRemove = [i for i, track in enumerate(pattern) if "text" in dir(track[0]) and track[0].text != PS_DRUM_TRACK_NAMES]
+    tracksToRemove = [i for i, track in enumerate(pattern) if "text" in dir(track[0]) and track[0].text not in PS_DRUM_TRACK_NAMES]
     for trackId in sorted(tracksToRemove, reverse=True):
         del pattern[trackId]
 
@@ -144,7 +141,7 @@ def convertPitches(events):
         pitch = event.data[0]
 
         # remove the extra pitches for Phase Shift cympal detection
-        if pitch in PS_CYMBAL_DETECTION and PS_CYMBAL_DETECTION[pitch] in allPitches:
+        if pitch in TOMS_MODIFIER and TOMS_MODIFIER[pitch] in allPitches:
             pitch = None
         # Convert to standard midi pitches
         pitch = PS_MIDI[pitch] if pitch in PS_MIDI else pitch
