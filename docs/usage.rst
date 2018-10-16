@@ -35,7 +35,7 @@ Conversion
 To convert a Phase Shift MIDI file to a standard one, run the script:
 
 >>> cd ADTOF
->>> python PhaseShiftConverter.py [pathToPhaseShiftChartFolder]
+>>> python PhaseShiftConverter.py [-h] [-o OUTPUTNAME] [-d] folderPath
 
 This script is going to convert the Phase Shift midi file to a "note_std.mid" file by applying multiple corrections:
 
