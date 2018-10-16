@@ -9,7 +9,7 @@ import argparse
 # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
 INI_NAME = "song.ini"
 PS_MIDI_NAME = "notes.mid"
-PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X","PART DRUMS"]
+PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X","PART DRUMS"] # By order of quality
 TOMS_MODIFIER = {110: 98, 111: 99, 112: 100} #ie.: When the 110 is on, changes the note 98 from hi-hat to high tom for the duration of the note.
 TOMS_MODIFIER_LOOKUP = {v:k for k,v in TOMS_MODIFIER.items()}
 DRUM_ROLLS = 126 #TODO: implement
@@ -94,7 +94,12 @@ def cleanMidi(pattern, delay=0):
         Exception("ERROR MIDI format not implemented, Expecting a format 1 MIDI")
 
     # Remove the non-drum tracks
-    tracksToRemove = [i for i, track in enumerate(pattern) if "text" in dir(track[0]) and track[0].text not in PS_DRUM_TRACK_NAMES]
+    tracksName = [[event.text for event in track if event.name == "Track Name"] for track in pattern]
+    tracksName = [names[0] if names else None for names in tracksName]
+    for name in PS_DRUM_TRACK_NAMES:
+        if name in tracksName:
+            tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name]
+            break
     for trackId in sorted(tracksToRemove, reverse=True):
         del pattern[trackId]
 
