@@ -18,3 +18,10 @@ To install the dependencies run:
 
 .. _python-midi: https://github.com/vishnubob/python-midi
 
+Usage
+-----
+
+To convert a chart run:
+
+>>> cd ADTOF
+>>> python PhaseShiftConverter.py [-h] [-o OUTPUTNAME] [-d] folderPath
