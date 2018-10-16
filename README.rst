@@ -2,7 +2,7 @@ ADTOF
 =====
 Automatic Drum Transcription On Fire (ADTOF) is an effort to list existing format of drum transcriptions available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
 
-Right now, we offer to convert charts from the games Phase Shift and Rock Band to an easy to use file format.
+Right now, we offer to convert charts from the games Phase Shift to an easy to use file format.
 
 Documentation
 -------------
