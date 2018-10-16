@@ -1,7 +1,7 @@
 Datasets
 ========
 
-There are multiple datasets made by one or multiple users:
+There are multiple datasets crowdsourced:
 
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
 | ID                             | Demo                             | #tracks | #time      | Length                | Note                                                                                 |
