@@ -1,7 +1,7 @@
 Datasets
 ========
 
-There are multiple datasets crowsourced :
+There are multiple datasets made by one or multiple users:
 
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
 | ID                             | Demo                             | #tracks | #time      | Length                | Note                                                                                 |
@@ -24,3 +24,4 @@ There are multiple datasets crowsourced :
 .. _HoodieNinja's Youtube channel: https://www.youtube.com/channel/UCIJc_NHELwJktUpskj6TbcA/videos
 .. _Bloodline's Youtube channel: https://www.youtube.com/user/xBLooDLiNEx808x/about
 
+This project is not affiliated with any author of those datasets and does not promote the sharing of copyrighted content.

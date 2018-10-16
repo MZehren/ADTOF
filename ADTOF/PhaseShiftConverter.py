@@ -18,14 +18,14 @@ DRUM_ROLLS = 126  # TODO: implement
 CYMBAL_SWELL = 127  # TODO: implement
 
 # midi notes used by the game PhaseShift and RockBand
-with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
+with open(os.path.join(os.path.dirname(__file__), "./mappingDictionaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
     PS_MIDI = {int(key): int(value)
                for key, value in json.load(outfile).items()}
 
 
 # Convert the redundant classes of midi to the more general one (ie.: the bass drum 35 and 36 are converted to 36)
 # See https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
-with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/StandardMidiToReduced.json"), 'r') as outfile:
+with open(os.path.join(os.path.dirname(__file__), "./mappingDictionaries/StandardMidiToReduced.json"), 'r') as outfile:
     REDUCED_MIDI = {int(key): int(value)
                     for key, value in json.load(outfile).items()}
 
