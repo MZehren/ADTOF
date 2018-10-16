@@ -8,10 +8,10 @@ Usually, softwares doing ADT need a music file as an input and produce a midi fi
 One of the current issues in this field is the lack of training data which consist of music already annotated manually. 
 
 This project rose from the idea that finding a transcription from any moderately famous song is easy with a simple google search. 
-Online services offer crowdsources human-made transcription which is usually in text, HTML, or guitar pro formats (`example 1`_).
-The issue here is that this kind of data is not synchronized to the original source audio, making it very hard to use as training data for ADT.
+Online services offer crowdsourced human-made transcriptions which qre usually in text, HTML, or guitar pro formats (`example 1`_).
+The issue here is that this kind of annotations are not synchronized to the source audio, making them very hard to use as training data for ADT.
 
-The alternative is to look at video games such as Phase Shift or Rock Band where the player can perform a popular song on a controller of the shape of a guitar or drums. 
+The alternative is to look at video games such as Guitar Hero, Phase Shift or Rock Band where the player can perform a popular song on a controller of the shape of a guitar or drums. 
 The transcriptions available for those games have the advantage of being precisely synchronized to the original audio to ensure the best gameplay experience to the user (`example 2`_).
 A community of players started to create their own transcriptions of their favourite bands and shared them in different formats. 
 
@@ -52,7 +52,7 @@ If this project is not enough for you, you may want to look at those tools. An e
 To our knowledge, no tool offers to convert a game format to a standard midi format.
 
  - `Editor On Fire`_: Editor to create songs. Can import, analyse, and export between most of the games formats. 
- - C3CONTools_: A collection of tools to create, analyse, clean and convert most of the games formats. Most of the tools can work with batches making it easy to covert multiple files together.
+ - C3CONTools_: A collection of tools to create, analyse, clean and convert most of the games formats. Most of the tools can work in batches making it easy to convert multiple files at the same time.
  - `Magma Rock Band Network tools`_: Official tool to create song packages from stems and MIDI files in Rock Band Specifications. 
  - `Magma C3 Roks Edition`_: Clone of the official tool made by independant developpers.
 
