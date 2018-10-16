@@ -10,7 +10,10 @@ import argparse
 INI_NAME = "song.ini"
 PS_MIDI_NAME = "notes.mid"
 PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X","PART DRUMS"]
-TOMS_MODIFIER = {98: 110, 99: 111, 100: 112} #ie.: When the 110 is played, changes the note 98 from hi-hat to high tom.
+TOMS_MODIFIER = {110: 98, 111: 99, 112: 100} #ie.: When the 110 is on, changes the note 98 from hi-hat to high tom for the duration of the note.
+TOMS_MODIFIER_LOOKUP = {v:k for k,v in TOMS_MODIFIER.items()}
+DRUM_ROLLS = 126 #TODO: implement
+CYMBAL_SWELL = 127 #TODO: implement
 
 # midi notes used by the game PhaseShift and RockBand
 with open(os.path.join(os.path.dirname(__file__), "./conversionDictionnaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
@@ -38,9 +41,8 @@ def main():
         help="Name of the MIDI file created from the conversion. Default to 'notes_std.mid'"
     )
     args = parser.parse_args()
-
+    
     convertFolder(args.folderPath, args.outputName)
-
 
 def convertFolder(folderPath, outputName):
     """
@@ -92,7 +94,6 @@ def cleanMidi(pattern, delay=0):
         Exception("ERROR MIDI format not implemented, Expecting a format 1 MIDI")
 
     # Remove the non-drum tracks
-    # I delete them instead of creating a new pattern because pattern is more than a list and list comprehension wouldn't work
     tracksToRemove = [i for i, track in enumerate(pattern) if "text" in dir(track[0]) and track[0].text not in PS_DRUM_TRACK_NAMES]
     for trackId in sorted(tracksToRemove, reverse=True):
         del pattern[trackId]
@@ -105,14 +106,26 @@ def cleanMidi(pattern, delay=0):
             ticks = secondToTick(delay, ppq=pattern.resolution)
             track[0].tick += ticks
 
-        # Change the note on each event to standard midi pitches
-        simultaneousEvents = []
+        # Keep track of the simultaneous notes playing 
+        notesOn = {}
+        notesOff = {}
         for event in track:
-            simultaneousEvents.append(event)
-            if event.tick != 0:
-                convertPitches([localEvent for localEvent in simultaneousEvents if localEvent.name == "Note On"])
-                convertPitches([localEvent for localEvent in simultaneousEvents if localEvent.name == "Note Off"])
-                simultaneousEvents = []
+            # Before the start of a new time step, do the conversion
+            if event.tick > 0:
+                convertPitches(notesOn)
+                convertPitches(notesOff) # Convert the note off events to the same pitches
+                notesOff = {} # Note off events have no duration, so we remove them
+
+            # Keep track of all the notes
+            if event.name == "Note On" and event.velocity > 0:
+                if event.pitch in notesOn:
+                    warnings.warn("error MIDI Note On overriding existing note")
+                notesOn[event.pitch] = event
+            if (event.name == "Note On" and event.velocity == 0) or event.name == "Note Off":
+                if event.pitch not in notesOn:
+                    warnings.warn("error MIDI Note Off not existing")
+                notesOn.pop(event.pitch, None)
+                notesOff[event.pitch] = event
 
         # Remove empty events with a pitch set to None from the convertPitches method:
         eventsToRemove = [j for j, event in enumerate(track) if (event.name == "Note On" or event.name == "Note Off") and event.data[0] == None]
@@ -128,25 +141,32 @@ def convertPitches(events):
     """
     Convert the notes from a list of simultaneous events to standard pitches.
     The events which should be removed have a pitch set to None.
+    
+    This function is not pure, it's going to change the items in the dictionnary of events
 
     Arguments:
-        events: Synchronous midi events
+        events: dictionnary of simultaneous midi notes. The key has to be the pitch of the note
     """
     #All pitches played at this time
-    allPitches = set([event.data[0] for event in events])
+    allPitches = events.keys()
     #keeping track of duplicated pitches after the classes reduction
     existingPitches = set([])
 
-    for event in events:
-        pitch = event.data[0]
+    for pitch, event in events.items():
 
-        # remove the extra pitches for Phase Shift cympal detection
-        if pitch in TOMS_MODIFIER and TOMS_MODIFIER[pitch] in allPitches:
+        # Convert to standard midi pitches and apply the tom modifiers
+        if pitch in TOMS_MODIFIER:
+            pitch = None #this is not a real note played, but a modifier
+        elif pitch in TOMS_MODIFIER_LOOKUP and TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
+            pitch = PS_MIDI[TOMS_MODIFIER_LOOKUP[pitch]] #this pitch is played with his modifier
+        elif pitch in PS_MIDI:
+            pitch = PS_MIDI[pitch] #this pitch doesn't have a modifier
+        else:
             pitch = None
-        # Convert to standard midi pitches
-        pitch = PS_MIDI[pitch] if pitch in PS_MIDI else pitch
-        # Reduce the number of pitches by converting to base classes
+
+        # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
         pitch = REDUCED_MIDI[pitch] if pitch in REDUCED_MIDI else None
+
         # Remove duplicated pitches
         if pitch in existingPitches:
             pitch = None
