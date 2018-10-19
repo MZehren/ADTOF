@@ -1,7 +1,7 @@
 Datasets
 ========
 
-There are multiple datasets crowdsourced:
+There are multiple datasets crowdsourced :
 
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
 | ID                             | Demo                             | #tracks | Length     | Format                | Note                                                                                 |
@@ -23,5 +23,7 @@ There are multiple datasets crowdsourced:
 .. _Sodamlazy's Youtube channel: https://www.youtube.com/channel/UCK7zmooWgENeCFercRJT51A
 .. _HoodieNinja's Youtube channel: https://www.youtube.com/channel/UCIJc_NHELwJktUpskj6TbcA
 .. _Bloodline's Youtube channel: https://www.youtube.com/user/xBLooDLiNEx808x
+
+This list is not exhaustive and those datasets may overlap.
 
 This project is not affiliated with any author of those datasets and does not promote the sharing of copyrighted content.
