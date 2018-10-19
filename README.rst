@@ -1,6 +1,6 @@
 ADTOF
 =====
-Automatic Drum Transcription On Fire (ADTOF) is an effort to list existing format of drum transcriptions available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
+Automatic Drum Transcription On Fire (ADTOF) is an effort to list existing formats of drum transcriptions available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
 
 Right now, we offer to convert charts from the game Phase Shift to an easy to use file format.
 
@@ -18,3 +18,10 @@ To install the dependencies run:
 
 .. _python-midi: https://github.com/vishnubob/python-midi
 
+Usage
+-----
+
+To convert a chart run:
+
+>>> cd ADTOF
+>>> python PhaseShiftConverter.py [-h] [-o OUTPUTNAME] [-d] folderPath
