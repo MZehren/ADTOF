@@ -1,7 +1,7 @@
 Introduction
 ============
 
-ADTOF is an effort to list existing format of drum transcriptions available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
+ADTOF is an effort to list existing format of drum transcription available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
 
 Automatic drum transcription (ADT) is the problem of automatically creating a transcription with the help of algorithms.
 Usually, softwares doing ADT need a music file as an input and produce a midi file from it.
@@ -13,7 +13,7 @@ The issue here is that this kind of data is not synchronized to the original sou
 
 The alternative is to look at video games such as Phase Shift or Rock Band where the player can perform a popular song on a controller of the shape of a guitar or drums. 
 The transcriptions available for those games have the advantage of being precisely synchronized to the original audio to ensure the best gameplay experience to the user (`example 2`_).
-A community of players started to create their own transcriptions of their favourite bands and shared them in different formats. 
+A community of players started to create their own transcriptions of their favourite music and shared them online. 
 
 .. _example 1: https://www.songsterr.com/a/wsa/gojira-lenfant-sauvage-drum-tab-s381936t5
 .. _example 2: https://www.youtube.com/watch?v=26vfTMXLlV4
@@ -22,7 +22,7 @@ Limitations
 ~~~~~~~~~~~
 
 The game charts are made for players on a `toy drum set`_, thus it can be an inexact representation of what is played in the track annotated. 
-This game controller is similar to an electronic drum set but is meant to be versatile and only contains 8 pads loosely defined.
+This game controller is similar to an electronic drum set but is meant to be versatile and only contains 8 pads which can represent different drums.
 The general template of the correlation between the game controller and a real drum kit is:
 
  - Orange drum = Kick
@@ -48,7 +48,7 @@ Existing work
 ~~~~~~~~~~~~~
 
 Other tools made to create or convert between different games file formats already exist. 
-If this project is not enough for you, you may want to look at those tools. An even more exhaustive list of tools can also be found on `customscreators.com`_.
+If this project is not enough for you, you may want to look at those tools. Another list of tools can also be found on `customscreators.com`_.
 To our knowledge, no tool offers to convert a game format to a standard midi format.
 
  - `Editor On Fire`_: Editor to create songs. Can import, analyse, and export between most of the games formats. 

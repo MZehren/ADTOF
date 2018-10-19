@@ -3,12 +3,14 @@ Usage
 
 There are multiple file formats you could import from, each one comes from a specific game. 
 In this page, you will see a little summary on how to handle those formats.
-For now, we offer to import files from the games Phase Shift and Rock Band (1 to 4) and then convert them to a standard MIDI file aligned to an audio file.
+For now, we offer to import files from the games Phase Shift and we are pointing to a solution to handle Rock Band (1 to 4).
+With those two formats we are covering the majority of ressources available online. 
+The charts are then converted to a standard MIDI file aligned to an audio file.
 
 Standard MIDI
 -------------
 
-We aim to convert the games' file format to standard midi files to maximises the compatibility with other softwares.
+We aim to convert the games' file format to standard midi files to maximises the compatibility with other softwares or tools.
 The resulting file is a standard `format 1 MIDI file`_ with two tracks:
 
  - The 'tempo map' containing all the tempo and time signature events.
@@ -27,7 +29,7 @@ Format
 The charts distributed for this game are contained in a folder with multiple files:
 
  - **guitar.ogg**: the audio from the track annotated. This file can sometimes be in multitracks Mogg when separated stems are available, which is not common for custom tracks.
- - **notes.mid**: a format 1 MIDI file containing the notes to be played by the different instruments such as the drums or the guitars. The note from the events are not standard and need to be converted with the script in this repository. The MIDI specifications of this format seem to be the same as Rock Band's format, which is described on c3universe.com_.
+ - **notes.mid**: a format 1 MIDI file containing the notes to be played by the different instruments such as the drums or the guitars. The pitches in this file are not standard and need to be converted with the script in this repository. The MIDI specifications of this format seem to be the same as Rock Band's format, which is described on c3universe.com_.
  - **song.ini**: a file containing some meta information such as the delay between the audio and the MIDI files.
 
 Conversion
@@ -40,11 +42,11 @@ To convert a Phase Shift MIDI file to a standard one, run the script:
 
 This script is going to convert the Phase Shift midi file to a "note_std.mid" file by applying multiple corrections:
 
- - Only one track containing drums event is kept and all the other instruments are discarded.
- - Phase Shift format handles toms notes with the same MIDI pitch as cymbal notes played at the same time as a modifying note. We convert the events with modifiers to the standard ones.
+ - Only one track containing drums events is kept and all the other instruments are discarded.
+ - Toms notes which are cymbal events played during a modifying note are converted to standard events.
  - The Phase Shift pitches are converted to standard pitches following the mapping in PhaseShiftMidiToStandard.json_. You can see the list of standard pitches on Wikipedia_.
- - The ambiguous midi classes are reduced to the general ones following StandardMidiToReduced.json_. Feel free to change this mapping to fit your needs.
- - A delay at the start of the MIDI file is added to match the eventual delay in **song.ini** if the argument *-d* is present.
+ - The ambiguous midi classes are reduced to general ones following StandardMidiToReduced.json_. For examples, all the toms are converted to floor tom events. Feel free to change this mapping to fit your needs and your own classes.
+ - If the argument *-d* is present, a delay at the start of the MIDI file is added to match the eventual delay in **song.ini** .
 
 .. _PhaseShiftMidiToStandard.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/conversionDictionnaries/PhaseShiftMidiToStandard.json
 .. _StandardMidiToReduced.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/conversionDictionnaries/StandardMidiToReduced.json
