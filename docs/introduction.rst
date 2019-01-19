@@ -1,19 +1,20 @@
 Introduction
 ============
 
-ADTOF is an effort to list existing format of drum transcription available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
-
-Automatic drum transcription (ADT) is the problem of automatically creating a transcription with the help of algorithms.
+Automatic drum transcription (ADT) is the problem of automatically creating a drums transcription of a music track with the help of algorithms.
 Usually, softwares doing ADT need a music file as an input and produce a midi file from it.
 One of the current issues in this field is the lack of training data which consist of music already annotated manually. 
 
+this project, Automatic drum transcription on fire (ADTOF) is an effort to list existing format of drum transcription available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
+
 This project rose from the idea that finding a transcription from any moderately famous song is easy with a simple google search. 
-Online services offer crowdsourced human-made transcriptions which qre usually in text, HTML, or guitar pro formats (`example 1`_).
+Online services offer crowdsourced human-made transcriptions which are usually in text, HTML, MIDI, or guitar pro formats (`example 1`_).
 The issue here is that this kind of annotations are not synchronized to the source audio, making them very hard to use as training data for ADT.
 
 The alternative is to look at video games such as Guitar Hero, Phase Shift or Rock Band where the player can perform a popular song on a controller of the shape of a guitar or drums. 
 The transcriptions available for those games have the advantage of being precisely synchronized to the original audio to ensure the best gameplay experience to the user (`example 2`_).
 A community of players started to create their own transcriptions of their favourite music and shared them online. 
+This is the kind of data we want to make accessible as training data for ADT algorithms whith this project.
 
 .. _example 1: https://www.songsterr.com/a/wsa/gojira-lenfant-sauvage-drum-tab-s381936t5
 .. _example 2: https://www.youtube.com/watch?v=26vfTMXLlV4

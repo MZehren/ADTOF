@@ -5,12 +5,11 @@ import os
 import warnings
 import argparse
 
-# Load static variables
+# Static variables
 # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
 INI_NAME = "song.ini"
 PS_MIDI_NAME = "notes.mid"
-PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS",
-                       "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
+PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
 # ie.: When the 110 is on, changes the note 98 from hi-hat to high tom for the duration of the note.
 TOMS_MODIFIER = {110: 98, 111: 99, 112: 100}
 TOMS_MODIFIER_LOOKUP = {v: k for k, v in TOMS_MODIFIER.items()}
@@ -19,15 +18,12 @@ CYMBAL_SWELL = 127  # TODO: implement
 
 # midi notes used by the game PhaseShift and RockBand
 with open(os.path.join(os.path.dirname(__file__), "./mappingDictionaries/PhaseShiftMidiToStandard.json"), 'r') as outfile:
-    PS_MIDI = {int(key): int(value)
-               for key, value in json.load(outfile).items()}
-
+    PS_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
 # Convert the redundant classes of midi to the more general one (ie.: the bass drum 35 and 36 are converted to 36)
 # See https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
 with open(os.path.join(os.path.dirname(__file__), "./mappingDictionaries/StandardMidiToReduced.json"), 'r') as outfile:
-    REDUCED_MIDI = {int(key): int(value)
-                    for key, value in json.load(outfile).items()}
+    REDUCED_MIDI = {int(key): int(value) for key, value in json.load(outfile).items()}
 
 
 def main():
@@ -35,24 +31,17 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
-    parser = argparse.ArgumentParser(
-        description='Process a Phase Shift chart folder and convert the MIDI file to standard MIDI')
-    parser.add_argument('folderPath', type=str,
-                        help="Path to the Phase Shift chart folder.")
+    parser = argparse.ArgumentParser(description='Process a Phase Shift chart folder and convert the MIDI file to standard MIDI')
+    parser.add_argument('folderPath', type=str, help="Path to the Phase Shift chart folder.")
     parser.add_argument(
-        '-o', 
+        '-o',
         '--output',
         dest='outputName',
         type=str,
         default="notes_std.mid",
         help="Name of the MIDI file created from the conversion. Default to 'notes_std.mid'"
     )
-    parser.add_argument(
-        '-d', 
-        '--delay',
-        action='store_true',
-        help="Add a delay in the MIDI file according to the song.ini's delay property"
-    )
+    parser.add_argument('-d', '--delay', action='store_true', help="Add a delay in the MIDI file according to the song.ini's delay property")
     args = parser.parse_args()
 
     convertFolder(args.folderPath, args.outputName, args.delay)
@@ -112,19 +101,16 @@ def cleanMidi(pattern, delay=0):
     """
     # Check if the format of the midi file is supported
     if pattern.format != 1 or pattern.resolution < 0 or not pattern.tick_relative:
-        raise Exception(
-            "ERROR: MIDI format not implemented, Expecting a format 1 MIDI")
+        raise Exception("ERROR: MIDI format not implemented, Expecting a format 1 MIDI")
 
     # Remove the non-drum tracks
-    tracksName = [[event.text for event in track if event.name ==
-                   "Track Name"] for track in pattern]
+    tracksName = [[event.text for event in track if event.name == "Track Name"] for track in pattern]
     tracksName = [names[0] if names else None for names in tracksName]
     drumTrackFlag = False
     for name in PS_DRUM_TRACK_NAMES:
         if name in tracksName:
             drumTrackFlag = True
-            tracksToRemove = [i for i, trackName in enumerate(
-                tracksName) if trackName != None and trackName != name]
+            tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name]
             for trackId in sorted(tracksToRemove, reverse=True):
                 del pattern[trackId]
             break
@@ -141,9 +127,9 @@ def cleanMidi(pattern, delay=0):
                 event = midi.SetTempoEvent()
                 event.mpqn = int(delay * 1000000 / 4)
                 track.insert(0, event)
-                track[1].tick += 4*pattern.resolution
+                track[1].tick += 4 * pattern.resolution
             else:
-                track[0].tick += 4*pattern.resolution
+                track[0].tick += 4 * pattern.resolution
 
         # Keep track of the simultaneous notes playing
         notesOn = {}
@@ -159,8 +145,7 @@ def cleanMidi(pattern, delay=0):
             # Keep track of all the notes
             if event.name == "Note On" and event.velocity > 0:
                 if event.pitch in notesOn:
-                    warnings.warn(
-                        "error MIDI Note On overriding existing note")
+                    warnings.warn("error MIDI Note On overriding existing note")
                 notesOn[event.pitch] = event
             if (event.name == "Note On" and event.velocity == 0) or event.name == "Note Off":
                 if event.pitch not in notesOn:
@@ -169,8 +154,7 @@ def cleanMidi(pattern, delay=0):
                 notesOff[event.pitch] = event
 
         # Remove empty events with a pitch set to None from the convertPitches method:
-        eventsToRemove = [j for j, event in enumerate(track) if (
-            event.name == "Note On" or event.name == "Note Off") and event.data[0] == None]
+        eventsToRemove = [j for j, event in enumerate(track) if (event.name == "Note On" or event.name == "Note Off") and event.data[0] == None]
         for j in sorted(eventsToRemove, reverse=True):
             # Save to time information from the event removed in the next event
             if track[j].tick and len(track) > j + 1:
