@@ -4,6 +4,8 @@
 
 # Compiled Python files
 *.pyc
+/build
+*.egg-info
 
 # Sphinx documentation
 /docs/_build/
