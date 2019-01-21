@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # from python-midi in vendors
 import midi
 import json

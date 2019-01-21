@@ -6,6 +6,8 @@
 *.pyc
 /build
 *.egg-info
+/dist
+/notebooks
 
 # Sphinx documentation
 /docs/_build/
