@@ -38,18 +38,31 @@ Conversion
 To convert a Phase Shift MIDI file to a standard one, run the script:
 
 >>> cd ADTOF
->>> python PhaseShiftConverter.py [-h] [-o OUTPUTNAME] [-d] folderPath
+>>> python PhaseShiftConverter.py -h
+usage: PhaseShiftConverter.py [-h] [-o OUTPUTNAME] [-d] folderPath
+Process a Phase Shift chart folder and convert the MIDI file to standard MIDI
+positional arguments:
+  folderPath            Path to the Phase Shift chart folder.
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUTNAME, --output OUTPUTNAME
+                        Name of the MIDI file created from the conversion.
+                        Default to 'notes_std.mid'
+  -d, --delay           Add a delay in the MIDI file according to the
+                        song.ini's delay property
+
+
 
 This script is going to convert the Phase Shift midi file to a "note_std.mid" file by applying multiple corrections:
 
  - Only one track containing drums events is kept and all the other instruments are discarded.
  - Toms notes which are cymbal events played during a modifying note are converted to standard events.
  - The Phase Shift pitches are converted to standard pitches following the mapping in PhaseShiftMidiToStandard.json_. You can see the list of standard pitches on Wikipedia_.
- - The ambiguous midi classes are reduced to general ones following StandardMidiToReduced.json_. For examples, all the toms are converted to floor tom events. Feel free to change this mapping to fit your needs and your own classes.
+ - The ambiguous midi classes are reduced to general ones following StandardMidiToReduced.json_. For examples, all the toms (notes 41, 43, 45, 47, 48, and 50) are converted to floor tom events (note 41). Feel free to change this mapping to fit your needs and your own classes.
  - If the argument *-d* is present, a delay at the start of the MIDI file is added to match the eventual delay in **song.ini** .
 
-.. _PhaseShiftMidiToStandard.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/conversionDictionnaries/PhaseShiftMidiToStandard.json
-.. _StandardMidiToReduced.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/conversionDictionnaries/StandardMidiToReduced.json
+.. _PhaseShiftMidiToStandard.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/mappingDictionaries/PhaseShiftMidiToStandard.json
+.. _StandardMidiToReduced.json: https://github.com/MZehren/ADTOF/blob/master/ADTOF/mappingDictionaries/StandardMidiToReduced.json
 
 Rock Band
 -----------

@@ -5,7 +5,7 @@ Automatic drum transcription (ADT) is the problem of automatically creating a dr
 Usually, softwares doing ADT need a music file as an input and produce a midi file from it.
 One of the current issues in this field is the lack of training data which consist of music already annotated manually. 
 
-this project, Automatic drum transcription on fire (ADTOF) is an effort to list existing format of drum transcription available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
+this project, Automatic Drum Transcription On Fire (ADTOF) is an effort to list existing format of drum transcription available online and utilize them as ADT training data by converting them to a standard MIDI file aligned to an audio file.
 
 This project rose from the idea that finding a transcription from any moderately famous song is easy with a simple google search. 
 Online services offer crowdsourced human-made transcriptions which are usually in text, HTML, MIDI, or guitar pro formats (`example 1`_).
@@ -36,7 +36,7 @@ The general template of the correlation between the game controller and a real d
  - Green cymbal = Crash Cymbal 
 
 This template is not necessarily followed by the annotator as the gameplay experienced can be favoured against a more precise annotation. 
-To overcome this problem, we propose to remove all the ambiguity in the annotations by mapping the precise classes to general ones (see :ref:`Usage <usage>`).
+To overcome this problem, we propose to remove all the ambiguity in the annotations by mapping the precise classes to general ones (see :ref:`usage`).
 
 
 All the charts transcribed by humans don't necessarily match the same level of quality.
