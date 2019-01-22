@@ -35,7 +35,7 @@ The charts distributed for this game are contained in a folder with multiple fil
 Conversion
 ~~~~~~~~~~
 
-To convert a Phase Shift MIDI file to a standard one, run the script:
+To convert a Phase Shift MIDI file to the standard one, run the script:
 
 >>> cd ADTOF
 >>> python PhaseShiftConverter.py -h
