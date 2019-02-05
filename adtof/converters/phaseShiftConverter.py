@@ -9,7 +9,8 @@ import mido
 import pkg_resources
 
 from adtof.converters import Converter
-from adtof.io import MidiFile
+
+# from adtof.io import MidiFile
 
 
 class PhaseShiftConverter(Converter):
@@ -36,7 +37,7 @@ class PhaseShiftConverter(Converter):
     _m2r = pkg_resources.resource_string(__name__, "mappingDictionaries/standardMidiToReduced.json").decode()
     REDUCED_MIDI = {int(key): int(value) for key, value in json.loads(_m2r).items()}
 
-    def convertFolder(self, folderPath, outputName, addDelay):
+    def convert(self, folderPath, inputFile, outputName, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events
         """
@@ -55,13 +56,18 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = mido.MidiFile(os.path.join(folderPath, PhaseShiftConverter.PS_MIDI_NAME))
+        midi = mido.MidiFile(os.path.join(folderPath, inputFile))
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
 
         # Write the resulting file
         midi.save(os.path.join(folderPath, outputName))
+
+    def isConvertible(self, folderPath, inputFile):
+        files = os.listdir(folderPath)
+        return inputFile == PhaseShiftConverter.PS_MIDI_NAME and  "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
+
 
     def readIni(self, iniPath):
         """
@@ -111,13 +117,15 @@ class PhaseShiftConverter(Converter):
 
             # add the delay
             if delay != 0:
-                if i == 0:
-                    event = midi.SetTempoEvent()
-                    event.mpqn = int(delay * 1000000 / 4)
+                if i == 0: 
+                    #If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
+                    event = mido.MetaMessage("set_tempo")
+                    event.tempo = int(delay * 1000000 / 4)
                     track.insert(0, event)
-                    track[1].tick += 4 * midi.resolution
+                    track[1].time += 4 * midi.ticks_per_beat
                 else:
-                    track[0].tick += 4 * midi.resolution
+                    #If this is a standard track, add a delay of 4 beats to the first event
+                    track[0].time += 4 * midi.ticks_per_beat
 
             # Keep track of the simultaneous notes playing
             notesOn = {}
@@ -132,21 +140,21 @@ class PhaseShiftConverter(Converter):
 
                 # Keep track of all the notes
                 if event.type == "note_on" and event.velocity > 0:
-                    if event.pitch in notesOn:
+                    if event.note in notesOn:
                         warnings.warn("error MIDI Note On overriding existing note")
-                    notesOn[event.pitch] = event
-                if (event.name == "Note On" and event.velocity == 0) or event.name == "Note Off":
-                    if event.pitch not in notesOn:
+                    notesOn[event.note] = event
+                if (event.type == "note_on" and event.velocity == 0) or event.type == "note_off":
+                    if event.note not in notesOn:
                         warnings.warn("error MIDI Note Off not existing")
-                    notesOn.pop(event.pitch, None)
-                    notesOff[event.pitch] = event
+                    notesOn.pop(event.note, None)
+                    notesOff[event.note] = event
 
             # Remove empty events with a pitch set to None from the convertPitches method:
-            eventsToRemove = [j for j, event in enumerate(track) if (event.name == "Note On" or event.name == "Note Off") and event.data[0] == None]
+            eventsToRemove = [j for j, event in enumerate(track) if (event.type == "note_on" or event.type == "note_off") and event.note == 0]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
-                if track[j].tick and len(track) > j + 1:
-                    track[j + 1].tick += track[j].tick
+                if track[j].time and len(track) > j + 1:
+                    track[j + 1].time += track[j].time
                 del track[j]
         return midi
 
@@ -169,36 +177,35 @@ class PhaseShiftConverter(Converter):
 
             # Convert to standard midi pitches and apply the tom modifiers
             if pitch in PhaseShiftConverter.TOMS_MODIFIER:
-                pitch = None  # this is not a real note played, but a modifier
+                pitch = 0  # this is not a real note played, but a modifier
             elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
                 # this pitch is played with his modifier
                 pitch = PhaseShiftConverter.PS_MIDI[PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch]]
             elif pitch in PhaseShiftConverter.PS_MIDI:
                 pitch = PhaseShiftConverter.PS_MIDI[pitch]  # this pitch doesn't have a modifier
             else:
-                pitch = None
+                pitch = 0
 
             # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
-            pitch = PhaseShiftConverter.REDUCED_MIDI[
-                pitch
-            ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else None
+            pitch = PhaseShiftConverter.REDUCED_MIDI[pitch
+                                                     ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
 
             # Remove duplicated pitches
             if pitch in existingPitches:
-                pitch = None
+                pitch = 0
 
             existingPitches.add(pitch)
-            event.data[0] = pitch
+            event.note = pitch
 
         return events
 
-    def secondToTick(self, time, mpqn=500000, ppq=960):
+    def secondTotime(self, time, mpqn=500000, ppq=960):
         """
-        convert from seconds to midi ticks based on midi resolution
+        convert from seconds to midi times based on midi resolution
 
         arguments:
             time: time in seconds
             mpqn: microseconds per quarter note
-            ppq: pulses (ticks) per quarter notes
+            ppq: pulses (times) per quarter notes
         """
         return int(float(time) / (float(mpqn) / 1000000) * float(ppq))

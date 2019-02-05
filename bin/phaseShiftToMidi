@@ -24,12 +24,11 @@ def main():
         default="notes_std.mid",
         help="Name of the MIDI file created from the conversion. Default to 'notes_std.mid'"
     )
-    parser.add_argument('-d', '--delay', action='store_true', help="Add a delay in the MIDI file according to the song.ini's delay property")
     args = parser.parse_args()
 
     psc = PhaseShiftConverter()
-    psc.convertFolder(args.folderPath, args.outputName, args.delay)
-
+    psc.convertRecursive(args.folderPath, args.outputName)
+    print("Done!")
 
 if __name__ == '__main__':
     main()
