@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+"""
+Convert the PhaseShift's MIDI file format into real MIDI
+"""
+import argparse
+
+from adtof.converters import PhaseShiftConverter
+
+
+def main():
+    """
+    Entry point of the program
+    Parse the arguments and call the conversion
+    """
+    parser = argparse.ArgumentParser(description='Process a Phase Shift chart folder and convert the MIDI file to standard MIDI')
+    parser.add_argument('folderPath', type=str, help="Path to the Phase Shift chart folder.")
+    parser.add_argument(
+        '-o',
+        '--output',
+        dest='outputName',
+        type=str,
+        default="notes_std.mid",
+        help="Name of the MIDI file created from the conversion. Default to 'notes_std.mid'"
+    )
+    args = parser.parse_args()
+
+    psc = PhaseShiftConverter()
+    psc.convertRecursive(args.folderPath, args.outputName)
+    print("Done!")
+
+if __name__ == '__main__':
+    main()
