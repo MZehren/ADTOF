@@ -1,5 +1,7 @@
 import setuptools
-import glob 
+import glob
+
+requirements = ["mido"]
 
 with open("README.rst", "r") as fh:
     long_description = fh.read()
@@ -13,7 +15,8 @@ setuptools.setup(
     long_description=long_description,
     url="https://github.com/MZehren/ADTOF",
     packages=setuptools.find_packages(),
-    package_data = {"adtof":['converters/mappingDictionaries/*']},
+    package_data={"adtof": ['converters/mappingDictionaries/*']},
+    install_requires=requirements,
     classifiers=[
         # "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License"
