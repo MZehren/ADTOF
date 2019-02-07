@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
+"""
+Convert the PhaseShift's MIDI file format into real MIDI
+"""
+import argparse
+
+from adtof.converters import DynamicTimeWrappingConverter
+
+
+def main():
+    """
+    Entry point of the program
+    Parse the arguments and call the conversion
+    """
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('midiFile', type=str, help="Path to the MIDI file.")
+    parser.add_argument('musicFile', type=str, help="Path to the music fi;e.")
+    parser.add_argument(
+        '-o',
+        '--output',
+        dest='outputName',
+        type=str,
+        default="notes_aligned.mid",
+        help="Name of the MIDI file created from the alignment. Default to 'notes_aligned.mid'"
+    )
+    args = parser.parse_args()
+
+    dtwc = DynamicTimeWrappingConverter()
+    dtwc.convert(args.musicFile, args.midiFile, args.outputName)
+    print("Done!")
+
+if __name__ == '__main__':
+    main()

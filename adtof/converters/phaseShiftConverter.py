@@ -9,8 +9,7 @@ import mido
 import pkg_resources
 
 from adtof.converters import Converter
-
-# from adtof.io import MidiFile
+from adtof.io import MidoProxy
 
 
 class PhaseShiftConverter(Converter):
@@ -56,7 +55,7 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = mido.MidiFile(os.path.join(folderPath, inputFile))
+        midi = MidoProxy(os.path.join(folderPath, inputFile))
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
@@ -66,8 +65,7 @@ class PhaseShiftConverter(Converter):
 
     def isConvertible(self, folderPath, inputFile):
         files = os.listdir(folderPath)
-        return inputFile == PhaseShiftConverter.PS_MIDI_NAME and  "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
-
+        return inputFile == PhaseShiftConverter.PS_MIDI_NAME and "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
 
     def readIni(self, iniPath):
         """
@@ -117,7 +115,7 @@ class PhaseShiftConverter(Converter):
 
             # add the delay
             if delay != 0:
-                if i == 0: 
+                if i == 0:
                     #If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
                     event = mido.MetaMessage("set_tempo")
                     event.tempo = int(delay * 1000000 / 4)

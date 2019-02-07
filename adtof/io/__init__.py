@@ -1,1 +1,1 @@
-# from .midiFile import MidiFile
+from .midoProxy import MidoProxy
