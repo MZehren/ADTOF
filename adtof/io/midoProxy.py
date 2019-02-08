@@ -1,4 +1,5 @@
 import mido
+import numpy as np
 from mido import MidiFile
 
 
@@ -36,7 +37,7 @@ class MidoProxy(MidiFile):
         usPerBeats = beat * tempo
         return usPerBeats / 1000000
 
-    def getEvents(self):
+    def getEventsPosition(self):
         """
         Compute the time in seconds of each event
         """
@@ -47,13 +48,20 @@ class MidoProxy(MidiFile):
             timeCursor = 0
 
             for event in track:
-                startTicks = tickCursor
-                endTicks = tickCursor + event.time
+                if event.time:
+                    start = tickCursor
+                    end = tickCursor + event.time
+                    selectedTempo =  [t for t in tempoEvents if t[0] > start and t[0] < end]  
 
-                tw
-                firstTempoTicks = timeCursor
+                    tempo0 = [t[1] for t in tempoEvents if t[0] <= start][0]
+                    Tempi = [tempo0] + [t[1] for t in selectedTempo]
+                    weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / event.time
 
-                tickCursor += event.tick
+                    timeCursor += self.getTicksToSecond(event.time, np.sum(Tempi * weight))
+
+                tickCursor += event.time
+                #TODO find a better method than: event.time = timeCursor
+                
 
 
     def getTrackNames(self):
@@ -62,3 +70,5 @@ class MidoProxy(MidiFile):
         """
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
+
+class timeValue(Int)

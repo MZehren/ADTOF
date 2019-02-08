@@ -11,11 +11,11 @@ class DynamicTimeWrappingConverter(Converter):
     """
 
     def convert(self, inputMusicPath, inputMidiPath, outputName):
+        midi = MidoProxy(inputMidiPath)
+        midiEvents = midi.getEventsPosition()
+
         y, sr =  librosa.load(inputMusicPath)
         onsets = librosa.onset.onset_detect(y=y, sr=sr)
-
-        midi = MidoProxy(inputMidiPath)
-        midiEvents = midi.getEvents()
         pass
 
     # def isConvertible(self, folder, inputFile):

@@ -1,7 +1,7 @@
 import setuptools
 import glob
 
-requirements = ["mido"]
+requirements = ["mido", "librosa"]
 
 with open("README.rst", "r") as fh:
     long_description = fh.read()
