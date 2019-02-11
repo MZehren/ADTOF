@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import sys
 import warnings
 
 import mido
@@ -19,7 +20,9 @@ class PhaseShiftConverter(Converter):
     # Static variables
     # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
     INI_NAME = "song.ini"
-    PS_MIDI_NAME = "notes.mid"
+    PS_MIDI_NAME = "notes.mid" #TODO remove this field
+    PS_MIDI_NAMES = ["notes.mid"]
+    PS_MUSIC_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
     # ie.: When the 110 is on, changes the note 98 from hi-hat to high tom for the duration of the note.
     TOMS_MODIFIER = {110: 98, 111: 99, 112: 100}
@@ -36,7 +39,7 @@ class PhaseShiftConverter(Converter):
     _m2r = pkg_resources.resource_string(__name__, "mappingDictionaries/standardMidiToReduced.json").decode()
     REDUCED_MIDI = {int(key): int(value) for key, value in json.loads(_m2r).items()}
 
-    def convert(self, folderPath, inputFile, outputName, addDelay=True):
+    def convert(self, folderPath, outputName, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events
         """
@@ -55,7 +58,7 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = MidoProxy(os.path.join(folderPath, inputFile))
+        midi = MidoProxy(os.path.join(folderPath, PhaseShiftConverter.PS_MIDI_NAME))
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
@@ -63,9 +66,31 @@ class PhaseShiftConverter(Converter):
         # Write the resulting file
         midi.save(os.path.join(folderPath, outputName))
 
-    def isConvertible(self, folderPath, inputFile):
+    def isConvertible(self, folderPath):
         files = os.listdir(folderPath)
-        return inputFile == PhaseShiftConverter.PS_MIDI_NAME and "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
+        return PhaseShiftConverter.PS_MIDI_NAME in files and "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
+
+    def convertRecursive(self, rootFodler, outputName):
+        """
+        Go recursively inside the folders and convert everything convertible
+        TODO: add filtering on duplicated files (ie, between double bass versions and simplified ones)
+        """
+        converted = 0
+        failed = 0
+        for root, _, files in os.walk(rootFodler):
+            # for file in files:
+            if self.isConvertible(root):
+                try:
+                    self.convert(root, outputName)
+                    print("converted", root)
+                    converted += 1
+                except ValueError:
+                    print("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1])
+                    print("for file:", root)
+                    failed += 1
+
+        print("converted:", converted, "failed:", failed)
+
 
     def readIni(self, iniPath):
         """
@@ -196,14 +221,3 @@ class PhaseShiftConverter(Converter):
             event.note = pitch
 
         return events
-
-    def secondTotime(self, time, mpqn=500000, ppq=960):
-        """
-        convert from seconds to midi times based on midi resolution
-
-        arguments:
-            time: time in seconds
-            mpqn: microseconds per quarter note
-            ppq: pulses (times) per quarter notes
-        """
-        return int(float(time) / (float(mpqn) / 1000000) * float(ppq))

@@ -1,3 +1,3 @@
 from .converter import Converter
 from .phaseShiftConverter import PhaseShiftConverter
-from .dynamicTimeWrappingConverter import DynamicTimeWrappingConverter
+from .onsetsAlignementConverter import OnsetsAlignementConverter

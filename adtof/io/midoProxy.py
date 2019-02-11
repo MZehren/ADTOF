@@ -45,74 +45,88 @@ class MidoProxy(MidiFile):
 
         return tempoEvents
 
+    @lazy_property
+    def positionsLookup(self):
+        """
+        Compute the time in seconds of each event
+
+        store that in a 3D list of [track, event, property]
+        """
+        positionsLookup = []
+        for i, track in enumerate(self.tracks):
+            positionsLookup.append([])
+            tickCursor = 0
+            timeCursor = 0
+            for j, event in enumerate(track):
+                timeIncrement = 0
+                if event.time:
+                    timeIncrement = self.getTicksToSecond(tickCursor + event.time, start=tickCursor)
+                    timeCursor += timeIncrement
+                    tickCursor += event.time
+
+                positionsLookup[i].append({"tickAbsolute": tickCursor, "timeAbsolute": timeCursor, "tick": event.time, "time": timeCursor})
+
+        return positionsLookup
+
     def getTicksToSecond(self, ticks, start=0, tempo=0):
         """
         Transform a number of ticks with a tempo in microseconds per beat into seconds based on the resolution of the midi file
+
+        if no tempo is provided, the track's tempo is going to be used
+        It's possible to specify a start value if the event is not occuring at the m
         """
         end = ticks
         delta = end - start
-        if not tempo: #get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
+        if not tempo:  #get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents
-            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end] #get the tempo changes during the event
-            tempo0 = [t[1] for t in tempoEvents if t[0] <= start][0] #get the tempo at the start location
+            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]  #get the tempo changes during the event
+            tempo0 = [t[1] for t in tempoEvents if t[0] <= start][0]  #get the tempo at the start location
             Tempi = [tempo0] + [t[1] for t in selectedTempo]
-            weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta #get the weighted average of all the tempi
+            weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta  #get the weighted average of all the tempi
             tempo = np.sum(Tempi * weight)
 
-        beat = delta / self.ticks_per_beat #convert the ticks in beat and then seconds
+        beat = delta / self.ticks_per_beat  #convert thegetraiseticks in beat and then seconds
         usPerBeats = beat * tempo
         return usPerBeats / 1000000
 
-    def getSecondToTicks(self, second):
-        raise NotImplementedError()
+    def getSecondToTicks(self, second, start=0, tempo=0):
+        """
+        Compute the numbs a delta  er of ticks equal to the duration in second in function of the MIDI resolution
+
+        If no tempo is provided, uses track's tempo.
+        If start in ticks is provided, the value take into account the tempo 
+        """
+        if not tempo:
+            raise NotImplementedError()
+            # tempoEvents = self.tempoEvents
+            # tempoDuration = [self.getTicksToSecond(tempoEvent[0], tempo=tempoEvent[1]) for tempoEvent in tempoEvents]
+            # weight = 
+        return int(float(second) / (float(tempo) / 1000000) * float(self.ticks_per_beat))
 
     def getOnsets(self):
         """
         Return a list a positions in seconds of the notes_on events
         """
         notesPositions = []
-        for track in self.tracks:
-            tickCursor = 0
-            for event in track:
+        for i, track in enumerate(self.tracks):
+            for j, event in enumerate(track):
                 if event.time:
-                    tickCursor += event.time
-
                     if event.type == "note_on" and event.velocity > 0:
-                        notesPositions.append(self.getTicksToSecond(tickCursor))
+                        notesPositions.append(self.positionsLookup[i][j]["timeAbsolute"])
 
         return notesPositions
 
-    # def getEventsPosition(self):
-    #     """
-    #     Compute the time in seconds of each event
-    #     """
-    #     tempoEvents = self.getTempoEvent()
-
-    #     positionLookup = {}
-    #     for track in self.tracks[1:]:
-    #         tickCursor = 0
-    #         timeCursor = 0
-    #         for event in track:
-    #             if event.time:
-    #                 start = tickCursor
-    #                 end = tickCursor + event.time
-    #                 selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]
-
-    #                 tempo0 = [t[1] for t in tempoEvents if t[0] <= start][0]
-    #                 Tempi = [tempo0] + [t[1] for t in selectedTempo]
-    #                 weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / event.time
-
-    #                 timeCursor += self.getTicksToSecond(event.time, np.sum(Tempi * weight))
-
-    #                 tickCursor += event.time
-    #                 #TODO find a better method than: event.time = timeCursor
-    #                 positionLookup[tickCursor] = timeCursor
-
-    #     return positionLookup
+    def addDelay(self, delta):
+        """
+        Increment the position of the midi events by a delay
+        TODO check if negative value works
+        """
+        for i, track in enumerate(self.tracks):
+            track[0].time += self.getSecondToTicks(delta, tempo=self.tempoEvents[0][1])
 
     def getTrackNames(self):
         """
-        Return the first name of each track
+        Return the first name event of each track
         """
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
