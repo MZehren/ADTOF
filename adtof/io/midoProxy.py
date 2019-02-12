@@ -119,10 +119,16 @@ class MidoProxy(MidiFile):
     def addDelay(self, delta):
         """
         Increment the position of the midi events by a delay
-        TODO check if negative value works
         """
-        for i, track in enumerate(self.tracks):
-            track[0].time += self.getSecondToTicks(delta, tempo=self.tempoEvents[0][1])
+        for track in self.tracks:
+            increment = self.getSecondToTicks(delta, tempo=self.tempoEvents[0][1])
+            for event in track:            
+                event.time += increment
+                if event.time < 0:
+                    increment = event.time
+                    event.time = 0
+                else:
+                    break
 
     def getTrackNames(self):
         """

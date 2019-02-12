@@ -31,6 +31,7 @@ class OnsetsAlignementConverter(Converter):
             if midiFiles and musicFiles:
                 try:
                     self.convert(os.path.join(root, musicFiles[0]), os.path.join(root, midiFiles[0]), os.path.join(root, outputName))
+                    print("converted", root)
                     converted += 1
                 except ValueError:
                     print(ValueError)

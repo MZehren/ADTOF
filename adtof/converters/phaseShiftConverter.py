@@ -20,7 +20,7 @@ class PhaseShiftConverter(Converter):
     # Static variables
     # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
     INI_NAME = "song.ini"
-    PS_MIDI_NAME = "notes.mid" #TODO remove this field
+    PS_MIDI_NAME = "notes.mid"  #TODO remove this field
     PS_MIDI_NAMES = ["notes.mid"]
     PS_MUSIC_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
@@ -91,7 +91,6 @@ class PhaseShiftConverter(Converter):
 
         print("converted:", converted, "failed:", failed)
 
-
     def readIni(self, iniPath):
         """
         the ini file is of shape:
@@ -124,10 +123,10 @@ class PhaseShiftConverter(Converter):
         tracksName = [[event.name for event in track if event.type == "track_name"] for track in midi.tracks]
         tracksName = [names[0] if names else None for names in tracksName]
         drumTrackFlag = False
-        for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
-            if name in tracksName:
+        for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES: #try all the names in decreasing order of priority
+            if name in tracksName: #if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name]
+                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
