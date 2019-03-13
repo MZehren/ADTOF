@@ -13,7 +13,7 @@ from adtof.converters import PhaseShiftConverter
 
 class OnsetsAlignementConverter(Converter):
     """
-    Converter which tries to align the music file to the midi file as close as possible 
+    Converter which tries to align the midi file to the music file as close as possible 
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
