@@ -14,6 +14,7 @@ class Converter(object):
         raise NotImplementedError()
 
 
+
     def convertRecursive(self, rootFodler, outputName):
         """
         Go recursively inside the folders and convert everything convertible
