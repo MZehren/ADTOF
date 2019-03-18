@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
 import warnings
@@ -84,9 +85,9 @@ class PhaseShiftConverter(Converter):
                     self.convert(root, outputName)
                     print("converted", root)
                     converted += 1
-                except ValueError:
-                    print("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1])
-                    print("for file:", root)
+                except:
+                    logging.error(("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]))
+                    logging.error(("for file:", root))
                     failed += 1
 
         print("converted:", converted, "failed:", failed)

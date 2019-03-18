@@ -1,7 +1,7 @@
 from . import Converter
 import librosa
 import numpy as np
-from automix.model.classes.signal import Signal
+# from automix.model.classes.signal import Signal
 
 
 class FeatureExtraction(Converter):
