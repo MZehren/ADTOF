@@ -10,19 +10,20 @@ import matplotlib.pyplot as plt
 class rv1(object):
     """
     Richard Vogl model
+    http://ifs.tuwien.ac.at/~vogl/
     """
 
     def __init__(self):
+        self.model = self.createModel()
         pass
 
     def createModel(self):
         """
         TODO
         """
-        #TODO
         # When to apply the dropout?
-        # How to handle the bidirectionnal aggregation ? Sum, or nothing ?
-        # How to handle the ocntext for the learning 400 samples before learning?
+        # How to handle the bidirectional aggregation ? Sum, or nothing ?
+        # How to handle the context for the learning 400 samples before learning?
         context = 25
         n_bins = 84
         model = tf.keras.Sequential([
@@ -46,6 +47,6 @@ class rv1(object):
 
         model.compile(optimizer="adam", loss="sigmoid_cross_entropy_with_logits")
         return model
-    
-    def train(x, y):
-        
+
+    def train(self, X, Y):
+        pass

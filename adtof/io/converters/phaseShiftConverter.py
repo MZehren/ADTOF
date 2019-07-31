@@ -10,7 +10,7 @@ import warnings
 import mido
 import pkg_resources
 
-from adtof.converters import Converter
+from adtof.io.converters import Converter
 from adtof.io import MidoProxy
 
 
@@ -21,7 +21,7 @@ class PhaseShiftConverter(Converter):
     # Static variables
     # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
     INI_NAME = "song.ini"
-    PS_MIDI_NAME = "notes.mid"  #TODO remove this field
+    PS_MIDI_NAME = "notes.mid"  # TODO remove this field
     PS_MIDI_NAMES = ["notes.mid"]
     PS_MUSIC_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
@@ -44,11 +44,12 @@ class PhaseShiftConverter(Converter):
         """
         Read the ini file and convert the midi file to the standard events
         """
-        #read the ini file
+        # read the ini file
         delay = None
         try:
             metadata = self.readIni(os.path.join(folderPath, PhaseShiftConverter.INI_NAME))
-            delay = float(metadata["delay"]) / 1000 if "delay" in metadata else 0.
+            delay = float(metadata["delay"]) / \
+                1000 if "delay" in metadata else 0.
 
             if not metadata["pro_drums"] or metadata["pro_drums"] != "True":
                 warnings.warn("song.ini doesn't contain pro_drums = True")
@@ -69,7 +70,8 @@ class PhaseShiftConverter(Converter):
 
     def isConvertible(self, folderPath):
         files = os.listdir(folderPath)
-        return PhaseShiftConverter.PS_MIDI_NAME in files and "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
+        return PhaseShiftConverter.PS_MIDI_NAME in files and "song.ini" in files and ("song.ogg" in files or
+                                                                                      "guitar.ogg" in files)
 
     def convertRecursive(self, rootFodler, outputName):
         """
@@ -124,10 +126,13 @@ class PhaseShiftConverter(Converter):
         tracksName = [[event.name for event in track if event.type == "track_name"] for track in midi.tracks]
         tracksName = [names[0] if names else None for names in tracksName]
         drumTrackFlag = False
-        for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES: #try all the names in decreasing order of priority
-            if name in tracksName: #if a name is found in the tracks
+        # try all the names in decreasing order of priority
+        for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
+            if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
+                tracksToRemove = [
+                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
+                ]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -141,13 +146,13 @@ class PhaseShiftConverter(Converter):
             # add the delay
             if delay != 0:
                 if i == 0:
-                    #If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
+                    # If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
                     event = mido.MetaMessage("set_tempo")
                     event.tempo = int(delay * 1000000 / 4)
                     track.insert(0, event)
                     track[1].time += 4 * midi.ticks_per_beat
                 else:
-                    #If this is a standard track, add a delay of 4 beats to the first event
+                    # If this is a standard track, add a delay of 4 beats to the first event
                     track[0].time += 4 * midi.ticks_per_beat
 
             # Keep track of the simultaneous notes playing
@@ -173,7 +178,10 @@ class PhaseShiftConverter(Converter):
                     notesOff[event.note] = event
 
             # Remove empty events with a pitch set to None from the convertPitches method:
-            eventsToRemove = [j for j, event in enumerate(track) if (event.type == "note_on" or event.type == "note_off") and event.note == 0]
+            eventsToRemove = [
+                j for j, event in enumerate(track)
+                if (event.type == "note_on" or event.type == "note_off") and event.note == 0
+            ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
                 if track[j].time and len(track) > j + 1:
@@ -201,17 +209,19 @@ class PhaseShiftConverter(Converter):
             # Convert to standard midi pitches and apply the tom modifiers
             if pitch in PhaseShiftConverter.TOMS_MODIFIER:
                 pitch = 0  # this is not a real note played, but a modifier
-            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
+            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[
+                    pitch] in allPitches:
                 # this pitch is played with his modifier
                 pitch = PhaseShiftConverter.PS_MIDI[PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch]]
             elif pitch in PhaseShiftConverter.PS_MIDI:
-                pitch = PhaseShiftConverter.PS_MIDI[pitch]  # this pitch doesn't have a modifier
+                # this pitch doesn't have a modifier
+                pitch = PhaseShiftConverter.PS_MIDI[pitch]
             else:
                 pitch = 0
 
             # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
-            pitch = PhaseShiftConverter.REDUCED_MIDI[pitch
-                                                     ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
+            pitch = PhaseShiftConverter.REDUCED_MIDI[
+                pitch] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
 
             # Remove duplicated pitches
             if pitch in existingPitches:

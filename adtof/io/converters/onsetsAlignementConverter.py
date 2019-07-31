@@ -4,9 +4,9 @@ from bisect import bisect_left
 import librosa
 import numpy as np
 
-from adtof.converters import Converter
+from adtof.io.converters import Converter
 from adtof.io import MidoProxy
-from adtof.converters import PhaseShiftConverter
+from adtof.io.converters import PhaseShiftConverter
 
 # from dtw import dtw
 

@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
 """
 TODO
 """
 import argparse
 
-from adtof import converters
+from adtof.io import FeatureExtraction
+
+
+def loadData(path):
+    fe = FeatureExtraction()
+    x = fe.open(path)
+    y = []
+
+    return x, y
 
 
 def main():
@@ -18,11 +25,10 @@ def main():
     parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
 
-    fe = converters.FeatureExtraction()
+    X, Y = loadData(args.folderPath)
 
-    signal = fe.open(args.folderPath)
-    signal.plot(show=True)
     print("Done!")
+
 
 if __name__ == '__main__':
     main()

@@ -5,7 +5,7 @@ Convert the PhaseShift's MIDI file format into real MIDI
 """
 import argparse
 
-from adtof.converters import OnsetsAlignementConverter
+from adtof.io.converters import OnsetsAlignementConverter
 
 
 def main():
@@ -14,8 +14,10 @@ def main():
     Parse the arguments and call the conversion
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('rootFolder', type=str, help="Path to the root folder of the conversion.")
-    parser.add_argument("-i", '--input', dest="inputName", type=str, default="notes_std.mid", help="name of the midi files to convert.")
+    parser.add_argument('rootFolder', type=str,
+                        help="Path to the root folder of the conversion.")
+    parser.add_argument("-i", '--input', dest="inputName", type=str,
+                        default="notes_std.mid", help="name of the midi files to convert.")
     parser.add_argument(
         '-o',
         '--output',

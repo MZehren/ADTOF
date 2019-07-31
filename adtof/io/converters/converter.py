@@ -13,9 +13,7 @@ class Converter(object):
         """
         raise NotImplementedError()
 
-
-
-    def convertRecursive(self, rootFodler, outputName):
+    def convertRecursive(self, rootFolder, outputName):
         """
         Go recursively inside the folders and convert everything convertible
         """
