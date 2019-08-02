@@ -1,13 +1,7 @@
 import tensorflow as tf
-import tensorflow.feature_column as fc
-
-import os
-import sys
-
-import matplotlib.pyplot as plt
 
 
-class rv1(object):
+class RV1(object):
     """
     Richard Vogl model
     http://ifs.tuwien.ac.at/~vogl/
@@ -50,3 +44,6 @@ class rv1(object):
 
     def train(self, X, Y):
         pass
+
+
+rv1 = RV1()

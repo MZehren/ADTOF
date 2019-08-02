@@ -8,6 +8,7 @@
 *.egg-info
 /dist
 /notebooks
+/venv
 
 # Sphinx documentation
 /docs/_build/

@@ -4,14 +4,28 @@
 TODO
 """
 import argparse
+import os
 
-from adtof.io import FeatureExtraction
+from adtof.io import CQT
+from adtof.io.converters import PhaseShiftConverter
 
 
 def loadData(path):
-    fe = FeatureExtraction()
-    x = fe.open(path)
-    y = []
+    psc = PhaseShiftConverter()
+    cqt = CQT()
+
+    for root, dirs, files in os.walk(path):
+        # fullPath = os.sep.join(path)
+        midi, audio = psc.getConvertibleFiles(root)
+        if audio and midi:
+            try:
+                y = psc.convert(root).getDenseEncoding(sampleRate=98.4375, timeShift=0)
+                x = cqt.open(os.sep.join([root, audio]))[:len(y)]
+                print(audio)
+            except:
+                print(root + " not working")
+    # x = fe.open(path)
+    # y = []
 
     return x, y
 

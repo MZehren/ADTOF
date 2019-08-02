@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import mido
 import numpy as np
 from mido import MidiFile
@@ -68,19 +70,19 @@ class MidoProxy(MidiFile):
 
         return positionsLookup
 
-    def getTicksToSecond(self, ticks, start=0, tempo=0):
+    def getTicksToSecond(self, ticks, start=0, tempo=None):
         """
         Transform a number of ticks with a tempo in microseconds per beat into seconds based on the resolution of the midi file
 
         if no tempo is provided, the track's tempo is going to be used
-        It's possible to specify a start value if the event is not occuring at the m
+        It's possible to specify a start value if the event is not occuring from the start
         """
         end = ticks
         delta = end - start
-        if not tempo:  #get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
+        if tempo is None:  #get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents
             selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]  #get the tempo changes during the event
-            tempo0 = [t[1] for t in tempoEvents if t[0] <= start][0]  #get the tempo at the start location
+            tempo0 = [t[1] for t in tempoEvents if t[0] <= start][-1]  #get the tempo at the start location
             Tempi = [tempo0] + [t[1] for t in selectedTempo]
             weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta  #get the weighted average of all the tempi
             tempo = np.sum(Tempi * weight)
@@ -100,21 +102,27 @@ class MidoProxy(MidiFile):
             raise NotImplementedError()
             # tempoEvents = self.tempoEvents
             # tempoDuration = [self.getTicksToSecond(tempoEvent[0], tempo=tempoEvent[1]) for tempoEvent in tempoEvents]
-            # weight = 
+            # weight =
         return int(float(second) / (float(tempo) / 1000000) * float(self.ticks_per_beat))
 
-    def getOnsets(self):
+    def getOnsets(self, separated=False):
         """
         Return a list a positions in seconds of the notes_on events
         """
-        notesPositions = []
+        allNotesPositions = []
+        notesPositions = defaultdict(list)
+
         for i, track in enumerate(self.tracks):
             for j, event in enumerate(track):
-                if event.time:
-                    if event.type == "note_on" and event.velocity > 0:
-                        notesPositions.append(self.positionsLookup[i][j]["timeAbsolute"])
+                if event.type == "note_on" and event.velocity > 0:
+                    notesPositions[event.note].append(self.positionsLookup[i][j]["timeAbsolute"])
+                    if event.time:
+                        allNotesPositions.append(self.positionsLookup[i][j]["timeAbsolute"])
 
-        return notesPositions
+        if separated:
+            return notesPositions
+        else:
+            return allNotesPositions
 
     def addDelay(self, delta):
         """
@@ -122,7 +130,7 @@ class MidoProxy(MidiFile):
         """
         for track in self.tracks:
             increment = self.getSecondToTicks(delta, tempo=self.tempoEvents[0][1])
-            for event in track:            
+            for event in track:
                 event.time += increment
                 if event.time < 0:
                     increment = event.time
@@ -136,3 +144,24 @@ class MidoProxy(MidiFile):
         """
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
+
+    def getDenseEncoding(self, sampleRate=100, timeShift=0):
+        """
+        Encode in a dense matrix
+        from [0.1, 0.5]
+        to [0, 1, 0, 0, 0, 1]
+        """
+        notes = self.getOnsets(separated=True)
+        result = []
+        for key in notes.keys():
+            row = np.zeros(int(np.round((self.length + timeShift) * sampleRate))+1)
+            for time in notes[key]:
+                row[int(np.round((time + timeShift) * sampleRate))] = 1
+            result.append(row)
+
+        return np.array(result).T
+
+    @staticmethod
+    def fromDenseEncoding(sampleRate, timeShift=0):
+        raise NotImplementedError()
+      

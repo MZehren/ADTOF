@@ -23,7 +23,7 @@ class OnsetsAlignementConverter(Converter):
         if midiCandidates is None:
             midiCandidates = PhaseShiftConverter.PS_MIDI_NAMES
         if musicCandidates is None:
-            musicCandidates = PhaseShiftConverter.PS_MUSIC_NAMES
+            musicCandidates = PhaseShiftConverter.PS_AUDIO_NAMES
         for root, _, files in os.walk(rootFodler):
             midiFiles = [file for file in midiCandidates if file in files]
             musicFiles = [file for file in musicCandidates if file in files]
