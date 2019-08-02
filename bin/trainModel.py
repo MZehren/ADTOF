@@ -8,7 +8,7 @@ import os
 
 from adtof.io import CQT
 from adtof.io.converters import PhaseShiftConverter
-
+from adtof.deepModels import RV1
 
 def loadData(path):
     psc = PhaseShiftConverter()
@@ -21,7 +21,7 @@ def loadData(path):
             try:
                 y = psc.convert(root).getDenseEncoding(sampleRate=98.4375, timeShift=0)
                 x = cqt.open(os.sep.join([root, audio]))[:len(y)]
-                print(audio)
+                return x, y
             except:
                 print(root + " not working")
     # x = fe.open(path)
@@ -39,8 +39,10 @@ def main():
     parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
 
+    model = RV1().createModel()
     X, Y = loadData(args.folderPath)
-
+    model.fit(X, Y, epochs=5)
+    
     print("Done!")
 
 
