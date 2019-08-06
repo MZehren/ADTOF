@@ -4,30 +4,51 @@
 TODO
 """
 import argparse
+import datetime
 import os
 
+import numpy as np
+import tensorflow as tf
+
+from adtof.deepModels import RV1
 from adtof.io import CQT
 from adtof.io.converters import PhaseShiftConverter
-from adtof.deepModels import RV1
 
-def loadData(path):
+
+def loadData(path, context=25, split=0.8):
     psc = PhaseShiftConverter()
     cqt = CQT()
 
+    X = None
+    Y= None
     for root, dirs, files in os.walk(path):
         # fullPath = os.sep.join(path)
         midi, audio = psc.getConvertibleFiles(root)
         if audio and midi:
-            try:
-                y = psc.convert(root).getDenseEncoding(sampleRate=98.4375, timeShift=0)
-                x = cqt.open(os.sep.join([root, audio]))[:len(y)]
-                return x, y
-            except:
-                print(root + " not working")
+            # try:
+            # Get the midi in dense matrix representation
+            y = psc.convert(root).getDenseEncoding(sampleRate=98.4375, timeShift=0)
+
+            # Get the CQT with a context
+            x = cqt.open(os.sep.join([root, audio]))
+            x = np.array([x[i:i + context] for i in range(len(x) - context)])
+
+            # Add the channel dimension
+            x = x.reshape(x.shape + (1,))
+
+            x = x[:min(len(y), len(x))]
+            y = y[:min(len(y), len(x))]
+            X = np.concatenate((X, x), axis=0) if X is not None else x
+            Y = np.concatenate((Y, y), axis=0) if Y is not None else y
+            print(root + " OK")
+            # except Exception as e: 
+            #     import midi
+            #     pattern = midi.read_midifile(root+"/notes.mid")
+            #     print(root, e)
     # x = fe.open(path)
     # y = []
 
-    return x, y
+    return X, Y
 
 
 def main():
@@ -40,9 +61,18 @@ def main():
     args = parser.parse_args()
 
     model = RV1().createModel()
+    log_dir = "logs\\fit\\" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
     X, Y = loadData(args.folderPath)
-    model.fit(X, Y, epochs=5)
-    
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
+    dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+    dataset = dataset.batch(2048).repeat()
+    dataset_test = tf.data.Dataset.from_tensor_slices((X_test, y_test))
+    dataset_test = dataset.batch(2048).repeat()
+
+    model.fit(dataset, epochs=5, steps_per_epoch=30, callbacks=[tensorboard_callback])
+
     print("Done!")
 
 

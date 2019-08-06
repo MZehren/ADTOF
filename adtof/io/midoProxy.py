@@ -4,6 +4,9 @@ import mido
 import numpy as np
 from mido import MidiFile
 
+import midi
+import warnings
+
 
 def lazy_property(fn):
     '''Decorator that makes a property lazy-evaluated.
@@ -66,7 +69,12 @@ class MidoProxy(MidiFile):
                     timeCursor += timeIncrement
                     tickCursor += event.time
 
-                positionsLookup[i].append({"tickAbsolute": tickCursor, "timeAbsolute": timeCursor, "tick": event.time, "time": timeCursor})
+                positionsLookup[i].append({
+                    "tickAbsolute": tickCursor,
+                    "timeAbsolute": timeCursor,
+                    "tick": event.time,
+                    "time": timeCursor
+                })
 
         return positionsLookup
 
@@ -81,10 +89,12 @@ class MidoProxy(MidiFile):
         delta = end - start
         if tempo is None:  #get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents
-            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]  #get the tempo changes during the event
+            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end
+                            ]  #get the tempo changes during the event
             tempo0 = [t[1] for t in tempoEvents if t[0] <= start][-1]  #get the tempo at the start location
             Tempi = [tempo0] + [t[1] for t in selectedTempo]
-            weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta  #get the weighted average of all the tempi
+            weight = np.diff([start] + [t[0] for t in selectedTempo] +
+                             [end]) / delta  #get the weighted average of all the tempi
             tempo = np.sum(Tempi * weight)
 
         beat = delta / self.ticks_per_beat  #convert thegetraiseticks in beat and then seconds
@@ -145,7 +155,7 @@ class MidoProxy(MidiFile):
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
 
-    def getDenseEncoding(self, sampleRate=100, timeShift=0):
+    def getDenseEncoding(self, sampleRate=100, timeShift=0, keys=[36, 40, 41, 46, 49]):
         """
         Encode in a dense matrix
         from [0.1, 0.5]
@@ -153,15 +163,16 @@ class MidoProxy(MidiFile):
         """
         notes = self.getOnsets(separated=True)
         result = []
-        for key in notes.keys():
-            row = np.zeros(int(np.round((self.length + timeShift) * sampleRate))+1)
+        for key in keys:
+            row = np.zeros(int(np.round((self.length + timeShift) * sampleRate)) + 1)
             for time in notes[key]:
                 row[int(np.round((time + timeShift) * sampleRate))] = 1
             result.append(row)
+            if len(notes[key]) == 0:
+                warnings.warn(key, "is not represented in this track")
 
         return np.array(result).T
 
     @staticmethod
     def fromDenseEncoding(sampleRate, timeShift=0):
         raise NotImplementedError()
-      
