@@ -4,7 +4,6 @@ import mido
 import numpy as np
 from mido import MidiFile
 
-import midi
 import warnings
 
 
@@ -169,7 +168,7 @@ class MidoProxy(MidiFile):
                 row[int(np.round((time + timeShift) * sampleRate))] = 1
             result.append(row)
             if len(notes[key]) == 0:
-                warnings.warn(key, "is not represented in this track")
+                warnings.warn(str(key) + " is not represented in this track")
 
         return np.array(result).T
 

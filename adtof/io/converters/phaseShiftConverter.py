@@ -72,28 +72,30 @@ class PhaseShiftConverter(Converter):
         return midi
 
     def isConvertible(self, folderPath):
-        files = os.listdir(folderPath)
-        return PhaseShiftConverter.PS_MIDI_NAME in files and "song.ini" in files and ("song.ogg" in files or "guitar.ogg" in files)
+        return all(self.getConvertibleFiles(folderPath))
 
-    def _getFirstOccurenceOfIntersection(self, A:list, B:list):
-        """
-        return the first element appearing in list A and B
-        return None if there is not such an element
-        """
-        for a in A:
-            if a in B:
-                return a
-        return None
-
+    def getTrackName(self, folderPath):
+        ini = self.readIni(os.path.join(folderPath, PhaseShiftConverter.INI_NAME))
+        if "name" in ini:
+            return ini["name"]
+        
 
     def getConvertibleFiles(self, folderPath):
         """
         Return the name of the midiFile and AudioFile of a Phaseshift folder
         """
+        #Util function to select the first file
+        def getFirstOccurenceOfIntersection(A:list, B:list):
+            for a in A:
+                if a in B:
+                    return a
+            return None
+
         files = os.listdir(folderPath)
-        midiFile = self._getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files) 
-        audioFile = self._getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
-        return midiFile, audioFile
+        midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files) 
+        audioFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
+        iniFile = PhaseShiftConverter.INI_NAME if PhaseShiftConverter.INI_NAME in files else None
+        return midiFile, audioFile, iniFile
 
     def convertRecursive(self, rootFodler, outputName):
         """
