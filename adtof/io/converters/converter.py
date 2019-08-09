@@ -4,6 +4,11 @@ import sys
 from collections import defaultdict
 
 import jellyfish
+import numpy as np
+import sklearn
+import tensorflow as tf
+
+from adtof.io import CQT
 
 
 class Converter(object):
@@ -125,23 +130,64 @@ class Converter(object):
 
     @staticmethod
     def _pickVersion(candidates):
+        """
+        in case there are multiple version of the same track, pick the best version to use
+        PhaseShift > rockBand
+        PhaseShift with more notes > Phase shift with less notes 
+        """
         from adtof.io.converters import PhaseShiftConverter
         from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
             psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)]
-            if len(psTrakcs):
-                
-            print(candidate)
+            if len(psTrakcs) > 0:
+                # TODO: select the best one
+                candidates[candidate] = psTrakcs[0]
+            else:
+                # TODO: convert Rockband
+                del candidates[candidate]
 
+        return candidates
 
     @staticmethod
-    def convertAll(rootFolder):
+    def generateGenerator(data):
         """
-        get all tracks in the good format
+        Create a generator with the tracks in data
         """
-        logging.basicConfig(filename='log/conversion.log',level=logging.DEBUG)
+
+        def gen(context=25):
+            cqt = CQT()
+            for path, converter in data:
+                midi, audio, ini = converter.getConvertibleFiles(path)
+                try:
+                    # Get the midi in dense matrix representation
+                    y = converter.convert(path).getDenseEncoding(sampleRate=98.4375, timeShift=0)
+
+                    # Get the CQT with a context
+                    x = cqt.open(os.sep.join([path, audio]))
+                    x = np.array([x[i:i + context] for i in range(len(x) - context)])
+
+                    # Add the channel dimension
+                    x = x.reshape(x.shape + (1, ))
+
+                    for i in range(min(len(y), len(x))):
+                        yield x[i], y[i]
+                except Exception as e:
+                    print(path, e)
+
+        return gen
+
+    @staticmethod
+    def convertAll(rootFolder, test_size=0.2):
+        """
+        convert all tracks in the good format
+        and return a dataset.
+        """
+        logging.basicConfig(filename='log/conversion.log', level=logging.DEBUG)
 
         candidates = Converter._getFileCandidates(rootFolder)
         candidates = Converter._mergeFileNames(candidates, similitudeThreshold=0.8)
         candidates = Converter._pickVersion(candidates)
+
+        train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
+        return tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64)), tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
