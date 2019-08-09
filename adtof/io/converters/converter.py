@@ -1,6 +1,8 @@
+import logging
 import os
 import sys
 from collections import defaultdict
+
 import jellyfish
 
 
@@ -29,7 +31,7 @@ class Converter(object):
         raise NotImplementedError()
 
     @staticmethod
-    def getFileCandidates(rootFolder):
+    def _getFileCandidates(rootFolder):
         """
         go recursively inside all folders, identify the format available and list all the tracks
         """
@@ -62,7 +64,7 @@ class Converter(object):
         return results
 
     @staticmethod
-    def cleanName(name):
+    def _cleanName(name):
         """
         Look at keywords in the name.
         if it contains ainy, remove them and return a priority score
@@ -80,7 +82,7 @@ class Converter(object):
             return name, 10000
 
     @staticmethod
-    def mergeFileNames(candidates, similitudeThreshold=0.8):
+    def _mergeFileNames(candidates, similitudeThreshold=0.8):
         """
         Merge the multiple version of the tracks between "foo_expert" and "foo_expert+"
         1: remove the keywords like "expert" or "(double_bass)"
@@ -91,10 +93,10 @@ class Converter(object):
         """
         names = candidates.keys()
         names = [n for n in names if n is not None]
-        cleanedNames = [Converter.cleanName(name) for name in names]
+        cleanedNames = [Converter._cleanName(name) for name in names]
         analysed = set([])
         group = []
-        for i, a in enumerate(cleanedNames):
+        for i, a in enumerate(names):
             if i in analysed:
                 continue
             analysed.add(i)
@@ -118,11 +120,28 @@ class Converter(object):
             else:
                 key = min(row, key=lambda k: k[1])[0]
                 result[key] = candidates[key]
-                print("removing doubles: ", key, row)
+                logging.debug(("removing doubles: ", key, row))
         return result
 
     @staticmethod
-    def convertAll(rootFolder):
-        candidates = Converter.getFileCandidates(rootFolder)
-        candidates = Converter.mergeFileNames(candidates, similitudeThreshold=0.8)
+    def _pickVersion(candidates):
+        from adtof.io.converters import PhaseShiftConverter
+        from adtof.io.converters import RockBandConverter
 
+        for candidate in candidates:
+            psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)]
+            if len(psTrakcs):
+                
+            print(candidate)
+
+
+    @staticmethod
+    def convertAll(rootFolder):
+        """
+        get all tracks in the good format
+        """
+        logging.basicConfig(filename='log/conversion.log',level=logging.DEBUG)
+
+        candidates = Converter._getFileCandidates(rootFolder)
+        candidates = Converter._mergeFileNames(candidates, similitudeThreshold=0.8)
+        candidates = Converter._pickVersion(candidates)

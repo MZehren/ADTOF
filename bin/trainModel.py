@@ -64,6 +64,8 @@ def main():
     parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
 
+    Converter.convertAll(args.folderPath)
+    exit(1)
     model = RV1().createModel()
     log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -80,7 +82,6 @@ def main():
     print("Done!")
 
 
-# if __name__ == '__main__':
-#     main()
-# TODO TEMP implementation
-Converter.convertAll("/home/mickael/Documents/Datasets/drumsTranscription/ADTOF/")
+if __name__ == '__main__':
+    main()
+
