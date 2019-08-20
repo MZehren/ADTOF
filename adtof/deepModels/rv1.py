@@ -11,14 +11,21 @@ class RV1(object):
     #     # self.model = self.createModel()
     #     pass
 
-    def createModel(self, context = 25, n_bins=84, output=5):
-        """
-        TODO
+    def createModel(self, context=25, n_bins=84, output=5):
+        """Return a ts model based 
+        
+        Keyword Arguments:
+            context {int} -- [description] (default: {25})
+            n_bins {int} -- [description] (default: {84})
+            output {int} -- number of classes in the output (should be the events: 36, 40, 41, 46, 49) (default: {5})
+            outputWeight {list} --  (default: {[]}) 
+        
+        Returns:
+            [type] -- [description]
         """
         # When to apply the dropout?
         # How to handle the bidirectional aggregation ? Sum, or nothing ?
         # How to handle the context for the learning 400 samples before learning?
-        
 
         # model = tf.keras.Sequential([
         #     # Adds a densely-connected layer with 64 units to the model:
@@ -29,7 +36,11 @@ class RV1(object):
         #     tf.keras.layers.Dense(output, activation='softmax')
         # ])
         model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), ),
+            tf.keras.layers.Conv2D(
+                32,
+                (3, 3),
+                input_shape=(context, n_bins, 1),
+            ),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Conv2D(32, (3, 3)),
             tf.keras.layers.BatchNormalization(),
@@ -45,10 +56,12 @@ class RV1(object):
             # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(output)
+            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
+            tf.keras.layers.Dense(output, activation=tf.keras.activations.sigmoid)
         ])
 
-        model.compile(optimizer="adam", loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
+        model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001),
+                      loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
         return model
 
     def train(self, X, Y):

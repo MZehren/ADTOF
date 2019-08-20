@@ -91,6 +91,9 @@ class PhaseShiftConverter(Converter):
                     return a
             return None
 
+        if os.path.isdir(folderPath) == False:
+            return None, None, None
+        
         files = os.listdir(folderPath)
         midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files) 
         audioFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)

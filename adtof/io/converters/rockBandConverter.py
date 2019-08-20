@@ -19,7 +19,7 @@ class RockBandConverter(Converter):
         try:
             with open(file, "r") as f:
                 firstLine = f.readline()
-                if [True for i in RockBandConverter.BEGINNING_OF_FILES if i in firstLine[:4]].any():
+                if any([True for i in RockBandConverter.BEGINNING_OF_FILES if i in firstLine[:4]]):
                     return True
         except:
             return False

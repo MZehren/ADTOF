@@ -46,17 +46,21 @@ class Converter(object):
         from adtof.io.converters import PhaseShiftConverter
 
         ac = ArchiveConverter()
-        for root, dirs, files in os.walk(rootFolder):
+        for root, _, files in os.walk(rootFolder):
             for file in files:
                 fullPath = os.path.join(root, file)
-                ac.convert(fullPath)
+                try:
+                    ac.convert(fullPath)
+                except Exception as e:
+                    logging.info(e)
+                    logging.info("Archive not working: " + file)
 
         rbc = RockBandConverter()
         psc = PhaseShiftConverter()
 
         results = defaultdict(list)
         #Check anything convertible
-        for root, dirs, files in os.walk(rootFolder):
+        for root, _, files in os.walk(rootFolder):
             if psc.isConvertible(root):
                 results[psc.getTrackName(root)].append((root, psc))
             else:
@@ -75,8 +79,9 @@ class Converter(object):
         if it contains ainy, remove them and return a priority score
         """
         keywords = [
-            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)", "(2x Bass Pedals)", "2xbp", "2x",
-            "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)", "(Reduced 2x Bass Pedal+)", "1x", "(B)"
+            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)",
+            "(2x Bass Pedals)", "2xbp", "2x", "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)",
+            "(Reduced 2x Bass Pedal+)", "1x", "(B)"
         ]
 
         contained = [k for k in keywords if k in name]
@@ -136,10 +141,12 @@ class Converter(object):
         PhaseShift with more notes > Phase shift with less notes 
         """
         from adtof.io.converters import PhaseShiftConverter
-        from adtof.io.converters import RockBandConverter
+        # from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
-            psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)]
+            psTrakcs = [
+                convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)
+            ]
             if len(psTrakcs) > 0:
                 # TODO: select the best one
                 candidates[candidate] = psTrakcs[0]
@@ -153,13 +160,18 @@ class Converter(object):
     def generateGenerator(data):
         """
         Create a generator with the tracks in data
+        TODO: this seems ugly
         """
 
-        def gen(context=25):
+        def gen(context=25, classWeight = [1, 4, 40, 1, 2]):
+            """
+            [36, 40, 41, 46, 49]
+            """
             cqt = CQT()
+
             for path, converter in data:
-                midi, audio, ini = converter.getConvertibleFiles(path)
                 try:
+                    _, audio, _ = converter.getConvertibleFiles(path)
                     # Get the midi in dense matrix representation
                     y = converter.convert(path).getDenseEncoding(sampleRate=98.4375, timeShift=0)
 
@@ -168,10 +180,12 @@ class Converter(object):
                     x = np.array([x[i:i + context] for i in range(len(x) - context)])
 
                     # Add the channel dimension
-                    x = x.reshape(x.shape + (1, ))
+                    x = x.reshape(x.shape + (1,))
 
                     for i in range(min(len(y), len(x))):
-                        yield x[i], y[i]
+                        sampleWeight = max(1, np.sum(classWeight * x[i][0]))
+                        yield x[i], y[i], sampleWeight
+
                 except Exception as e:
                     print(path, e)
 
@@ -183,11 +197,13 @@ class Converter(object):
         convert all tracks in the good format
         and return a dataset.
         """
-        logging.basicConfig(filename='log/conversion.log', level=logging.DEBUG)
 
         candidates = Converter._getFileCandidates(rootFolder)
         candidates = Converter._mergeFileNames(candidates, similitudeThreshold=0.8)
         candidates = Converter._pickVersion(candidates)
+        logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
-        return tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64)), tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
+        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64, tf.float64))
+        return trainDS, tf.data.Dataset.from_generator(Converter.generateGenerator(test),
+                                                       (tf.float64, tf.int64, tf.float64))
