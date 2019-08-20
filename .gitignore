@@ -10,6 +10,7 @@
 /notebooks
 /venv
 /logs
+/models
 
 # Sphinx documentation
 /docs/_build/

@@ -163,7 +163,7 @@ class Converter(object):
         TODO: this seems ugly
         """
 
-        def gen(context=25, classWeight = [1, 4, 40, 1, 2]):
+        def gen(context=25, classWeight=[1, 4, 40, 1, 2]):
             """
             [36, 40, 41, 46, 49]
             """

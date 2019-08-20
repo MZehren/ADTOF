@@ -34,14 +34,19 @@ def main():
 
     model = RV1().createModel()
     log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),
+        tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=2, verbose=1),
+        tf.keras.callbacks.ModelCheckpoint("models/rv1", load_weights_on_restart=True, save_weights_only=True)
+    ]
 
     model.fit(dataset,
-              epochs=5,
+              epochs=50,
               steps_per_epoch=1000,
-              callbacks=[tensorboard_callback],
+              callbacks=callbacks,
               validation_data=dataset_test,
               validation_steps=10)
+
     print("Done!")
 
 

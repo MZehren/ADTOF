@@ -1,7 +1,7 @@
 import setuptools
 import glob
 
-requirements = ["mido", "librosa", "pyunpack", "patool", "jellyfish"]
+requirements = ["mido", "librosa", "pyunpack", "patool", "jellyfish", "pydot", "graphviz"]
 
 with open("README.rst", "r") as fh:
     long_description = fh.read()

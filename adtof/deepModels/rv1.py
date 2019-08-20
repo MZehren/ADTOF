@@ -64,8 +64,5 @@ class RV1(object):
                       loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
         return model
 
-    def train(self, X, Y):
-        pass
-
 
 # rv1 = RV1()
