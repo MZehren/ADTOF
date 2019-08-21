@@ -1,2 +1,2 @@
-from .midoProxy import MidoProxy
+from .myMidi import MidiProxy
 from .cqt import CQT

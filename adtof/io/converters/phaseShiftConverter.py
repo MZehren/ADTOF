@@ -7,11 +7,10 @@ import os
 import sys
 import warnings
 
-import mido
 import pkg_resources
 
 from adtof.io.converters import Converter
-from adtof.io import MidoProxy
+from adtof.io import MidiProxy
 
 
 class PhaseShiftConverter(Converter):
@@ -60,7 +59,7 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = MidoProxy(os.path.join(folderPath, PhaseShiftConverter.PS_MIDI_NAME))
+        midi = MidiProxy(os.path.join(folderPath, PhaseShiftConverter.PS_MIDI_NAME))
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
@@ -78,14 +77,14 @@ class PhaseShiftConverter(Converter):
         ini = self.readIni(os.path.join(folderPath, PhaseShiftConverter.INI_NAME))
         if "name" in ini:
             return ini["name"]
-        
 
     def getConvertibleFiles(self, folderPath):
         """
         Return the name of the midiFile and AudioFile of a Phaseshift folder
         """
+
         #Util function to select the first file
-        def getFirstOccurenceOfIntersection(A:list, B:list):
+        def getFirstOccurenceOfIntersection(A: list, B: list):
             for a in A:
                 if a in B:
                     return a
@@ -93,9 +92,9 @@ class PhaseShiftConverter(Converter):
 
         if os.path.isdir(folderPath) == False:
             return None, None, None
-        
+
         files = os.listdir(folderPath)
-        midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files) 
+        midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files)
         audioFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
         iniFile = PhaseShiftConverter.INI_NAME if PhaseShiftConverter.INI_NAME in files else None
         return midiFile, audioFile, iniFile
@@ -107,17 +106,17 @@ class PhaseShiftConverter(Converter):
         """
         converted = 0
         failed = 0
-        for root, _, files in os.walk(rootFodler):
+        for root, _, _ in os.walk(rootFodler):
             # for file in files:
             if self.isConvertible(root):
-                try:
-                    self.convert(root, outputName)
-                    print("converted", root)
-                    converted += 1
-                except:
-                    logging.error(("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]))
-                    logging.error(("for file:", root))
-                    failed += 1
+                # try:
+                self.convert(root, outputName)
+                print("converted", root)
+                converted += 1
+                # except:
+                #     logging.error(("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]))
+                #     logging.error(("for file:", root))
+                #     failed += 1
 
         print("converted:", converted, "failed:", failed)
 
@@ -150,14 +149,15 @@ class PhaseShiftConverter(Converter):
             raise Exception("ERROR: MIDI format not implemented, Expecting a format 1 MIDI")
 
         # Remove the non-drum tracks
-        tracksName = [[event.name for event in track if event.type == "track_name"] for track in midi.tracks]
-        tracksName = [names[0] if names else None for names in tracksName]
+        tracksName = midi.getTracksName()
         drumTrackFlag = False
         # try all the names in decreasing order of priority
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
+                tracksToRemove = [
+                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
+                ]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -165,53 +165,47 @@ class PhaseShiftConverter(Converter):
         if not drumTrackFlag:
             raise Exception("ERROR: No drum track in the MIDI file")
 
+        # add the delay
+        midi.addDelay(delay)
+
         # for each track
         for i, track in enumerate(midi.tracks):
-
-            # add the delay
-            if delay != 0:
-                if i == 0:
-                    # If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
-                    event = mido.MetaMessage("set_tempo")
-                    event.tempo = int(delay * 1000000 / 4)
-                    track.insert(0, event)
-                    track[1].time += 4 * midi.ticks_per_beat
-                else:
-                    # If this is a standard track, add a delay of 4 beats to the first event
-                    track[0].time += 4 * midi.ticks_per_beat
-
             # Keep track of the simultaneous notes playing
             notesOn = {}
             notesOff = {}
             for event in track:
                 # Before the start of a new time step, do the conversion
-                if event.time > 0:
-                    self.convertPitches(notesOn)
+                if midi.getEventTick(event) > 0:
+                    self.convertPitches(notesOn, midi)
                     # Convert the note off events to the same pitches
-                    self.convertPitches(notesOff)
+                    self.convertPitches(notesOff, midi)
                     notesOff = {}  # Note off events have no duration, so we remove them
 
                 # Keep track of all the notes
-                if event.type == "note_on" and event.velocity > 0:
-                    if event.note in notesOn:
+                notePitch = midi.getEventPith(event)
+                if midi.isEventNoteOn(event):
+                    if notePitch in notesOn:
                         warnings.warn("error MIDI Note On overriding existing note")
-                    notesOn[event.note] = event
-                if (event.type == "note_on" and event.velocity == 0) or event.type == "note_off":
-                    if event.note not in notesOn:
+                    notesOn[notePitch] = event
+                elif midi.isEventNoteOff(event):
+                    if notePitch not in notesOn:
                         warnings.warn("error MIDI Note Off not existing")
-                    notesOn.pop(event.note, None)
-                    notesOff[event.note] = event
+                    notesOn.pop(notePitch, None)
+                    notesOff[notePitch] = event
 
             # Remove empty events with a pitch set to None from the convertPitches method:
-            eventsToRemove = [j for j, event in enumerate(track) if (event.type == "note_on" or event.type == "note_off") and event.note == 0]
+            eventsToRemove = [
+                j for j, event in enumerate(track)
+                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+            ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
-                if track[j].time and len(track) > j + 1:
-                    track[j + 1].time += track[j].time
+                if midi.getEventTick(track[j]) and len(track) > j + 1:
+                    midi.setEventTick(track[j + 1], midi.getEventTick(track[j]) + midi.getEventTick(track[j + 1]))
                 del track[j]
         return midi
 
-    def convertPitches(self, events):
+    def convertPitches(self, events, midi):
         """
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to None.
@@ -231,7 +225,8 @@ class PhaseShiftConverter(Converter):
             # Convert to standard midi pitches and apply the tom modifiers
             if pitch in PhaseShiftConverter.TOMS_MODIFIER:
                 pitch = 0  # this is not a real note played, but a modifier
-            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
+            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[
+                    pitch] in allPitches:
                 # this pitch is played with his modifier
                 pitch = PhaseShiftConverter.PS_MIDI[PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch]]
             elif pitch in PhaseShiftConverter.PS_MIDI:
@@ -241,14 +236,14 @@ class PhaseShiftConverter(Converter):
                 pitch = 0
 
             # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
-            pitch = PhaseShiftConverter.REDUCED_MIDI[pitch
-                                                     ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
+            pitch = PhaseShiftConverter.REDUCED_MIDI[
+                pitch] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
 
             # Remove duplicated pitches
             if pitch in existingPitches:
                 pitch = 0
 
             existingPitches.add(pitch)
-            event.note = pitch
+            midi.setEventPitch(event, pitch)
 
         return events

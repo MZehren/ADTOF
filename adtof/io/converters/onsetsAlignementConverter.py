@@ -5,7 +5,7 @@ import librosa
 import numpy as np
 
 from adtof.io.converters import Converter
-from adtof.io import MidoProxy
+from adtof.io import MidiProxy
 from adtof.io.converters import PhaseShiftConverter
 
 # from dtw import dtw
@@ -39,7 +39,7 @@ class OnsetsAlignementConverter(Converter):
         print("converted", converted, "failed", failed)
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath):
-        midi = MidoProxy(inputMidiPath)
+        midi = MidiProxy(inputMidiPath)
         midiOnsets = midi.getOnsets()
 
         y, sr = librosa.load(inputMusicPath)
