@@ -183,8 +183,8 @@ class Converter(object):
                     x = x.reshape(x.shape + (1,))
 
                     for i in range(min(len(y), len(x))):
-                        sampleWeight = max(1, np.sum(classWeight * x[i][0]))
-                        yield x[i], y[i], sampleWeight
+                        sampleWeight = 1 #max(1, np.sum(classWeight * y[i][0]))
+                        yield x[i], y[i]
 
                 except Exception as e:
                     print(path, e)
@@ -204,6 +204,7 @@ class Converter(object):
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
-        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64, tf.float64))
-        return trainDS, tf.data.Dataset.from_generator(Converter.generateGenerator(test),
-                                                       (tf.float64, tf.int64, tf.float64))
+
+        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
+        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
+        return trainDS, testDS

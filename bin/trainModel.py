@@ -31,9 +31,18 @@ def main():
     dataset, dataset_test = Converter.convertAll(args.folderPath)
     dataset = dataset.batch(400).repeat()
     dataset_test = dataset_test.batch(400).repeat()
+    # debug = True
+    # if debug:
+    #     iterator = dataset.make_one_shot_iterator()
+    #     X, Y, _ = iterator.get_next()
+    #     import matplotlib.pyplot as plt
+    #     plt.matshow(np.array([np.reshape(x[0],84) for x in X]).T)
+    #     plt.plot(Y*30)
+    #     plt.show()
 
     model = RV1().createModel()
     log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),
         tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=2, verbose=1),

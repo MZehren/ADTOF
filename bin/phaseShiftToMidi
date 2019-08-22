@@ -25,6 +25,13 @@ def main():
 
     psc = PhaseShiftConverter()
     psc.convertRecursive(args.folderPath, args.outputName)
+    # if True:
+    #     midi = psc.convert(args.folderPath)
+    #     dense = midi.getDenseEncoding()
+    #     import matplotlib.pyplot as plt
+    #     plt.plot(dense)
+    #     plt.show()
+
     print("Done!")
 
 

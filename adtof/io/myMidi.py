@@ -253,7 +253,6 @@ class PythonMidiProxy():
     def __init__(self, path):
         self.tracks = midi.read_midifile(path)
         self.type = self.tracks.format
-        self.length = np.max([track[-1]["time"] for track in self.positionsLookup()])
         self.filename = path
 
     def getTracksName(self):
@@ -431,9 +430,10 @@ class PythonMidiProxy():
         to [0, 1, 0, 0, 0, 1]
         """
         notes = self.getOnsets(separated=True)
+        length = np.max([values[-1] for values in notes.values()])
         result = []
         for key in keys:
-            row = np.zeros(int(np.round((self.length + timeShift) * sampleRate)) + 1)
+            row = np.zeros(int(np.round((length + timeShift) * sampleRate)) + 1)
             for time in notes[key]:
                 row[int(np.round((time + timeShift) * sampleRate))] = 1
             result.append(row)

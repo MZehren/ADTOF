@@ -60,8 +60,9 @@ class RV1(object):
             tf.keras.layers.Dense(output, activation=tf.keras.activations.sigmoid)
         ])
 
-        model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001),
-                      loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
+        model.compile(
+            optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001)
+            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
         return model
 
 
