@@ -1,14 +1,16 @@
 import logging
 import os
 import sys
+import warnings
 from collections import defaultdict
 
 import jellyfish
+import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 import tensorflow as tf
 
-from adtof.io import CQT
+from adtof.io import MIR
 
 
 class Converter(object):
@@ -163,28 +165,33 @@ class Converter(object):
         TODO: this seems ugly
         """
 
-        def gen(context=25, classWeight=[1, 4, 40, 1, 2]):
+        def gen(context=25, midiLatency=12, classWeight=[2/16, 8/16, 16/16, 2/16, 4/16]):
             """
             [36, 40, 41, 46, 49]
             """
-            cqt = CQT()
+            mir = MIR()
 
             for path, converter in data:
                 try:
                     _, audio, _ = converter.getConvertibleFiles(path)
                     # Get the midi in dense matrix representation
                     y = converter.convert(path).getDenseEncoding(sampleRate=98.4375, timeShift=0)
+                    y = y[midiLatency:]
+
+                    if np.sum(y) == 0:
+                        warnings.warn("Midi doesn't have notes " + path)
+                        continue
 
                     # Get the CQT with a context
-                    x = cqt.open(os.sep.join([path, audio]))
+                    x = mir.open(os.sep.join([path, audio]))
                     x = np.array([x[i:i + context] for i in range(len(x) - context)])
 
                     # Add the channel dimension
                     x = x.reshape(x.shape + (1,))
 
                     for i in range(min(len(y), len(x))):
-                        sampleWeight = 1 #max(1, np.sum(classWeight * y[i][0]))
-                        yield x[i], y[i]
+                        sampleWeight = max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
+                        yield x[i], y[i], sampleWeight
 
                 except Exception as e:
                     print(path, e)
@@ -192,7 +199,7 @@ class Converter(object):
         return gen
 
     @staticmethod
-    def convertAll(rootFolder, test_size=0.2):
+    def convertAll(rootFolder, test_size=0.1):
         """
         convert all tracks in the good format
         and return a dataset.
@@ -205,6 +212,21 @@ class Converter(object):
 
         train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
 
-        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
-        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
+        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64, tf.float64))
+
+        # dataset = trainDS.batch(800).repeat()
+        # iterator = dataset.make_one_shot_iterator()
+        # Converter.vizDataset(iterator)
+
+        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64, tf.float64))
         return trainDS, testDS
+
+    @staticmethod
+    def vizDataset(iterator):
+        X, Y, _ = iterator.get_next()
+        plt.matshow(np.array([np.reshape(x[0], 84) for x in X]).T)
+        print(np.sum(Y))
+        for i in range(len(Y[0])):
+            times = [t for t, y in enumerate(Y) if y[i]]
+            plt.plot(times, np.ones(len(times)) * i * 10, "or")
+        plt.show()

@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
 
     psc = PhaseShiftConverter()
-    psc.convertRecursive(args.folderPath, args.outputName)
+    psc.convertRecursive(args.folderPath, None)
     # if True:
     #     midi = psc.convert(args.folderPath)
     #     dense = midi.getDenseEncoding()

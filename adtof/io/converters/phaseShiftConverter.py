@@ -110,8 +110,8 @@ class PhaseShiftConverter(Converter):
             # for file in files:
             if self.isConvertible(root):
                 # try:
-                self.convert(root, outputName)
-                print("converted", root)
+                midi = self.convert(root, outputName=outputName)
+                print("converted", root, len(midi.getOnsets()))
                 converted += 1
                 # except:
                 #     logging.error(("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]))

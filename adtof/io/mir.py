@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 
 
-class CQT(object):
+class MIR(object):
     """
     Load the track to be fed inside a NN
     """
@@ -21,8 +21,15 @@ class CQT(object):
         Load an audio track and return an array numpy
         """
         y, sr = librosa.load(path, sr=self.sampleRate)
-        # TODO: add the dB conversion
         # TODO: add 0.25s of zero padding at the start for instant onsets 
         # TODO: add first order difference
-        cqts = np.abs(librosa.cqt(y, sr=sr, hop_length=int(np.round(sr / self.frameRate)), n_bins=self.n_bins, fmin=self.fMin))
-        return cqts.T
+        cqt = librosa.cqt(y, sr=sr, hop_length=int(np.round(sr / self.frameRate)), n_bins=self.n_bins, fmin=self.fMin)
+        linear_cqt = np.abs(cqt)
+        freqs = librosa.cqt_frequencies(linear_cqt.shape[0], fmin=self.fMin)
+        result = librosa.perceptual_weighting(linear_cqt**2, freqs, ref=np.max)
+        result += np.min(result) * -1
+
+        max = np.max(result)
+        min = np.min(result)
+        result = (result - min) / (max - min)
+        return result.T

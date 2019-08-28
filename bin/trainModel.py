@@ -15,7 +15,7 @@ import sklearn
 import tensorflow as tf
 
 from adtof.deepModels import RV1
-from adtof.io import CQT
+from adtof.io import MIR
 from adtof.io.converters import Converter, PhaseShiftConverter
 
 
@@ -29,16 +29,8 @@ def main():
     args = parser.parse_args()
 
     dataset, dataset_test = Converter.convertAll(args.folderPath)
-    dataset = dataset.batch(400).repeat()
-    dataset_test = dataset_test.batch(400).repeat()
-    # debug = True
-    # if debug:
-    #     iterator = dataset.make_one_shot_iterator()
-    #     X, Y, _ = iterator.get_next()
-    #     import matplotlib.pyplot as plt
-    #     plt.matshow(np.array([np.reshape(x[0],84) for x in X]).T)
-    #     plt.plot(Y*30)
-    #     plt.show()
+    dataset = dataset.batch(1200).repeat()
+    dataset_test = dataset_test.batch(1200).repeat()
 
     model = RV1().createModel()
     log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -49,13 +41,18 @@ def main():
         tf.keras.callbacks.ModelCheckpoint("models/rv1", load_weights_on_restart=True, save_weights_only=True)
     ]
 
-    model.fit(dataset,
-              epochs=50,
-              steps_per_epoch=1000,
-              callbacks=callbacks,
-              validation_data=dataset_test,
-              validation_steps=10)
+    # model.fit(dataset,
+    #           epochs=50,
+    #           steps_per_epoch=1000,
+    #           callbacks=callbacks,
+    #           validation_data=dataset_test,
+    #           validation_steps=10,
+    #           )
 
+    predictions = model.predict(dataset_test, steps=1)
+    import matplotlib.pyplot as plt
+    plt.plot(predictions)
+    plt.show()
     print("Done!")
 
 

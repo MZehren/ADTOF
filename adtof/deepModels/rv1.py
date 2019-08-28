@@ -61,7 +61,7 @@ class RV1(object):
         ])
 
         model.compile(
-            optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001)
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.003), #tf.keras.optimizers.RMSprop(learning_rate=0.001),
             loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
         return model
 
