@@ -175,7 +175,7 @@ class Converter(object):
                 try:
                     _, audio, _ = converter.getConvertibleFiles(path)
                     # Get the midi in dense matrix representation
-                    y = converter.convert(path).getDenseEncoding(sampleRate=98.4375, timeShift=0)
+                    y = converter.convert(path).getDenseEncoding(sampleRate=100, timeShift=0)
                     y = y[midiLatency:]
 
                     if np.sum(y) == 0:
@@ -190,8 +190,8 @@ class Converter(object):
                     x = x.reshape(x.shape + (1,))
 
                     for i in range(min(len(y), len(x))):
-                        sampleWeight = max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
-                        yield x[i], y[i], sampleWeight
+                        sampleWeight = 1 #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
+                        yield x[i], y[i]
 
                 except Exception as e:
                     print(path, e)
@@ -212,13 +212,13 @@ class Converter(object):
 
         train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
 
-        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64, tf.float64))
+        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
 
         # dataset = trainDS.batch(800).repeat()
         # iterator = dataset.make_one_shot_iterator()
         # Converter.vizDataset(iterator)
 
-        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64, tf.float64))
+        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
         return trainDS, testDS
 
     @staticmethod

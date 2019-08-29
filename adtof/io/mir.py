@@ -1,5 +1,6 @@
 import librosa
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class MIR(object):
@@ -9,27 +10,58 @@ class MIR(object):
 
     def __init__(self):
         # TODO: load the parameters externally
-        self.sampleRate = 44100
+        self.sampleRate = None  # 44100
         # requirement of k*2**(n_octaves - 1) exists so that recursive downsampling inside CQT retains frame alignment.
         # hop length = 448 or frameRate = 98.4375Hz
-        self.frameRate = 98.4375
+        self.frameRate = 100
         self.n_bins = 84
-        self.fMin = 20
+        self.fMin = 32.70  #20
 
     def open(self, path: str):
         """
         Load an audio track and return an array numpy
         """
         y, sr = librosa.load(path, sr=self.sampleRate)
-        # TODO: add 0.25s of zero padding at the start for instant onsets 
-        # TODO: add first order difference
-        cqt = librosa.cqt(y, sr=sr, hop_length=int(np.round(sr / self.frameRate)), n_bins=self.n_bins, fmin=self.fMin)
-        linear_cqt = np.abs(cqt)
-        freqs = librosa.cqt_frequencies(linear_cqt.shape[0], fmin=self.fMin)
-        result = librosa.perceptual_weighting(linear_cqt**2, freqs, ref=np.max)
-        result += np.min(result) * -1
+        # TODO: add 0.25s of zero padding at the start for instant onsets
+
+        result = librosa.feature.melspectrogram(y=y, sr=sr,  hop_length=int(np.round(sr / self.frameRate)))
+        result = librosa.amplitude_to_db(result)
+        diff = np.diff(result)
+        result = result[1:]
+        result = [result[i] + diff[i] for i in range(len(result))]
+        self.viz(diff)
 
         max = np.max(result)
         min = np.min(result)
         result = (result - min) / (max - min)
         return result.T
+
+
+    def openCQT(self, path: str):
+        """
+        Load an audio track and return an array numpy
+        """
+        y, sr = librosa.load(path, sr=self.sampleRate)
+        # TODO: add 0.25s of zero padding at the start for instant onsets
+        cqt = librosa.cqt(y, sr=sr, hop_length=int(np.round(sr / self.frameRate)), n_bins=self.n_bins, fmin=self.fMin)
+        linear_cqt = np.abs(cqt)
+        # freqs = librosa.cqt_frequencies(linear_cqt.shape[0], fmin=self.fMin)
+        # result = librosa.perceptual_weighting(linear_cqt**2, freqs, ref=np.max)
+        # result += np.min(result) * -1
+        result = librosa.amplitude_to_db(linear_cqt)
+
+        # max = np.max(result)
+        # min = np.min(result)
+        # result = (result - min) / (max - min)
+        # self.viz(result.T)
+
+        return result.T
+
+    def viz(self, result):
+        """debug viz
+        
+        Arguments:
+            result {2D matrix} -- the stft to display
+        """
+        plt.matshow(result)
+        plt.show()

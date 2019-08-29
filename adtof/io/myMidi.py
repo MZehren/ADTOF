@@ -423,7 +423,7 @@ class PythonMidiProxy():
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
 
-    def getDenseEncoding(self, sampleRate=100, timeShift=0, keys=[36, 40, 41, 46, 49]):
+    def getDenseEncoding(self, sampleRate=100, timeShift=0, keys=[36, 40, 41, 46, 49], radiation=2):
         """
         Encode in a dense matrix
         from [0.1, 0.5]
@@ -435,7 +435,9 @@ class PythonMidiProxy():
         for key in keys:
             row = np.zeros(int(np.round((length + timeShift) * sampleRate)) + 1)
             for time in notes[key]:
-                row[int(np.round((time + timeShift) * sampleRate))] = 1
+                index = int(np.round((time + timeShift) * sampleRate))
+                for i in range(index - radiation, min(index + radiation + 1, len(row))):
+                    row[i] = 1
             result.append(row)
             if len(notes[key]) == 0:
                 logging.info(self.filename + " " + str(key) + " is not represented in this track")
