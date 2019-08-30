@@ -214,6 +214,8 @@ class Converter(object):
 
         trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
 
+        # next(Converter.generateGenerator(train)())
+
         # dataset = trainDS.batch(800).repeat()
         # iterator = dataset.make_one_shot_iterator()
         # Converter.vizDataset(iterator)
@@ -223,7 +225,7 @@ class Converter(object):
 
     @staticmethod
     def vizDataset(iterator):
-        X, Y, _ = iterator.get_next()
+        X, Y= iterator.get_next()
         plt.matshow(np.array([np.reshape(x[0], 84) for x in X]).T)
         print(np.sum(Y))
         for i in range(len(Y[0])):

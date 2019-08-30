@@ -11,7 +11,7 @@ class RV1(object):
     #     # self.model = self.createModel()
     #     pass
 
-    def createModel(self, context=25, n_bins=128, output=5):
+    def createModel(self, context=25, n_bins=256, output=5):
         """Return a ts model based 
         
         Keyword Arguments:

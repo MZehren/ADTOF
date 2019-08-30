@@ -25,16 +25,16 @@ class MIR(object):
         # TODO: add 0.25s of zero padding at the start for instant onsets
 
         result = librosa.feature.melspectrogram(y=y, sr=sr,  hop_length=int(np.round(sr / self.frameRate)))
-        result = librosa.amplitude_to_db(result)
-        diff = np.diff(result)
+        result = librosa.amplitude_to_db(result).T
+        diff = np.diff(result, axis=0)
         result = result[1:]
-        result = [result[i] + diff[i] for i in range(len(result))]
-        self.viz(diff)
+        result = np.concatenate((result, diff), axis=1)
+        # self.viz(result)
 
         max = np.max(result)
         min = np.min(result)
         result = (result - min) / (max - min)
-        return result.T
+        return result
 
 
     def openCQT(self, path: str):
