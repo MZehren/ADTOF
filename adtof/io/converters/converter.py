@@ -165,7 +165,7 @@ class Converter(object):
         TODO: this seems ugly
         """
 
-        def gen(context=25, midiLatency=12, classWeight=[2/16, 8/16, 16/16, 2/16, 4/16]):
+        def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
             """
             [36, 40, 41, 46, 49]
             """
@@ -175,7 +175,7 @@ class Converter(object):
                 try:
                     _, audio, _ = converter.getConvertibleFiles(path)
                     # Get the midi in dense matrix representation
-                    y = converter.convert(path).getDenseEncoding(sampleRate=100, timeShift=0)
+                    y = converter.convert(path).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
                     y = y[midiLatency:]
 
                     if np.sum(y) == 0:
@@ -184,13 +184,17 @@ class Converter(object):
 
                     # Get the CQT with a context
                     x = mir.open(os.sep.join([path, audio]))
+                    # Converter.vizNumpy(x, y, title=path)
+
                     x = np.array([x[i:i + context] for i in range(len(x) - context)])
 
                     # Add the channel dimension
                     x = x.reshape(x.shape + (1,))
 
+                    
+
                     for i in range(min(len(y), len(x))):
-                        sampleWeight = 1 #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
+                        sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
                         yield x[i], y[i]
 
                 except Exception as e:
@@ -214,7 +218,7 @@ class Converter(object):
 
         trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
 
-        # next(Converter.generateGenerator(train)())
+        next(Converter.generateGenerator(train)())
 
         # dataset = trainDS.batch(800).repeat()
         # iterator = dataset.make_one_shot_iterator()
@@ -225,9 +229,18 @@ class Converter(object):
 
     @staticmethod
     def vizDataset(iterator):
-        X, Y= iterator.get_next()
+        X, Y = iterator.get_next()
         plt.matshow(np.array([np.reshape(x[0], 84) for x in X]).T)
         print(np.sum(Y))
+        for i in range(len(Y[0])):
+            times = [t for t, y in enumerate(Y) if y[i]]
+            plt.plot(times, np.ones(len(times)) * i * 10, "or")
+        plt.show()
+
+    @staticmethod
+    def vizNumpy(X, Y, title="bla"):
+        plt.title(title)
+        plt.matshow(X.T)
         for i in range(len(Y[0])):
             times = [t for t, y in enumerate(Y) if y[i]]
             plt.plot(times, np.ones(len(times)) * i * 10, "or")

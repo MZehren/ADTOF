@@ -35,34 +35,45 @@ class RV1(object):
         #     # Add a softmax layer with 10 output units:
         #     tf.keras.layers.Dense(output, activation='softmax')
         # ])
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(
-                32,
-                (3, 3),
-                input_shape=(context, n_bins, 1),
-            ),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(32, (3, 3)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Conv2D(64, (3, 3)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, (3, 3)),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
-            tf.keras.layers.Dense(output, activation=tf.keras.activations.sigmoid)
-        ])
+
+        model = tf.keras.models.Sequential()
+        model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(context, n_bins, 1)))
+        model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+        model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+        model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+        model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
+        model.add(tf.keras.layers.Flatten())
+        model.add(tf.keras.layers.Dense(64, activation='relu'))
+        model.add(tf.keras.layers.Dense(output, activation='softmax'))
+
+        # model = tf.keras.Sequential([
+        #     tf.keras.layers.Conv2D(
+        #         32,
+        #         (3, 3),
+        #         input_shape=(context, n_bins, 1),
+        #     ),
+        #     tf.keras.layers.BatchNormalization(),
+        #     tf.keras.layers.Conv2D(32, (3, 3)),
+        #     tf.keras.layers.BatchNormalization(),
+        #     tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
+        #     tf.keras.layers.Dropout(0.3),
+        #     tf.keras.layers.Conv2D(64, (3, 3)),
+        #     tf.keras.layers.BatchNormalization(),
+        #     tf.keras.layers.Conv2D(64, (3, 3)),
+        #     tf.keras.layers.BatchNormalization(),
+        #     tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
+        #     tf.keras.layers.Dropout(0.3),
+        #     # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+        #     # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+        #     # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+        #     tf.keras.layers.Flatten(),
+        #     tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
+        #     tf.keras.layers.Dense(output, activation=tf.keras.activations.sigmoid)
+        # ])
 
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.003), #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits)
+            optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
+            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits, metrics=['accuracy'])
         return model
 
 
