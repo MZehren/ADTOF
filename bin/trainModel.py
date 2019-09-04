@@ -15,6 +15,7 @@ import sklearn
 import tensorflow as tf
 
 from adtof.deepModels import RV1
+from adtof.deepModels import PeakPicking
 from adtof.io import MIR
 from adtof.io.converters import Converter, PhaseShiftConverter
 
@@ -24,6 +25,7 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
+    
     parser = argparse.ArgumentParser(description='todo')
     parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
