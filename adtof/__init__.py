@@ -1,3 +1,3 @@
-from . import io
+from . import io, deepModels
 
 

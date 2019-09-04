@@ -1,4 +1,5 @@
 import tensorflow as tf
+from adtof.deepModels.peakPicking import PeakPicking
 
 
 class RV1(object):
@@ -75,8 +76,41 @@ class RV1(object):
 
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits, metrics=[tf.keras.metrics.Precision()])
+            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits,
+            metrics=[PeakPicking()]
+        )
         return model
 
 
+
+
 # rv1 = RV1()
+
+# """
+# load
+# """
+# import pickle
+
+# file="/home/mickael/Documents/programming/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
+# with open(file, "rb") as f:
+#     u = pickle._Unpickler(f)
+#     u.encoding = 'latin1'
+#     p = u.load()
+#     print(p)
+
+# 00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b2f38ac8>
+# 01:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5d30>
+# 02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5722e5cf8>
+# 03:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5f28>
+# 04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd5b3eca978>
+# 05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca6d8>
+# 06:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3eca438>
+# 07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca048>
+# 08:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3ec3da0>
+# 09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd57228d208>
+# 10:<madmom.ml.nn.layers.StrideLayer object at 0x7fd57228d278>
+# 11:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d2b0>
+# 12:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d390>
+# 13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
+# 14:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d6a0>
+# 15:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d860>
