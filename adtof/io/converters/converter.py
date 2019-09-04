@@ -42,11 +42,10 @@ class Converter(object):
         """
         go recursively inside all folders, identify the format available and list all the tracks
         """
-        # Decompress all the files
-        from adtof.io.converters import ArchiveConverter
-        from adtof.io.converters import RockBandConverter
-        from adtof.io.converters import PhaseShiftConverter
+        # TODO clean the circle dependency by ,oving the code in a better location
+        from adtof.io.converters import ArchiveConverter, RockBandConverter, PhaseShiftConverter, TextConverter
 
+        # Decompress all the files
         ac = ArchiveConverter()
         for root, _, files in os.walk(rootFolder):
             for file in files:
@@ -59,17 +58,34 @@ class Converter(object):
 
         rbc = RockBandConverter()
         psc = PhaseShiftConverter()
-
+        tc = TextConverter()
         results = defaultdict(list)
         #Check anything convertible
         for root, _, files in os.walk(rootFolder):
-            if psc.isConvertible(root):
-                results[psc.getTrackName(root)].append((root, psc))
+            if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
+                                                       root.split("/")[-1] == ""):  # Add rbma files
+                midifolder = os.path.join(root, "annotations/drums")
+                midiFiles = [os.path.join(midifolder, f) for f in os.listdir(midifolder) if f.endswith(".txt")]
+
+                audioFolder = os.path.join(root, "audio")
+                audioFiles = [
+                    os.path.join(audioFolder, f)
+                    for f in os.listdir(audioFolder)
+                    if f.endswith(".mp3") or f.endswith(".wav")
+                ]
+
+                if len(midiFiles) != len(audioFiles):
+                    raise Exception("the rbma audio files without drums are not removes (6-7-26) ")
+                for i, _ in enumerate(midiFiles):
+                    results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
+
+            elif psc.isConvertible(root):
+                results[psc.getTrackName(root)].append((root, "", psc))
             else:
                 for file in files:
                     path = os.path.join(root, file)
                     if rbc.isConvertible(path):
-                        results[rbc.getTrackName(path)].append((path, psc))
+                        results[rbc.getTrackName(path)].append((path, "", psc))
 
         # Remove duplicate
         return results
@@ -94,7 +110,7 @@ class Converter(object):
             return name, 10000
 
     @staticmethod
-    def _mergeFileNames(candidates, similitudeThreshold=0.8):
+    def _mergeFileNames(candidates, similitudeThreshold=1):
         """
         Merge the multiple version of the tracks between "foo_expert" and "foo_expert+"
         1: remove the keywords like "expert" or "(double_bass)"
@@ -147,22 +163,22 @@ class Converter(object):
 
         for candidate in candidates:
             psTrakcs = [
-                convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)
+                convertor for convertor in candidates[candidate] if isinstance(convertor[2], PhaseShiftConverter)
             ]
             if len(psTrakcs) > 0:
                 # TODO: select the best one
                 candidates[candidate] = psTrakcs[0]
             else:
                 # TODO: convert Rockband
-                del candidates[candidate]
-
+                # del candidates[candidate]
+                candidates[candidate] = candidates[candidate][0]
         return candidates
 
     @staticmethod
     def generateGenerator(data):
         """
         Create a generator with the tracks in data
-        TODO: this seems ugly
+        TODO: this is ugly
         """
 
         def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
@@ -171,35 +187,27 @@ class Converter(object):
             """
             mir = MIR()
 
-            for path, converter in data:
+            for midiPath, audiPath, converter in data:
                 try:
-                    _, audio, _ = converter.getConvertibleFiles(path)
-                    # Get the midi in dense matrix representation
-                    y = converter.convert(path).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
+                    # TODO: update: _, audio, _ = converter.getConvertibleFiles(path)
+                    # Get the y: midi in dense matrix representation
+                    y = converter.convert(midiPath).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
                     y = y[midiLatency:]
-
                     if np.sum(y) == 0:
-                        warnings.warn("Midi doesn't have notes " + path)
+                        warnings.warn("Midi doesn't have notes " + midiPath)
                         continue
 
-                    # Get the CQT with a context
-                    x = mir.open(os.sep.join([path, audio]))
-                    # Converter.vizNumpy(x, y, title=path)
-
+                    # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
+                    x = mir.open(audiPath)
                     x = np.array([x[i:i + context] for i in range(len(x) - context)])
+                    x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
-                    # Add the channel dimension
-                    x = x.reshape(x.shape + (1,))
-
-                    
-
-                    for i in range(min(len(y), len(x))):
+                    for i in range(min(len(y)-1, len(x)-1)):
                         sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
                         yield x[i], y[i]
-
                 except Exception as e:
-                    print(path, e)
-
+                    print(midiPath, e)
+            print("DEBUG: real new epoch")
         return gen
 
     @staticmethod
@@ -210,20 +218,17 @@ class Converter(object):
         """
 
         candidates = Converter._getFileCandidates(rootFolder)
-        candidates = Converter._mergeFileNames(candidates, similitudeThreshold=0.8)
+        candidates = Converter._mergeFileNames(candidates)
         candidates = Converter._pickVersion(candidates)
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
-        train, test = sklearn.model_selection.train_test_split(list(candidates.values()), test_size=test_size)
+        candidateName = list(candidates.values())
+        candidateName.sort(key=lambda x: x[0])
+        train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
+
+        # next(Converter.generateGenerator(train)())
 
         trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
-
-        next(Converter.generateGenerator(train)())
-
-        # dataset = trainDS.batch(800).repeat()
-        # iterator = dataset.make_one_shot_iterator()
-        # Converter.vizDataset(iterator)
-
         testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
         return trainDS, testDS
 

@@ -247,3 +247,4 @@ class PhaseShiftConverter(Converter):
             midi.setEventPitch(event, pitch)
 
         return events
+

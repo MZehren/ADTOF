@@ -43,6 +43,7 @@ def lazy_property(fn):
 
 class MidoProxy(MidiFile):
     """
+    TODO: DEPRECATED
     Encapsulating MIDI functionalities in this proxy class to open the possibility of supporting another midi library more easily.
     """
 
@@ -251,9 +252,35 @@ class PythonMidiProxy():
     """
 
     def __init__(self, path):
-        self.tracks = midi.read_midifile(path)
-        self.type = self.tracks.format
-        self.filename = path
+        if path is not None:
+            self.tracks = midi.read_midifile(path)
+            self.type = self.tracks.format
+            self.filename = path
+        else:
+            self.tracks = midi.Pattern()
+            track = midi.Track()
+            self.tracks.append(track)
+            self.filename = ""
+
+    def addNote(self, deltaTime, pitch, duration=0, velocity=90, trackIndex=-1):
+        """
+        add a note in the specified track
+        the time is in absolute second
+        """
+        track = self.tracks[trackIndex]
+
+        tickOn = self.getSecondToTicks(deltaTime)
+        if len(track):
+            tickOn -= np.sum([n.tick for n in track])
+        tickOff = 0
+        if duration:  #TODO
+            raise NotImplementedError()
+
+        on = midi.NoteOnEvent(tick=tickOn, velocity=velocity, pitch=pitch)
+        off = midi.NoteOnEvent(tick=tickOff, pitch=pitch)
+
+        track.append(on)
+        track.append(off)
 
     def getTracksName(self):
         """Return the name of the tracks
@@ -382,19 +409,28 @@ class PythonMidiProxy():
         usPerBeats = beat * tempo
         return usPerBeats / 1000000
 
-    def getSecondToTicks(self, second, start=0, tempo=0):
+    def getSecondToTicks(self, second, start=0, tempo=None):
         """
         Compute the numbs a delta  er of ticks equal to the duration in second in function of the MIDI resolution
 
         If no tempo is provided, uses track's tempo.
         If start in ticks is provided, the value take into account the tempo 
         """
-        if not tempo:
-            raise NotImplementedError()
-            # tempoEvents = self.tempoEvents
-            # tempoDuration = [self.getTicksToSecond(tempoEvent[0], tempo=tempoEvent[1]) for tempoEvent in tempoEvents]
-            # weight =
-        return int(float(second) / (float(tempo) / 1000000) * float(self.tracks.resolution))
+        if tempo is None:  # TODO: test if it's working
+            tempo = self.tempoEvents()[0][1]
+            warnings.warn("naive tempo implementation. change that")
+            # tempoEvents = self.tempoEvents()
+
+            # # get the tempo changes during the event
+            # selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]
+            # # get the tempo at the start location
+            # tempo0 = [t[1] for t in tempoEvents if t[0] <= start][-1]
+            # Tempi = [tempo0] + [t[1] for t in selectedTempo]
+            # weight = np.diff([start] + [t[0] for t in selectedTempo] +
+            #                  [end]) / delta  # get the weighted average of all the tempi
+            # tempo = np.sum(Tempi * weight)
+
+        return int(second / (tempo / 1000000) * self.tracks.resolution)
 
     def getOnsets(self, separated=False):
         """

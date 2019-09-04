@@ -29,29 +29,36 @@ def main():
     args = parser.parse_args()
 
     dataset, dataset_test = Converter.convertAll(args.folderPath)
-    dataset = dataset.batch(600).repeat()
-    dataset_test = dataset_test.batch(600).repeat()
+    dataset = dataset.batch(400).repeat()
+    dataset_test = dataset_test.batch(400).repeat()
 
     model = RV1().createModel()
-    log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    log_dir = os.path.join("logs", "fit", "rv3") #datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    checkpoint_path = "models/rv3"
 
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=False),
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint("models/rv1", load_weights_on_restart=True, save_weights_only=True)
+        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True)
     ]
+    # model.load_weights(checkpoint_path, )
 
-    # model.fit(dataset,
-    #           epochs=50,
-    #           steps_per_epoch=100,
-    #           callbacks=callbacks,
-    #           validation_data=dataset_test,
-    #           validation_steps=10,
-    #           )
+    model.fit(dataset,
+              epochs=60,
+              steps_per_epoch=100,
+              callbacks=callbacks,
+              validation_data=dataset_test,
+              validation_steps=10,
+              )
 
-    predictions = model.predict(dataset_test, steps=5)
+    it = dataset_test.make_one_shot_iterator()
+    x, y = next(it)
+    predictions = model.predict(x)
+
     import matplotlib.pyplot as plt
-    plt.plot(predictions)
+    f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    ax1.plot(predictions)
+    ax2.plot(y)
     plt.show()
     print("Done!")
 
