@@ -8,8 +8,8 @@ class PeakPicking(tf.keras.metrics.Metric):
         super(tf.keras.metrics.Metric, self).__init__(name=name, **kwargs)
         self.sampleRate = sampleRate
         self.hitDistance = hitDistance
-        self.batch_y_true = self.add_weight(name='true', aggrega)
-        self.batch_y_pred = self.add_weight(name='pred', initializer='zeros')
+        self.batch_y_true = self.add_weight(name='true', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_y_pred = self.add_weight(name='pred', aggregation=tf.compat.v2.VariableAggregation.NONE)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         self.batch_y_true.append(y_true)
@@ -28,15 +28,13 @@ class PeakPicking(tf.keras.metrics.Metric):
         result = []
         for classValues in values:  # For all the classes
             peaksPosition = []
-            mySortedList = sorted([(i, value) for i, value in enumerate(classValues)], key=lambda x: x[1], reverse=True)
-            for i, value in mySortedList:  #For all the values by decreasing order
-                if value >= threshold:
-                    isMaximum = value == np.max(classValues[max(i - windowSize // 2, 0):i + windowSize // 2 + 1])
-                    isAboveMean = value >= np.mean(classValues[max(i - windowSize // 2, 0):i + windowSize // 2 + 1]) + threshold
-                    if isMaximum and isAboveMean:
-                        peaksPosition.append(i)
-                else:
-                    break
+            # mySortedList = sorted([(i, value) for i, value in enumerate(classValues)], key=lambda x: x[1], reverse=True)
+            for i, value in enumerate(classValues):  #For all the values by decreasing order
+                isMaximum = value == np.max(classValues[max(i - windowSize // 2, 0):i + windowSize // 2 + 1])
+                isAboveMean = value >= np.mean(
+                    classValues[max(i - windowSize // 2, 0):i + windowSize // 2 + 1]) + threshold
+                if isMaximum and isAboveMean:
+                    peaksPosition.append(i)
             result.append(peaksPosition)
         return result
 
@@ -48,8 +46,10 @@ class PeakPicking(tf.keras.metrics.Metric):
         precision = []
         recall = []
         fMeasure = []
-        for i, categoriePeaks in peaksIndexes:  #TODO: add sum metric as well?
-            hits = len([1 for index in categoriePeaks if any([v for v in yTrue[i][max(index - distance, 0):index + distance]])])
+        for i, categoriePeaks in enumerate(peaksIndexes):  #TODO: add sum metric as well?
+            hits = len([
+                1 for index in categoriePeaks if any([v for v in yTrue[i][max(index - distance, 0):index + distance]])
+            ])
             precision.append(hits / len(categoriePeaks))  #TODO: change that when the labels are weighted
             recall.append(hits / np.sum(yTrue[i]))
             fMeasure.append(2 * (precision * recall) / (precision + recall))

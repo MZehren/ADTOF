@@ -76,8 +76,8 @@ class RV1(object):
 
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.compat.v2.nn.sigmoid_cross_entropy_with_logits,
-            metrics=[PeakPicking()]
+            loss=tf.keras.backend.binary_crossentropy,  #tf.compat.v2.nn.sigmoid_cross_entropy_with_logits, those two are equivalent if binary_crossentropy(logits=True), since the activation is already the probabilty because of the sigmoid and not logits, do not use those
+            metrics=["accuracy", tf.keras.metrics.BinaryAccuracy()]  # PeakPicking()
         )
         return model
 

@@ -35,13 +35,12 @@ def main():
     dataset_test = dataset_test.batch(400).repeat()
 
     model = RV1().createModel()
-    log_dir = os.path.join("logs", "fit", "rv3") #datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    checkpoint_path = "models/rv3"
 
+    log_dir = os.path.join("logs", "fit", "rv1.2") #datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=False),
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=False, profile_batch=0),
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True)
+        tf.keras.callbacks.ModelCheckpoint("models/rv1", save_weights_only=True, load_weights_on_restart=True)
     ]
     # model.load_weights(checkpoint_path, )
 
