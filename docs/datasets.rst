@@ -17,6 +17,8 @@ There are multiple datasets crowdsourced :
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
 | `Bloodline's download link`_   | `Bloodline's Youtube channel`_   | ~127    | ~11:00:00  | RockBand & PhaseShift | Good annotations. Mostly rock tracks.                                                |
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
+https://www.mysongbook.com/free-lessons
+https://gumroad.com/alexrudinger#ydMGK
 
 
 .. _CustomsCreators website: http://customscreators.com/index.php?/page/index.html?sort_col=rating_value&sort_order=desc
