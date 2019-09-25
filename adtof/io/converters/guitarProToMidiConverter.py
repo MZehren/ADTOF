@@ -6,6 +6,99 @@ import string
 
 # from dtw import dtw
 
+class binaryReader(Object):
+
+    def __init__(self, path):
+        with open(path, mode='rb') as file: 
+            self.binary = file.read()
+        self.cursor = 0
+        self.data = {}
+        self.types = {
+            "ibs": self._readIntByteString,
+            "bs": self._readByteString,
+            "s":self._readString,
+            "i":self._readInt,
+            "B":self._readByte,
+            "sB":self._readSignedByte,
+            "S":self._readShort,
+            "?":self._readBool,
+            "s":self._skip
+        }
+    
+    def readField(name, type, *args):
+        String
+        self.data[name] = self.types[type](*args)
+
+    def _readIntByteString(self):
+        """
+        read the size(int) length(byte) string(char*length)
+        and move the cursor by size +4 ?
+        """
+        size = self._readInt() - 1
+        return self._readByteString(size)
+
+    def _readByteString(self, size):
+        """
+        read the length(byte) string(char*length)
+        and move the cursor by size
+        """
+        length = self._readByte()
+        return self._readString(size)[:length]
+
+    def _readString(self, length):
+        """
+        read string and increase the cursor
+        """
+        result = "".join([c.decode("latin-1") for c in unpack("c" * length, self.binary[self.cursor:self.cursor + length])])
+        self.cursor += length
+        return result
+
+    def _readInt(self):
+        """
+        read an int and increase the curose
+        """
+        result = unpack("i", self.binary[self.cursor:self.cursor + 4])[0]
+        self.cursor += 4
+        return result
+
+    def _readByte(self):
+        """
+        read a byte and increase the curose
+        """
+        result = self.binary[self.cursor]
+        self.cursor += 1
+        return result
+
+    def _readSignedByte(self):
+        """
+        TODO
+        """
+        result = self.binary[self.cursor]
+        self.cursor += 1
+        return result
+
+    def _readShort(self):
+        """
+        read a short and increase the cursor
+        """
+        result = unpack("h", self.binary[self.cursor:self.cursor + 2])[0]
+        self.cursor += 2
+        return result
+
+    def _readBool(self):
+        """
+        read a bool and increase the cursor
+        """
+        result = unpack("?", self.binary[self.cursor:self.cursor + 1])[0]
+        self.cursor += 1
+        return result
+    
+    def _skip(self, inc):
+        """
+        move the cursor
+        """
+        self.cursor += inc
+
 
 class GuitarProToMidiConverter(Converter):
     """
@@ -18,10 +111,13 @@ class GuitarProToMidiConverter(Converter):
         self.cursor = 0
         self.data = None
 
+    def otherConvert(self):
+        pass
     def convert(self, filePath, outputName=None):
-        with open(filePath, mode='rb') as file:  # b is important -> binary
-            self.data = file.read()
+        
         props = {}
+
+
 
         # read Infos
         # TODO split that into multiple functions
@@ -194,7 +290,7 @@ class GuitarProToMidiConverter(Converter):
                                 fifth = self._readByte()
                                 ninth = self._readByte()
                                 eleventh = self._readByte()
-                                firstFret = = self._readInt()
+                                firstFret = self._readInt()
                                 strings = [self._readInt() for fret in range(7)]
                                 barresCount = self._readByte()
                                 barreFrets = [self._readByte() for bla in range(5)]
@@ -219,69 +315,7 @@ class GuitarProToMidiConverter(Converter):
 
         print("lol ?")
 
-    def _readIntByteString(self):
-        """
-        read the size(int) length(byte) string(char*length)
-        and move the cursor by size +4 ?
-        """
-        size = self._readInt() - 1
-        return self._readByteString(size)
 
-    def _readByteString(self, size):
-        """
-        read the length(byte) string(char*length)
-        and move the cursor by size
-        """
-        length = self._readByte()
-        return self._readString(size)[:length]
-
-    def _readString(self, length):
-        """
-        read string and increase the cursor
-        """
-        result = "".join([c.decode("latin-1") for c in unpack("c" * length, self.data[self.cursor:self.cursor + length])])
-        self.cursor += length
-        return result
-
-    def _readInt(self):
-        """
-        read an int and increase the curose
-        """
-        result = unpack("i", self.data[self.cursor:self.cursor + 4])[0]
-        self.cursor += 4
-        return result
-
-    def _readByte(self):
-        """
-        read a byte and increase the curose
-        """
-        result = self.data[self.cursor]
-        self.cursor += 1
-        return result
-
-    def _readSignedByte(self):
-        """
-        TODO
-        """
-        result = self.data[self.cursor]
-        self.cursor += 1
-        return result
-
-    def _readShort(self):
-        """
-        read a short and increase the cursor
-        """
-        result = unpack("h", self.data[self.cursor:self.cursor + 2])[0]
-        self.cursor += 2
-        return result
-
-    def _readBool(self):
-        """
-        read a bool and increase the cursor
-        """
-        result = unpack("?", self.data[self.cursor:self.cursor + 1])[0]
-        self.cursor += 1
-        return result
 
 
 g = GuitarProToMidiConverter()
