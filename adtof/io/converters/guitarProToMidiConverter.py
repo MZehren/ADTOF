@@ -1,33 +1,85 @@
+from collections import OrderedDict
 from struct import unpack
+from typing import List
 
 from adtof.io import MidiProxy
 from adtof.io.converters import Converter, PhaseShiftConverter
-import string
 
-# from dtw import dtw
 
-class binaryReader(Object):
+class Field(object):
+
+    def __init__(self, *args, condition=None, repetition=None, postProcessing=None):
+        """[summary]
+        
+        Arguments:
+            object {[type]} -- [description]
+            name {[type]} -- [description]
+            type {[type]} -- [description]
+        
+        Keyword Arguments:
+            condition {[type]} -- [description] (default: {None})
+        """
+        self.args = args
+        self.condition = condition
+        self.repetition = repetition
+        self.postProcessing = postProcessing
+
+
+class IntByteString(Field):
+    pass
+
+
+class ByteString(Field):
+    pass
+
+
+class String(Field):
+    pass
+
+
+class Int(Field):
+    pass
+
+
+class Byte(Field):
+    pass
+
+
+class GroupField(Field):
+    pass
+
+
+class BinaryReader(object):
 
     def __init__(self, path):
-        with open(path, mode='rb') as file: 
+        with open(path, mode='rb') as file:
             self.binary = file.read()
         self.cursor = 0
         self.data = {}
         self.types = {
-            "ibs": self._readIntByteString,
-            "bs": self._readByteString,
-            "s":self._readString,
-            "i":self._readInt,
-            "B":self._readByte,
-            "sB":self._readSignedByte,
-            "S":self._readShort,
-            "?":self._readBool,
-            "s":self._skip
+            IntByteString: self._readIntByteString,
+            ByteString: self._readByteString,
+            String: self._readString,
+            Int: self._readInt,
+            Byte: self._readByte,
+            "sB": self._readSignedByte,
+            "S": self._readShort,
+            "?": self._readBool,
+            "s": self._skip
         }
-    
-    def readField(name, type, *args):
-        String
-        self.data[name] = self.types[type](*args)
+
+    def readFields(self, fieldsTree: OrderedDict):
+        # TODO make it possible to have a tree instead of a list. So a Field which is group of fields
+        for field in fieldsTree:
+            self.readField(field)
+
+    def readField(self, field: Field):
+        if field.repetition:
+            self.data[field.name] = [self.types[type(field)](*field.args) for v in field.repetition(self.data)]
+        else:
+            self.data[field.name] = self.types[type(field)](*field.args)
+        if field.postProcessing:
+            self.data[field.name] = field.postProcessing(self.data[field.name])
 
     def _readIntByteString(self):
         """
@@ -49,7 +101,8 @@ class binaryReader(Object):
         """
         read string and increase the cursor
         """
-        result = "".join([c.decode("latin-1") for c in unpack("c" * length, self.binary[self.cursor:self.cursor + length])])
+        result = "".join(
+            [c.decode("latin-1") for c in unpack("c" * length, self.binary[self.cursor:self.cursor + length])])
         self.cursor += length
         return result
 
@@ -92,7 +145,7 @@ class binaryReader(Object):
         result = unpack("?", self.binary[self.cursor:self.cursor + 1])[0]
         self.cursor += 1
         return result
-    
+
     def _skip(self, inc):
         """
         move the cursor
@@ -108,26 +161,38 @@ class GuitarProToMidiConverter(Converter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.cursor = 0
-        self.data = None
 
-    def otherConvert(self):
-        pass
+    def otherConvert(self, filePath):
+        b = BinaryReader(filePath)
+
+        # Meta
+    #     {
+    #     "version": "ByteString",
+    #     "title": "IntByteString",
+    #     "meta": ["IntByteString"]*8,
+    #     "noteCount": "Int",
+    #     "notes": ["IntByteString"]*"@noteCount"
+    # }
+        b.readFields([("version", ByteString(30, postProcessing=lambda x: [int(v) for v in x[-4:].split(".")])),
+                      ("title", IntByteString()), ("meta", [IntByteString(repetition=lambda d: range(8))]),
+                      Int("notesCount"),
+                      IntByteString("notes", repetition=lambda d: range(d["notesCount"])),
+                      Int("lyricsTrackChoice")])
+
+        # lyrics
+        for i in range(5):
+            b.readField(Int("lyricStartingMeasure"))
+
+        b.readFields(skeleton)
+        print(b.data)
+
     def convert(self, filePath, outputName=None):
-        
-        props = {}
 
-
+        self.otherConvert(filePath)
 
         # read Infos
         # TODO split that into multiple functions
-        version = self._readByteString(30)
-        props["versionMajor"], props["versionMinor"] = [int(v) for v in version[-4:].split(".")]
-        for key in ["title", "subtitle", "interpret", "album", "words", "music", "copyright", "tab", "instructional"]:
-            props[key] = self._readIntByteString()
-        props["notesCount"] = self._readInt()
-        for i in range(props["notesCount"]):
-            self._readIntByteString()
+
         props["lyricsTrackChoice"] = self._readInt()
         for i in range(5):
             lyricStartingMeasure = self._readInt()
@@ -138,11 +203,15 @@ class GuitarProToMidiConverter(Converter):
             rseEqualizer = self._readSignedByte()
         props["pageSetup"] = {
             "pageSize": [self._readInt(), self._readInt()],
-            "padding": [self._readInt(), self._readInt(), self._readInt(), self._readInt()],
+            "padding": [self._readInt(), self._readInt(),
+                        self._readInt(), self._readInt()],
             "scoreSizeProportion": self._readInt(),
             "headerAndFooter": self._readShort()
         }
-        for key in ["title", "subtitle", "artist", "album", "words", "music", "wordsAndMusic", "copyright1", "copyright2", "pageNumber"]:
+        for key in [
+                "title", "subtitle", "artist", "album", "words", "music", "wordsAndMusic", "copyright1", "copyright2",
+                "pageNumber"
+        ]:
             props["pageSetup"][key] = self._readIntByteString()
         props["tempoName"] = self._readIntByteString()
         tempo = self._readInt()
@@ -168,15 +237,23 @@ class GuitarProToMidiConverter(Converter):
                 self.cursor += 1
             flags = self._readByte()
             header = {
-                "tempo": tempo,
-                "timeSignature.numerator": self._readSignedByte() if flags & 0x01 else None,
-                "timeSignature.denominator": self._readSignedByte() if flags & 0x02 else None,
+                "tempo":
+                    tempo,
+                "timeSignature.numerator":
+                    self._readSignedByte() if flags & 0x01 else None,
+                "timeSignature.denominator":
+                    self._readSignedByte() if flags & 0x02 else None,
                 "isRepeatOpen": (flags & 0x04) != 0,
-                "repeatClose": self._readSignedByte() if flags & 0x08 else None,
-                "repeatAlternatives": self._readByte() if flags & 0x10 else None,
-                "marker": [self._readIntByteString(),
-                           self._readByte(), self._readByte(),
-                           self._readByte(), self._readByte()] if flags & 0x20 else None,
+                "repeatClose":
+                    self._readSignedByte() if flags & 0x08 else None,
+                "repeatAlternatives":
+                    self._readByte() if flags & 0x10 else None,
+                "marker":
+                    [self._readIntByteString(),
+                     self._readByte(),
+                     self._readByte(),
+                     self._readByte(),
+                     self._readByte()] if flags & 0x20 else None,
                 "root": [self._readSignedByte(), self._readSignedByte()] if flags & 0x40 else None,
                 "hasDoubleBar": (flags & 0x80) != 0
             }
@@ -203,16 +280,16 @@ class GuitarProToMidiConverter(Converter):
             useRSE = flags1 & 0x07
             indicateTuning = flags1 & 0x08
 
-            name =  self._readByteString(40)
+            name = self._readByteString(40)
             stringCount = self._readInt()
 
             for j in range(7):
                 iTuning = self._readInt()
-            
+
             port = self._readInt()
             # channel
             index = self._readInt()
-            effectChannel = self._readInt() -1
+            effectChannel = self._readInt() - 1
             fretCount = self._readInt()
             offset = self._readInt()
             color = [self._readByte() for c in range(4)]
@@ -259,7 +336,7 @@ class GuitarProToMidiConverter(Converter):
             self.cursor += 2
         else:
             self.cursor += 1
-        
+
         # readMeasures
         for header in headers:
             # if header == 0x60:
@@ -275,7 +352,7 @@ class GuitarProToMidiConverter(Converter):
                         durationIsDoted = flags & 0x01 != 0
                         if flags & 0x20:
                             iTuplet = self._readInt()
-                        if flags & 0x02: #readChord
+                        if flags & 0x02:  #readChord
                             newFormat = self._readBool()
                             if newFormat:
                                 isSharp = self._readBool()
@@ -284,7 +361,7 @@ class GuitarProToMidiConverter(Converter):
                                 typeOf = self._readByte()
                                 extension = self._readByte()
                                 bass = self._readInt()
-                                tonality = = self._readInt()
+                                tonality = self._readInt()
                                 add = self._readBool()
                                 name = self._readIntByteString()
                                 fifth = self._readByte()
@@ -312,10 +389,7 @@ class GuitarProToMidiConverter(Converter):
                         # if ((flags & 0x08) != 0) beat.effect = readBeatEffects(effect);
                         # if ((flags & 0x10) != 0)
 
-
         print("lol ?")
-
-
 
 
 g = GuitarProToMidiConverter()
