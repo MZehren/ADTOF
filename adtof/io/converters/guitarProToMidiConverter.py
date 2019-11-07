@@ -23,25 +23,31 @@ class GuitarProToMidiConverter(Converter):
             binary = file.read()
 
         gp = guitarpro.parse(filePath)
-        midi = self.generateMidi(gp)
-        return
+        generatedMidi = self.generateMidi(gp)
+        return generatedMidi
 
     def generateMidi(self, gp):
-        print(gp)
+        notes = [[beat.start, note] for track in gp.tracks if track.channel.isPercussionChannel for measure in track.measures
+                 for voice in measure.voices for beat in voice.beats for note in beat.notes]
+        notes.sort(key=lambda note: note[0])
+
+        track = midi.Track()
+        cursor = 0
+        for start, note in notes:
+            on = midi.NoteOnEvent(tick=start - cursor, velocity=note.velocity, pitch=note.value)
+            track.append(on)
+            off = midi.NoteOffEvent(tick=0, pitch=note.value)
+            track.append(off)
+            cursor = start
+        track.append(midi.EndOfTrackEvent(tick=1))
         pattern = midi.Pattern()
-        tick = 0
-        for track in gp.tracks:
-            if not track.channel.isPercussionChannel:
-                continue
-            for measure in track.measures:
-                for voice in measure.voices:
-                    for beat in voice.beats:
-                        on = midi.NoteOnEvent(tick=0, velocity=20, pitch=midi.G_3)
+        pattern.append(track)
+        return pattern
 
-
-
-        
 
 g = GuitarProToMidiConverter()
-g.convert("/home/mickael/Documents/Datasets/drumsTranscription/Transcriptions [By Alex Rudinger]/01 AAL/01 GuitarPro Files/01 Tempting Time.gp5")
+miskdf = g.convert(
+    "/home/mickael/Documents/Datasets/drumsTranscription/Transcriptions [By Alex Rudinger]/01 AAL/01 GuitarPro Files/01 Tempting Time.gp5"
+)
+midi.write_midifile("/home/mickael/Documents/Datasets/drumsTranscription/Transcriptions [By Alex Rudinger]/01 AAL/test.mid", miskdf)
 # g.convert("E:/ADTSets/Transcriptions [By Alex Rudinger]/01 AAL/01 GuitarPro Files/01 Tempting Time.gp5")
