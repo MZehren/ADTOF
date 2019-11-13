@@ -40,7 +40,7 @@ class OnsetsAlignementConverter(Converter):
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath):
         midi = MidiProxy(inputMidiPath)
-        midiOnsets = midi.getOnsets()
+        midiOnsets = midi.getOnsets() # TODO: try Madmom's onset detection 
 
         y, sr = librosa.load(inputMusicPath)
         musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
