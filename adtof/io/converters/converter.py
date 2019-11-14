@@ -62,30 +62,30 @@ class Converter(object):
         results = defaultdict(list)
         #Check anything convertible
         for root, _, files in os.walk(rootFolder):
-            if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
-                                                       root.split("/")[-1] == ""):  # Add rbma files
-                midifolder = os.path.join(root, "annotations/drums")
-                midiFiles = [os.path.join(midifolder, f) for f in os.listdir(midifolder) if f.endswith(".txt")]
+            # if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
+            #                                            root.split("/")[-1] == ""):  # Add rbma files
+            #     midifolder = os.path.join(root, "annotations/drums")
+            #     midiFiles = [os.path.join(midifolder, f) for f in os.listdir(midifolder) if f.endswith(".txt")]
 
-                audioFolder = os.path.join(root, "audio")
-                audioFiles = [
-                    os.path.join(audioFolder, f)
-                    for f in os.listdir(audioFolder)
-                    if f.endswith(".mp3") or f.endswith(".wav")
-                ]
+            #     audioFolder = os.path.join(root, "audio")
+            #     audioFiles = [
+            #         os.path.join(audioFolder, f)
+            #         for f in os.listdir(audioFolder)
+            #         if f.endswith(".mp3") or f.endswith(".wav")
+            #     ]
 
-                if len(midiFiles) != len(audioFiles):
-                    raise Exception("the rbma audio files without drums are not removes (6-7-26) ")
-                for i, _ in enumerate(midiFiles):
-                    results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
+            #     if len(midiFiles) != len(audioFiles):
+            #         raise Exception("the rbma audio files without drums are not removed (6-7-26) ")
+            #     for i, _ in enumerate(midiFiles):
+            #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
 
-            elif psc.isConvertible(root):
-                results[psc.getTrackName(root)].append((root, "", psc))
-            else:
-                for file in files:
-                    path = os.path.join(root, file)
-                    if rbc.isConvertible(path):
-                        results[rbc.getTrackName(path)].append((path, "", psc))
+            if psc.isConvertible(root):
+                results[psc.getTrackName(root)].append((root, psc))
+            # else:
+            #     for file in files:
+            #         path = os.path.join(root, file)
+            #         if rbc.isConvertible(path):
+            #             results[rbc.getTrackName(path)].append((path, "", psc))
 
         # Remove duplicate
         return results
@@ -99,7 +99,7 @@ class Converter(object):
         keywords = [
             "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)",
             "(2x Bass Pedals)", "2xbp", "2x", "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)",
-            "(Reduced 2x Bass Pedal+)", "1x", "(B)"
+            "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
         ]
 
         contained = [k for k in keywords if k in name]
@@ -110,7 +110,7 @@ class Converter(object):
             return name, 10000
 
     @staticmethod
-    def _mergeFileNames(candidates, similitudeThreshold=1):
+    def _mergeFileNames(candidates, similitudeThreshold=0.9):
         """
         Merge the multiple version of the tracks between "foo_expert" and "foo_expert+"
         1: remove the keywords like "expert" or "(double_bass)"
@@ -175,46 +175,9 @@ class Converter(object):
         return candidates
 
     @staticmethod
-    def generateGenerator(data):
-        """
-        Create a generator with the tracks in data
-        TODO: this is ugly
-        """
-
-        def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
-            """
-            [36, 40, 41, 46, 49]
-            """
-            mir = MIR()
-
-            for midiPath, audiPath, converter in data:
-                try:
-                    # TODO: update: _, audio, _ = converter.getConvertibleFiles(path)
-                    # Get the y: midi in dense matrix representation
-                    y = converter.convert(midiPath).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
-                    y = y[midiLatency:]
-                    if np.sum(y) == 0:
-                        warnings.warn("Midi doesn't have notes " + midiPath)
-                        continue
-
-                    # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
-                    x = mir.open(audiPath)
-                    x = np.array([x[i:i + context] for i in range(len(x) - context)])
-                    x = x.reshape(x.shape + (1,))  # Add the channel dimension
-
-                    for i in range(min(len(y)-1, len(x)-1)):
-                        sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
-                        yield x[i], y[i]
-                except Exception as e:
-                    print(midiPath, e)
-            print("DEBUG: real new epoch")
-        return gen
-
-    @staticmethod
     def convertAll(rootFolder, test_size=0.1):
         """
         convert all tracks in the good format
-        and return a dataset.
         """
 
         candidates = Converter._getFileCandidates(rootFolder)
@@ -224,12 +187,50 @@ class Converter(object):
 
         candidateName = list(candidates.values())
         candidateName.sort(key=lambda x: x[0])
+
+    @staticmethod
+    def getTFGenerator(candidateName, test_size=0.1):
+        """
+        WIP: Create a generator dynamically generating converted tracks        
+        """
+        def generateGenerator(data):
+            """
+            Create a generator with the tracks in data
+            TODO: this is ugly
+            """
+            def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
+                """
+                [36, 40, 41, 46, 49]
+                """
+                mir = MIR()
+                for midiPath, audiPath, converter in data:
+                    try:
+                        # TODO: update: _, audio, _ = converter.getConvertibleFiles(path)
+                        # Get the y: midi in dense matrix representation
+                        y = converter.convert(midiPath).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
+                        y = y[midiLatency:]
+                        if np.sum(y) == 0:
+                            warnings.warn("Midi doesn't have notes " + midiPath)
+                            continue
+
+                        # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
+                        x = mir.open(audiPath)
+                        x = np.array([x[i:i + context] for i in range(len(x) - context)])
+                        x = x.reshape(x.shape + (1,))  # Add the channel dimension
+
+                        for i in range(min(len(y) - 1, len(x) - 1)):
+                            # sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
+                            yield x[i], y[i]
+                    except Exception as e:
+                        print(midiPath, e)
+                print("DEBUG: real new epoch")
+            return gen
+
         train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
 
         # next(Converter.generateGenerator(train)())
-
-        trainDS = tf.data.Dataset.from_generator(Converter.generateGenerator(train), (tf.float64, tf.int64))
-        testDS = tf.data.Dataset.from_generator(Converter.generateGenerator(test), (tf.float64, tf.int64))
+        trainDS = tf.data.Dataset.from_generator(generateGenerator(train), (tf.float64, tf.int64))
+        testDS = tf.data.Dataset.from_generator(generateGenerator(test), (tf.float64, tf.int64))
         return trainDS, testDS
 
     @staticmethod
