@@ -17,6 +17,9 @@ class OnsetsAlignementConverter(Converter):
     Converter which tries to align the midi file to the music file as close as possible 
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
+    CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
+    PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
+
 
     # def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
     #     converted = 0
@@ -45,8 +48,8 @@ class OnsetsAlignementConverter(Converter):
 
         # y, sr = librosa.load(inputMusicPath)
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
-        proc = madmom.features.onsets.CNNOnsetProcessor()
-        musicOnsets = 
+        act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
+        musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
 
         error, correction = self.getError(midiOnsets, musicOnsets)
 

@@ -4,6 +4,8 @@
 Convert the PhaseShift's MIDI file format into real MIDI
 """
 import argparse
+import logging
+import os
 
 from adtof.io.converters import OnsetsAlignementConverter
 
@@ -13,23 +15,20 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
+    logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('rootFolder', type=str,
-                        help="Path to the root folder of the conversion.")
-    parser.add_argument("-i", '--input', dest="inputName", type=str,
-                        default="notes_std.mid", help="name of the midi files to convert.")
-    parser.add_argument(
-        '-o',
-        '--output',
-        dest='outputName',
-        type=str,
-        default="notes_aligned.mid",
-        help="Name of the MIDI file created from the alignment. Default to 'notes_aligned.mid'"
-    )
+    parser.add_argument('inputFolder', type=str, help="Path to the chart folder.")
     args = parser.parse_args()
 
     oac = OnsetsAlignementConverter()
-    oac.convertRecursive(args.rootFolder, args.outputName, [args.inputName])
+    files = [f[:-4] for f in os.listdir(os.path.join(args.inputFolder, "audio"))] #TODO: hardcoded .ogg extension
+    data = [[
+        os.path.join(args.inputFolder, "audio", f + ".ogg"),
+        os.path.join(args.inputFolder, "midi_converted", f + ".midi"),
+        os.path.join(args.inputFolder, "midi_aligned", f + ".midi")
+    ] for f in files]
+    for audio, midiIn, midiOut in data:
+        oac.convert(audio, midiIn, midiOut)
     print("Done!")
 
 

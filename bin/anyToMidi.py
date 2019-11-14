@@ -17,7 +17,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='Process a Phase Shift chart folder and convert the MIDI file to standard MIDI')
     parser.add_argument('inputFolder', type=str, help="Path to the chart folder.")
-    parser.add_argument('outputFolder', type=str, help="Path to the destinati=ion folder")
+    parser.add_argument('outputFolder', type=str, help="Path to the destination folder")
     args = parser.parse_args()
 
     Converter.convertAll(args.inputFolder, args.outputFolder)

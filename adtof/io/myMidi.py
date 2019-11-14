@@ -283,7 +283,7 @@ class PythonMidiProxy():
         """
         for i, track in enumerate(self.tracks):
             # add the delay
-            if delay != 0:
+            if delay > 0:
                 if i == 0:
                     # If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
                     event = midi.SetTempoEvent()
@@ -293,6 +293,8 @@ class PythonMidiProxy():
                 else:
                     # If this is a standard track, add a delay of 4 beats to the first event
                     track[0].tick += 4 * self.tracks.resolution
+            if delay < 0:
+                raise NotImplementedError()
 
     def getEventTick(self, event):
         return event.tick
@@ -418,8 +420,10 @@ class PythonMidiProxy():
     def getOnsets(self, separated=False):
         """
         Return a list a positions in seconds of the notes_on events
+
+        - separated (default False): return a dict for the position of each notes
         """
-        allNotesPositions = []
+        allNotesPositions = set([])
         notesPositions = defaultdict(list)
         positionsLookup = self.positionsLookup()
 
@@ -427,8 +431,7 @@ class PythonMidiProxy():
             for j, event in enumerate(track):
                 if self.isEventNoteOn(event):
                     notesPositions[event.pitch].append(positionsLookup[i][j]["timeAbsolute"])
-                    if event.tick:
-                        allNotesPositions.append(positionsLookup[i][j]["timeAbsolute"])
+                    allNotesPositions.add(positionsLookup[i][j]["timeAbsolute"])
 
         if separated:
             return notesPositions
