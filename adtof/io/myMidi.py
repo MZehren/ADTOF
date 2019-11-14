@@ -24,23 +24,6 @@ def lazy_property(fn):
     return _lazy_property
 
 
-# class MidiProxy(object):
-
-#     def _getProxy(self):
-#         try:
-#             import midi
-#             return PythonMidiProxy
-#         except ImportError:
-#             logging.info("python-midi import error, trying mido")
-
-#         try:
-#             from mido import MidiFile
-#             import mido
-#             return MidoProxy
-#         except ImportError:
-#             logging.info("python-midi import error, trying mido")
-
-
 class MidoProxy(MidiFile):
     """
     TODO: DEPRECATED
