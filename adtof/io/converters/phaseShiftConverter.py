@@ -3,14 +3,16 @@
 import argparse
 import json
 import logging
+import ntpath
 import os
 import sys
 import warnings
+from shutil import copyfile
 
 import pkg_resources
 
-from adtof.io.converters import Converter
 from adtof.io import MidiProxy
+from adtof.io.converters import Converter
 
 
 class PhaseShiftConverter(Converter):
@@ -39,14 +41,14 @@ class PhaseShiftConverter(Converter):
     _m2r = pkg_resources.resource_string(__name__, "mappingDictionaries/standardMidiToReduced.json").decode()
     REDUCED_MIDI = {int(key): int(value) for key, value in json.loads(_m2r).items()}
 
-    def convert(self, folderPath, outputName=None, addDelay=True):
+    def convert(self, inputFolder, outputFolder, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events
         """
         # read the ini file
         delay = None
         try:
-            metadata = self.readIni(os.path.join(folderPath, PhaseShiftConverter.INI_NAME))
+            metadata = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
             delay = float(metadata["delay"]) / \
                 1000 if "delay" in metadata else 0.
 
@@ -59,26 +61,30 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = MidiProxy(os.path.join(folderPath, PhaseShiftConverter.PS_MIDI_NAME))
+        midi = MidiProxy(os.path.join(inputFolder, PhaseShiftConverter.PS_MIDI_NAME))
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
 
         # Write the resulting file
-        if outputName:
-            midi.save(os.path.join(folderPath, outputName))
+        if outputFolder:
+            trackName = self.getTrackName(inputFolder)
+            midi.save(os.path.join(outputFolder, "midi_converted", trackName + ".midi"))
+
+            _, audioFile, _ = self.getConvertibleFiles(inputFolder)
+            copyfile(os.path.join(inputFolder, audioFile), os.path.join(outputFolder, "audio", trackName + ".ogg"))
 
         return midi
 
-    def isConvertible(self, folderPath):
-        return all(self.getConvertibleFiles(folderPath))
+    def isConvertible(self, inputFolder):
+        return all(self.getConvertibleFiles(inputFolder))
 
-    def getTrackName(self, folderPath):
-        ini = self.readIni(os.path.join(folderPath, PhaseShiftConverter.INI_NAME))
+    def getTrackName(self, inputFolder):
+        ini = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
         if "name" in ini:
-            return ini["name"]
+            return ini["name"].replace("/", "-")
 
-    def getConvertibleFiles(self, folderPath):
+    def getConvertibleFiles(self, inputFolder):
         """
         Return the name of the midiFile and AudioFile of a Phaseshift folder
         """
@@ -90,35 +96,14 @@ class PhaseShiftConverter(Converter):
                     return a
             return None
 
-        if os.path.isdir(folderPath) == False:
+        if os.path.isdir(inputFolder) == False:
             return None, None, None
 
-        files = os.listdir(folderPath)
+        files = os.listdir(inputFolder)
         midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files)
         audioFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
         iniFile = PhaseShiftConverter.INI_NAME if PhaseShiftConverter.INI_NAME in files else None
         return midiFile, audioFile, iniFile
-
-    def convertRecursive(self, rootFodler, outputName):
-        """
-        Go recursively inside the folders and convert everything convertible
-        TODO: add filtering on duplicated files (ie, between double bass versions and simplified ones)
-        """
-        converted = 0
-        failed = 0
-        for root, _, _ in os.walk(rootFodler):
-            # for file in files:
-            if self.isConvertible(root):
-                # try:
-                midi = self.convert(root, outputName=outputName)
-                print("converted", root, len(midi.getOnsets()))
-                converted += 1
-                # except:
-                #     logging.error(("Unexpected error:", sys.exc_info()[0], sys.exc_info()[1]))
-                #     logging.error(("for file:", root))
-                #     failed += 1
-
-        print("converted:", converted, "failed:", failed)
 
     def readIni(self, iniPath):
         """
@@ -155,9 +140,7 @@ class PhaseShiftConverter(Converter):
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [
-                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
-                ]
+                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -195,8 +178,7 @@ class PhaseShiftConverter(Converter):
 
             # Remove empty events with a pitch set to None from the convertPitches method:
             eventsToRemove = [
-                j for j, event in enumerate(track)
-                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+                j for j, event in enumerate(track) if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
             ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
@@ -225,8 +207,7 @@ class PhaseShiftConverter(Converter):
             # Convert to standard midi pitches and apply the tom modifiers
             if pitch in PhaseShiftConverter.TOMS_MODIFIER:
                 pitch = 0  # this is not a real note played, but a modifier
-            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[
-                    pitch] in allPitches:
+            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
                 # this pitch is played with his modifier
                 pitch = PhaseShiftConverter.PS_MIDI[PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch]]
             elif pitch in PhaseShiftConverter.PS_MIDI:
@@ -236,8 +217,8 @@ class PhaseShiftConverter(Converter):
                 pitch = 0
 
             # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
-            pitch = PhaseShiftConverter.REDUCED_MIDI[
-                pitch] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
+            pitch = PhaseShiftConverter.REDUCED_MIDI[pitch
+                                                     ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
 
             # Remove duplicated pitches
             if pitch in existingPitches:
@@ -247,4 +228,3 @@ class PhaseShiftConverter(Converter):
             midi.setEventPitch(event, pitch)
 
         return events
-

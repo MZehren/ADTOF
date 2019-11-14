@@ -18,7 +18,7 @@ class Converter(object):
     Base class to convert file formats
     """
 
-    def convert(self, inputPath, outputName=None):
+    def convert(self, inputPath, outputFolder):
         """
         Base method to convert a file
         if the outputName is not None, the file is also written to the disk
@@ -80,11 +80,11 @@ class Converter(object):
             #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
 
             if psc.isConvertible(root):
-                results[psc.getTrackName(root)].append((root, psc))
+                results[psc.getTrackName(root)].append((root, psc)) # TODO: change the hardcoded format to something simpler to use
             # else:
             #     for file in files:
             #         path = os.path.join(root, file)
-            #         if rbc.isConvertible(path):
+            #         if rbc.isConverinputFolder):
             #             results[rbc.getTrackName(path)].append((path, "", psc))
 
         # Remove duplicate
@@ -97,17 +97,16 @@ class Converter(object):
         if it contains ainy, remove them and return a priority score
         """
         keywords = [
-            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)",
-            "(2x Bass Pedals)", "2xbp", "2x", "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)",
-            "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
+            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)", "(2x Bass Pedals)", "2xbp", "2x",
+            "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)", "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
         ]
 
         contained = [k for k in keywords if k in name]
         if len(contained):
             longest = max(contained, key=lambda k: len(k))
-            return name.replace(longest, ''), keywords.index(longest)
+            return name.replace(longest, '').replace(' ', ''), keywords.index(longest)
         else:
-            return name, 10000
+            return name.replace(' ', ''), 10000
 
     @staticmethod
     def _mergeFileNames(candidates, similitudeThreshold=0.9):
@@ -162,9 +161,7 @@ class Converter(object):
         # from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
-            psTrakcs = [
-                convertor for convertor in candidates[candidate] if isinstance(convertor[2], PhaseShiftConverter)
-            ]
+            psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)]
             if len(psTrakcs) > 0:
                 # TODO: select the best one
                 candidates[candidate] = psTrakcs[0]
@@ -175,29 +172,36 @@ class Converter(object):
         return candidates
 
     @staticmethod
-    def convertAll(rootFolder, test_size=0.1):
+    def convertAll(inputFolder, outputFolder):
         """
         convert all tracks in the good format
         """
 
-        candidates = Converter._getFileCandidates(rootFolder)
+        # Get all possible convertible files and remove duplicated ones
+        candidates = Converter._getFileCandidates(inputFolder)
         candidates = Converter._mergeFileNames(candidates)
         candidates = Converter._pickVersion(candidates)
-        logging.info("number of tracks in the dataset: " + str(len(candidates)))
-
         candidateName = list(candidates.values())
         candidateName.sort(key=lambda x: x[0])
+        logging.info("number of tracks in the dataset: " + str(len(candidates)))
+        
+        # Do the conversion
+        for path, converter in candidates.values():
+            converter.convert(path, outputFolder)
+
 
     @staticmethod
     def getTFGenerator(candidateName, test_size=0.1):
         """
         WIP: Create a generator dynamically generating converted tracks        
         """
+
         def generateGenerator(data):
             """
             Create a generator with the tracks in data
             TODO: this is ugly
             """
+
             def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
                 """
                 [36, 40, 41, 46, 49]
@@ -216,7 +220,7 @@ class Converter(object):
                         # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
                         x = mir.open(audiPath)
                         x = np.array([x[i:i + context] for i in range(len(x) - context)])
-                        x = x.reshape(x.shape + (1,))  # Add the channel dimension
+                        x = x.reshape(x.shape + (1, ))  # Add the channel dimension
 
                         for i in range(min(len(y) - 1, len(x) - 1)):
                             # sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
@@ -224,6 +228,7 @@ class Converter(object):
                     except Exception as e:
                         print(midiPath, e)
                 print("DEBUG: real new epoch")
+
             return gen
 
         train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)

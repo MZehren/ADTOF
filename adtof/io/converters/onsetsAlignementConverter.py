@@ -2,6 +2,7 @@ import os
 from bisect import bisect_left
 
 import librosa
+import madmom
 import numpy as np
 
 from adtof.io.converters import Converter
@@ -17,41 +18,42 @@ class OnsetsAlignementConverter(Converter):
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
-    def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
-        converted = 0
-        failed = 0
-        if midiCandidates is None:
-            midiCandidates = PhaseShiftConverter.PS_MIDI_NAMES
-        if musicCandidates is None:
-            musicCandidates = PhaseShiftConverter.PS_AUDIO_NAMES
-        for root, _, files in os.walk(rootFodler):
-            midiFiles = [file for file in midiCandidates if file in files]
-            musicFiles = [file for file in musicCandidates if file in files]
+    # def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
+    #     converted = 0
+    #     failed = 0
+    #     if midiCandidates is None:
+    #         midiCandidates = PhaseShiftConverter.PS_MIDI_NAMES
+    #     if musicCandidates is None:
+    #         musicCandidates = PhaseShiftConverter.PS_AUDIO_NAMES
+    #     for root, _, files in os.walk(rootFodler):
+    #         midiFiles = [file for file in midiCandidates if file in files]
+    #         musicFiles = [file for file in musicCandidates if file in files]
 
-            if midiFiles and musicFiles:
-                try:
-                    self.convert(os.path.join(root, musicFiles[0]), os.path.join(root, midiFiles[0]), os.path.join(root, outputName))
-                    print("converted", root)
-                    converted += 1
-                except ValueError:
-                    print(ValueError)
-                    failed += 1
-        print("converted", converted, "failed", failed)
+    #         if midiFiles and musicFiles:
+    #             try:
+    #                 self.convert(os.path.join(root, musicFiles[0]), os.path.join(root, midiFiles[0]), os.path.join(root, outputName))
+    #                 print("converted", root)
+    #                 converted += 1
+    #             except ValueError:
+    #                 print(ValueError)
+    #                 failed += 1
+    #     print("converted", converted, "failed", failed)
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath):
         midi = MidiProxy(inputMidiPath)
-        midiOnsets = midi.getOnsets() # TODO: try Madmom's onset detection 
+        midiOnsets = midi.getOnsets() 
 
-        y, sr = librosa.load(inputMusicPath)
-        musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
+        # y, sr = librosa.load(inputMusicPath)
+        # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
+        proc = madmom.features.onsets.CNNOnsetProcessor()
+        musicOnsets = 
 
         error, correction = self.getError(midiOnsets, musicOnsets)
-
 
         midi.addDelay(correction)
         midi.save(outputPath)
 
-    def getError(self, onsetsA, onsetsB, maxThreshold=0.02):
+    def getError(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
         Compute the average error of onsets close to each other bellow a maxThreshold
 
