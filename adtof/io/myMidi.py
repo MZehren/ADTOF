@@ -281,9 +281,9 @@ class PythonMidiProxy():
         Arguments:
             delay {float} -- delay in second 
         """
-        for i, track in enumerate(self.tracks):
-            # add the delay
-            if delay > 0:
+        # add the delay
+        if delay > 0:
+            for i, track in enumerate(self.tracks):
                 if i == 0:
                     # If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
                     event = midi.SetTempoEvent()
@@ -293,8 +293,15 @@ class PythonMidiProxy():
                 else:
                     # If this is a standard track, add a delay of 4 beats to the first event
                     track[0].tick += 4 * self.tracks.resolution
-            if delay < 0:
-                raise NotImplementedError()
+        elif delay < 0:
+            raise NotImplementedError()
+            # for i, track in enumerate(self.tracks):
+            #     for note in track[:1]:
+            #         if note.tick == 0:
+            #             continue
+            #         note.tick += self.getSecondToTicks(delay, tempo=self.tempoEvents())
+
+
 
     def getEventTick(self, event):
         return event.tick

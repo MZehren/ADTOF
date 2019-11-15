@@ -20,7 +20,6 @@ class OnsetsAlignementConverter(Converter):
     CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
     PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
 
-
     # def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
     #     converted = 0
     #     failed = 0
@@ -44,29 +43,44 @@ class OnsetsAlignementConverter(Converter):
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath):
         midi = MidiProxy(inputMidiPath)
-        midiOnsets = midi.getOnsets() 
+        midiOnsets = midi.getOnsets()
 
         # y, sr = librosa.load(inputMusicPath)
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
         act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
         musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
 
-        error, correction = self.getError(midiOnsets, musicOnsets)
+        error, offset = self.getError(midiOnsets, musicOnsets)
 
-        midi.addDelay(correction)
-        midi.save(outputPath)
+        with open(outputPath + ".txt", "w") as file:
+            file.write("MAE, offset\n" + str(error) + "," + "," + str(offset))
+        # midi.addDelay(-offset)
+        # midi.save(outputPath)
 
     def getError(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
         Compute the average error of onsets close to each other bellow a maxThreshold
 
+        the correction tells how much you should shift B to align with A
+        or -correction you need to shift A to align with B 
         """
+        # Get the alignment between the notes and the onsets
         tuples = [(onsetA, self.findNeighboor(onsetsB, onsetA)) for onsetA in onsetsA]
         tuplesThresholded = [(onsets[0], onsets[1]) for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold]
-        diff = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
-        error = np.mean(np.abs(diff))
-        correction = np.mean(diff)
-        return error, correction
+
+        # # Get the playback difference and apply it
+        # # Doesn't work. the playback rate is way too off
+        # diffPlayback = [(tuplesThresholded[i + 1][0] - tuplesThresholded[i][0]) / (tuplesThresholded[i + 1][1] - tuplesThresholded[i][1])
+        #                 for i in range(len(tuplesThresholded) - 1)]
+        # correctionPlayback = np.mean(diffPlayback)
+        # tuplesThresholded = [(a / correctionPlayback, b) for a, b in tuplesThresholded]
+
+        # get the offset difference
+        diffOffset = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
+        correctionOffset = np.median(diffOffset)
+        remainingError = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
+
+        return remainingError, correctionOffset
 
     def findNeighboor(self, grid, value):
         """

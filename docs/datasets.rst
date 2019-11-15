@@ -19,7 +19,8 @@ There are multiple datasets crowdsourced :
 +--------------------------------+----------------------------------+---------+------------+-----------------------+--------------------------------------------------------------------------------------+
 
 Other potential sources of good quality annotations:
- - https://www.mysongbook.com/free-lessons (mainly classical rock, and the annotations can't be shared)
+ - https://www.mysongbook.com/free-lessons (mainly classical rock, the annotations can't be shared, no alignment)
+ - https://www.midi.com.au
  - https://gumroad.com/alexrudinger#ydMGK
  - https://github.com/mtolly/onyxite-customs
 
