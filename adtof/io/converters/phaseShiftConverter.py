@@ -26,20 +26,94 @@ class PhaseShiftConverter(Converter):
     PS_MIDI_NAMES = ["notes.mid"]
     PS_AUDIO_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
-    # ie.: When the 110 is on, changes the note 98 from hi-hat to high tom for the duration of the note.
-    TOMS_MODIFIER = {110: 98, 111: 99, 112: 100}
-    TOMS_MODIFIER_LOOKUP = {v: k for k, v in TOMS_MODIFIER.items()}
+
     DRUM_ROLLS = 126  # TODO: implement
     CYMBAL_SWELL = 127  # TODO: implement
 
-    # midi notes used by the game PhaseShift and RockBand
-    _ps2m = pkg_resources.resource_string(__name__, "mappingDictionaries/phaseShiftMidiToStandard.json").decode()
-    PS_MIDI = {int(key): int(value) for key, value in json.loads(_ps2m).items()}
-
-    # Convert the redundant classes of midi to the more general one (ie.: the bass drum 35 and 36 are converted to 36)
-    # See https://en.wikipedia.org/wiki/General_MIDI#Percussion for the full list of events
-    _m2r = pkg_resources.resource_string(__name__, "mappingDictionaries/standardMidiToReduced.json").decode()
-    REDUCED_MIDI = {int(key): int(value) for key, value in json.loads(_m2r).items()}
+    # Maps Phase shift/rock band expert difficulty to std midi
+    # TODO: handle "dico flip" event
+    EXPERT_MIDI = {
+        95: 35,
+        96: 35,
+        97: 38,
+        98: {
+            "modifier": 110,
+            True: 45,
+            False: 46
+        },
+        99: {
+            "modifier": 111,
+            True: 43,
+            False: 57
+        },
+        100: {
+            "modifier": 112,
+            True: 41,
+            False: 49
+        }
+    }
+    # Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes on the official charts released
+    ANIMATIONS_MIDI = {
+        51: 41,
+        50: 41,
+        49: 43,
+        48: 43,
+        47: 45,
+        46: 45,
+        42: 51,
+        41: 57,
+        40: 49,
+        39: 57,
+        38: 57,
+        37: 49,
+        36: 49,
+        35: 49,
+        34: 49,
+        32: 60,
+        31: {
+            "modifier": 25,
+            True: 46,
+            False: 42
+        },
+        30: {
+            "modifier": 25,
+            True: 46,
+            False: 42
+        },
+        27: 40,
+        26: 40,
+        24: 36,
+        28: 40,
+        29: 40,
+        43: 51,
+        44: 57,
+        45: 57
+    }
+    # Maps all the midi classes to more abstract consistant ones
+    # ie.: removes which to, is played to "a tom is played"
+    MIDI_REDUCED = {
+        35: 36,
+        36: 36,
+        37: 40,
+        38: 40,
+        40: 40,
+        41: 41,
+        43: 41,
+        45: 41,
+        47: 41,
+        48: 41,
+        50: 41,
+        42: 46,
+        44: 46,
+        46: 46,
+        49: 49,
+        51: 49,
+        52: 49,
+        53: 49,
+        55: 49,
+        57: 49,
+        59: 49
+    }
 
     def convert(self, inputFolder, outputFolder, addDelay=True):
         """
@@ -69,10 +143,15 @@ class PhaseShiftConverter(Converter):
         # Write the resulting file
         if outputFolder:
             trackName = self.getTrackName(inputFolder)
-            midi.save(os.path.join(outputFolder, "midi_converted", trackName + ".midi"))
-
             _, audioFile, _ = self.getConvertibleFiles(inputFolder)
-            copyfile(os.path.join(inputFolder, audioFile), os.path.join(outputFolder, "audio", trackName + ".ogg"))
+
+            outputMidiPath = os.path.join(outputFolder, "midi_converted", trackName + ".midi")
+            outputAudioPath = os.path.join(outputFolder, "audio", trackName + ".ogg")
+            self.checkPathExists(outputMidiPath)
+            self.checkPathExists(outputAudioPath)
+
+            midi.save(outputMidiPath)
+            copyfile(os.path.join(inputFolder, audioFile), outputAudioPath)
 
         return midi
 
@@ -140,7 +219,9 @@ class PhaseShiftConverter(Converter):
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
+                tracksToRemove = [
+                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
+                ]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -156,16 +237,20 @@ class PhaseShiftConverter(Converter):
             # Keep track of the simultaneous notes playing
             notesOn = {}
             notesOff = {}
-            for event in track:
+            for i, event in enumerate(track):
                 # Before the start of a new time step, do the conversion
+                # TODO: clean that: the key in noteOn/off is the base pitch, the pitch in the value.pitch is the modified pitch
+                notePitch = midi.getEventPith(event)
+
                 if midi.getEventTick(event) > 0:
-                    self.convertPitches(notesOn, midi)
-                    # Convert the note off events to the same pitches
-                    self.convertPitches(notesOff, midi)
+                    for notes in [notesOn, notesOff]:  # Convert the note on and off events to the same pitches
+                        conversion = self.convertPitches(notes.keys())
+                        for passedEvent in notes.values():
+                            # If the note is not converted we set it to 0 and remove it later
+                            midi.setEventPitch(passedEvent, conversion.get(passedEvent.pitch, 0))
                     notesOff = {}  # Note off events have no duration, so we remove them
 
-                # Keep track of all the notes
-                notePitch = midi.getEventPith(event)
+                # Keep track of the notes currently playing
                 if midi.isEventNoteOn(event):
                     if notePitch in notesOn:
                         warnings.warn("error MIDI Note On overriding existing note")
@@ -176,9 +261,10 @@ class PhaseShiftConverter(Converter):
                     notesOn.pop(notePitch, None)
                     notesOff[notePitch] = event
 
-            # Remove empty events with a pitch set to None from the convertPitches method:
+            # Remove empty events with a pitch set to 0 from the convertPitches method:
             eventsToRemove = [
-                j for j, event in enumerate(track) if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+                j for j, event in enumerate(track)
+                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
             ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
@@ -187,44 +273,27 @@ class PhaseShiftConverter(Converter):
                 del track[j]
         return midi
 
-    def convertPitches(self, events, midi):
+    def convertPitches(self, pitches):
         """
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to None.
-
-        This function is not pure, it's going to change the items in the dictionnary of events
-
-        Arguments:
-            events: dictionnary of simultaneous midi notes. The key has to be the pitch of the note
         """
-        # All pitches played at this time
-        allPitches = events.keys()
         # keeping track of duplicated pitches after the classes reduction
-        existingPitches = set([])
+        converted = self.remap(pitches, PhaseShiftConverter.ANIMATIONS_MIDI)
+        return converted
 
-        for pitch, event in events.items():
+    def remap(self, pitches, mapping):
+        """
+        Map pitches to a mapped value from a mapping
+        """
+        result = {}
+        for pitch in pitches:
+            if pitch not in mapping:
+                continue
+            mapped = mapping[pitch]
+            if isinstance(mapped, dict):
+                mapped = mapped[mapped["modifier"] in pitches]
 
-            # Convert to standard midi pitches and apply the tom modifiers
-            if pitch in PhaseShiftConverter.TOMS_MODIFIER:
-                pitch = 0  # this is not a real note played, but a modifier
-            elif pitch in PhaseShiftConverter.TOMS_MODIFIER_LOOKUP and PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch] in allPitches:
-                # this pitch is played with his modifier
-                pitch = PhaseShiftConverter.PS_MIDI[PhaseShiftConverter.TOMS_MODIFIER_LOOKUP[pitch]]
-            elif pitch in PhaseShiftConverter.PS_MIDI:
-                # this pitch doesn't have a modifier
-                pitch = PhaseShiftConverter.PS_MIDI[pitch]
-            else:
-                pitch = 0
+            result[pitch] = mapped
 
-            # Remove ambiguous notes (tom alto or tom medium) by converting to base classes (toms)
-            pitch = PhaseShiftConverter.REDUCED_MIDI[pitch
-                                                     ] if pitch in PhaseShiftConverter.REDUCED_MIDI and PhaseShiftConverter.REDUCED_MIDI[pitch] else 0
-
-            # Remove duplicated pitches
-            if pitch in existingPitches:
-                pitch = 0
-
-            existingPitches.add(pitch)
-            midi.setEventPitch(event, pitch)
-
-        return events
+        return result

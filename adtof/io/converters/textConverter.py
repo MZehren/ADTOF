@@ -23,8 +23,6 @@ class TextConverter(Converter):
     ressource = pkg_resources.resource_string(__name__, "mappingDictionaries/MDBDrumsToMidi.json").decode()
     MDBS_MIDI = {key: int(value) for key, value in json.loads(ressource).items()}
 
-    _m2r = pkg_resources.resource_string(__name__, "mappingDictionaries/standardMidiToReduced.json").decode()
-    REDUCED_MIDI = {int(key): int(value) for key, value in json.loads(_m2r).items()}
 
     def convert(self, txtFilePath, outputName=None):
         """

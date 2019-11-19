@@ -37,6 +37,14 @@ class Converter(object):
         """
         raise NotImplementedError()
 
+    def checkPathExists(self, path):
+        """ 
+            Generate the tree of folder if it doesn't exist
+        """
+        directory = os.path.dirname(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
     @staticmethod
     def _getFileCandidates(rootFolder):
         """
@@ -80,7 +88,8 @@ class Converter(object):
             #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
 
             if psc.isConvertible(root):
-                results[psc.getTrackName(root)].append((root, psc)) # TODO: change the hardcoded format to something simpler to use
+                results[psc.getTrackName(root)].append(
+                    (root, psc))  # TODO: change the hardcoded format to something simpler to use
             # else:
             #     for file in files:
             #         path = os.path.join(root, file)
@@ -97,8 +106,9 @@ class Converter(object):
         if it contains ainy, remove them and return a priority score
         """
         keywords = [
-            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)", "(2x Bass Pedals)", "2xbp", "2x",
-            "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)", "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
+            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)",
+            "(2x Bass Pedals)", "2xbp", "2x", "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)",
+            "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
         ]
 
         contained = [k for k in keywords if k in name]
@@ -161,7 +171,9 @@ class Converter(object):
         # from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
-            psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)]
+            psTrakcs = [
+                convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)
+            ]
             if len(psTrakcs) > 0:
                 # TODO: select the best one
                 candidates[candidate] = psTrakcs[0]
@@ -184,11 +196,10 @@ class Converter(object):
         candidateName = list(candidates.values())
         candidateName.sort(key=lambda x: x[0])
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
-        
+
         # Do the conversion
         for path, converter in candidates.values():
             converter.convert(path, outputFolder)
-
 
     @staticmethod
     def getTFGenerator(candidateName, test_size=0.1):
@@ -220,7 +231,7 @@ class Converter(object):
                         # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
                         x = mir.open(audiPath)
                         x = np.array([x[i:i + context] for i in range(len(x) - context)])
-                        x = x.reshape(x.shape + (1, ))  # Add the channel dimension
+                        x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
                         for i in range(min(len(y) - 1, len(x) - 1)):
                             # sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples

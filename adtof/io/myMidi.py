@@ -301,8 +301,6 @@ class PythonMidiProxy():
             #             continue
             #         note.tick += self.getSecondToTicks(delay, tempo=self.tempoEvents())
 
-
-
     def getEventTick(self, event):
         return event.tick
 
@@ -316,10 +314,7 @@ class PythonMidiProxy():
         return (event.name == "Note On" and event.velocity == 0) or event.name == "Note Off"
 
     def getEventPith(self, event):
-        try:
-            return event.pitch
-        except:
-            return None
+        return event.pitch if hasattr(event, "pitch") else None
 
     def setEventPitch(self, event, pitch):
         event.pitch = pitch
