@@ -220,9 +220,7 @@ class PhaseShiftConverter(Converter):
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [
-                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
-                ]
+                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -237,14 +235,16 @@ class PhaseShiftConverter(Converter):
         for i, track in enumerate(midi.tracks):
             notesOn = {}
             for i, event in enumerate(track):
-                # Before the start of a new time step, do the conversion
+                # Keep the original pithc as a key
                 notePitch = midi.getEventPith(event)
-                if midi.getEventTick(event) > 1: # TODO: hack? in "Around the world" the open HH modifier is 1 tick qfter the HH hit. 
+
+                # Before the start of a new time step, do the conversion
+                if midi.getEventTick(event) > 0:  # TODO: hack? in "Around the world" the open HH modifier is 1 tick after the HH hit.
                     # Convert the note on and off events to the same pitches
                     conversion = self.convertPitches(notesOn.keys())
-                    for passedEvent in notesOn.values():
+                    for pitch, passedEvent in notesOn.items():
                         # Set the pitch, if the note is not converted we set it to 0 and remove it later
-                        midi.setEventPitch(passedEvent, conversion.get(passedEvent.pitch, 0))
+                        midi.setEventPitch(passedEvent, conversion.get(pitch, 0))
 
                 # Keep track of the notes currently playing
                 if midi.isEventNoteOn(event):
@@ -259,8 +259,7 @@ class PhaseShiftConverter(Converter):
 
             # Remove empty events with a pitch set to 0 from the convertPitches method:
             eventsToRemove = [
-                j for j, event in enumerate(track)
-                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+                j for j, event in enumerate(track) if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
             ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
