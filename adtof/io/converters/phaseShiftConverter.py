@@ -52,6 +52,7 @@ class PhaseShiftConverter(Converter):
             False: 49
         }
     }
+
     # Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes on the official charts released
     ANIMATIONS_MIDI = {
         51: 41,
@@ -69,7 +70,7 @@ class PhaseShiftConverter(Converter):
         36: 49,
         35: 49,
         34: 49,
-        32: 60,
+        32: 60,  # Percussion w/ RH
         31: {
             "modifier": 25,
             True: 46,
@@ -232,23 +233,18 @@ class PhaseShiftConverter(Converter):
         # add the delay
         midi.addDelay(delay)
 
-        # for each track
+        # Convert the pitches
         for i, track in enumerate(midi.tracks):
-            # Keep track of the simultaneous notes playing
             notesOn = {}
-            notesOff = {}
             for i, event in enumerate(track):
                 # Before the start of a new time step, do the conversion
-                # TODO: clean that: the key in noteOn/off is the base pitch, the pitch in the value.pitch is the modified pitch
                 notePitch = midi.getEventPith(event)
-
-                if midi.getEventTick(event) > 0:
-                    for notes in [notesOn, notesOff]:  # Convert the note on and off events to the same pitches
-                        conversion = self.convertPitches(notes.keys())
-                        for passedEvent in notes.values():
-                            # If the note is not converted we set it to 0 and remove it later
-                            midi.setEventPitch(passedEvent, conversion.get(passedEvent.pitch, 0))
-                    notesOff = {}  # Note off events have no duration, so we remove them
+                if midi.getEventTick(event) > 1: # TODO: hack? in "Around the world" the open HH modifier is 1 tick qfter the HH hit. 
+                    # Convert the note on and off events to the same pitches
+                    conversion = self.convertPitches(notesOn.keys())
+                    for passedEvent in notesOn.values():
+                        # Set the pitch, if the note is not converted we set it to 0 and remove it later
+                        midi.setEventPitch(passedEvent, conversion.get(passedEvent.pitch, 0))
 
                 # Keep track of the notes currently playing
                 if midi.isEventNoteOn(event):
@@ -258,8 +254,8 @@ class PhaseShiftConverter(Converter):
                 elif midi.isEventNoteOff(event):
                     if notePitch not in notesOn:
                         warnings.warn("error MIDI Note Off not existing")
+                    midi.setEventPitch(event, notesOn[notePitch].pitch)
                     notesOn.pop(notePitch, None)
-                    notesOff[notePitch] = event
 
             # Remove empty events with a pitch set to 0 from the convertPitches method:
             eventsToRemove = [
