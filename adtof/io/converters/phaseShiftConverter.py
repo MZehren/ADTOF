@@ -113,7 +113,8 @@ class PhaseShiftConverter(Converter):
         53: 49,
         55: 49,
         57: 49,
-        59: 49
+        59: 49,
+        60: 0  # Don't remap the "percussion" as it is inconsistant 
     }
 
     def convert(self, inputFolder, outputFolder, addDelay=True):
@@ -220,7 +221,9 @@ class PhaseShiftConverter(Converter):
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
+                tracksToRemove = [
+                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
+                ]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -239,7 +242,7 @@ class PhaseShiftConverter(Converter):
                 notePitch = midi.getEventPith(event)
 
                 # Before the start of a new time step, do the conversion
-                if midi.getEventTick(event) > 0:  # TODO: hack? in "Around the world" the open HH modifier is 1 tick after the HH hit.
+                if midi.getEventTick(event) > 0:
                     # Convert the note on and off events to the same pitches
                     conversion = self.convertPitches(notesOn.keys())
                     for pitch, passedEvent in notesOn.items():
@@ -259,7 +262,8 @@ class PhaseShiftConverter(Converter):
 
             # Remove empty events with a pitch set to 0 from the convertPitches method:
             eventsToRemove = [
-                j for j, event in enumerate(track) if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+                j for j, event in enumerate(track)
+                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
             ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event
@@ -273,9 +277,10 @@ class PhaseShiftConverter(Converter):
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to None.
         """
-        # keeping track of duplicated pitches after the classes reduction
         converted = self.remap(pitches, PhaseShiftConverter.ANIMATIONS_MIDI)
-        return converted
+        if len(converted) == 0:
+            converted = self.remap(pitches, PhaseShiftConverter.EXPERT_MIDI)
+        return {k: PhaseShiftConverter.MIDI_REDUCED[v] for k, v in converted.items()}
 
     def remap(self, pitches, mapping):
         """

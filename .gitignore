@@ -11,6 +11,7 @@
 /venv
 /logs
 /models
+bin/profile
 
 # Sphinx documentation
 /docs/_build/
