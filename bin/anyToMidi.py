@@ -8,7 +8,6 @@ import logging
 
 from adtof.io.converters import Converter
 
-
 def main():
     """
     Entry point of the program
