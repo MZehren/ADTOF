@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-
+WIP: convert the midi files with the alignment into text files
 """
 import argparse
 import logging

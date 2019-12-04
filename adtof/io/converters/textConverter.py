@@ -6,43 +6,74 @@ import logging
 import os
 import sys
 import warnings
+from collections import defaultdict
 
 import pkg_resources
 
-from adtof.io.converters import Converter
+from adtof.config import MDBS_MIDI, MIDI_REDUCED, RBMA_MIDI
 from adtof.io import MidiProxy
+from adtof.io.converters import Converter
 
 
 class TextConverter(Converter):
     """
     Convert the text format from rbma_13 and MDBDrums to midi
     """
-    ressource = pkg_resources.resource_string(__name__, "mappingDictionaries/rbma13ToMidi.json").decode()
-    RBMA_MIDI = {int(key): int(value) for key, value in json.loads(ressource).items()}
 
-    ressource = pkg_resources.resource_string(__name__, "mappingDictionaries/MDBDrumsToMidi.json").decode()
-    MDBS_MIDI = {key: int(value) for key, value in json.loads(ressource).items()}
-
-
-    def convert(self, txtFilePath, outputName=None):
+    def castInt(self, s):
         """
-        Read the ini file and convert the midi file to the standard events
+        Try to convert a string in int if possible
         """
-        # read the file
+        try:
+            casted = int(s)
+            return casted
+        except ValueError:
+            return s
+
+    def getOnsets(self, txtFilePath, separated=False):
+        """
+        Parse the file and return a list of {"time": int, "pitch": int}
+
+        separated= return {pitch: [events]} instead of a flat array
+        """
         events = []
         with open(txtFilePath, "r") as f:
             for line in f:
                 time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
-                
                 time = float(time)
-                pitch = self.MDBS_MIDI[pitch] if pitch in self.MDBS_MIDI else self.RBMA_MIDI[int(pitch)]
-                events.append([time, pitch])
+                pitch = self.castInt(pitch)
+
+                if pitch in MDBS_MIDI:
+                    pitch = MDBS_MIDI[pitch]
+                elif pitch in RBMA_MIDI:
+                    pitch = RBMA_MIDI
+                pitch = MIDI_REDUCED[pitch]
+
+                events.append({"time": time, "pitch": pitch})
+
+        if separated:
+            result = defaultdict(list)
+            for e in events:
+                result[e["pitch"]].append(e["time"])
+            return result
+
+        return events
+
+    def convert(self, txtFilePath, outputName=None):
+        """
+        Convert a text file of the shape:
+        float string/int\n
+
+        returns and save a midi object 
+        """
+        # read the file
+        events = self.getOnsets(txtFilePath)
 
         # create the midi
         midi = MidiProxy(None)
-        for time, pitch in events:
-            midi.addNote(time, pitch)
-        
+        for event in events:
+            midi.addNote(e["time"], e["pitch"])
+
         #return
         if outputName:
             midi.save(outputName)

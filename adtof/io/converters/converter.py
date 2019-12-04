@@ -68,6 +68,7 @@ class Converter(object):
         psc = PhaseShiftConverter()
         tc = TextConverter()
         results = defaultdict(list)
+        genres = defaultdict(list)
         #Check anything convertible
         for root, _, files in os.walk(rootFolder):
             # if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
@@ -88,8 +89,13 @@ class Converter(object):
             #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
 
             if psc.isConvertible(root):
-                results[psc.getTrackName(root)].append(
-                    (root, psc))  # TODO: change the hardcoded format to something simpler to use
+                meta = psc.getTrackName(root)
+                if not meta["pro_drums"]:
+                    print("no pro drums") 
+                genres[meta["genre"]].append(root)
+                if meta["genre"] == "Pop/Dance/Electronic":
+                # TODO: change the hardcoded format to something simpler to use
+                    results[meta["name"]].append((root, psc))
             # else:
             #     for file in files:
             #         path = os.path.join(root, file)
@@ -189,8 +195,9 @@ class Converter(object):
         convert all tracks in the good format
         """
 
-        # Get all possible convertible files and remove duplicated ones
+        # Get all possible convertible files
         candidates = Converter._getFileCandidates(inputFolder)
+        # remove duplicated ones
         candidates = Converter._mergeFileNames(candidates)
         candidates = Converter._pickVersion(candidates)
         candidateName = list(candidates.values())

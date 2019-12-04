@@ -13,7 +13,7 @@ import pkg_resources
 
 from adtof.io import MidiProxy
 from adtof.io.converters import Converter
-
+from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED
 
 class PhaseShiftConverter(Converter):
     """
@@ -30,92 +30,7 @@ class PhaseShiftConverter(Converter):
     DRUM_ROLLS = 126  # TODO: implement
     CYMBAL_SWELL = 127  # TODO: implement
 
-    # Maps Phase shift/rock band expert difficulty to std midi
-    # TODO: handle "dico flip" event
-    EXPERT_MIDI = {
-        95: 35,
-        96: 35,
-        97: 38,
-        98: {
-            "modifier": 110,
-            True: 45,
-            False: 46
-        },
-        99: {
-            "modifier": 111,
-            True: 43,
-            False: 57
-        },
-        100: {
-            "modifier": 112,
-            True: 41,
-            False: 49
-        }
-    }
 
-    # Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes on the official charts released
-    ANIMATIONS_MIDI = {
-        51: 41,
-        50: 41,
-        49: 43,
-        48: 43,
-        47: 45,
-        46: 45,
-        42: 51,
-        41: 57,
-        40: 49,
-        39: 57,
-        38: 57,
-        37: 49,
-        36: 49,
-        35: 49,
-        34: 49,
-        32: 60,  # Percussion w/ RH
-        31: {
-            "modifier": 25,
-            True: 46,
-            False: 42
-        },
-        30: {
-            "modifier": 25,
-            True: 46,
-            False: 42
-        },
-        27: 40,
-        26: 40,
-        24: 36,
-        28: 40,
-        29: 40,
-        43: 51,
-        44: 57,
-        45: 57
-    }
-    # Maps all the midi classes to more abstract consistant ones
-    # ie.: removes which to, is played to "a tom is played"
-    MIDI_REDUCED = {
-        35: 36,
-        36: 36,
-        37: 40,
-        38: 40,
-        40: 40,
-        41: 41,
-        43: 41,
-        45: 41,
-        47: 41,
-        48: 41,
-        50: 41,
-        42: 46,
-        44: 46,
-        46: 46,
-        49: 49,
-        51: 49,
-        52: 49,
-        53: 49,
-        55: 49,
-        57: 49,
-        59: 49,
-        60: 0  # Don't remap the "percussion" as it is inconsistant 
-    }
 
     def convert(self, inputFolder, outputFolder, addDelay=True):
         """
@@ -144,7 +59,7 @@ class PhaseShiftConverter(Converter):
 
         # Write the resulting file
         if outputFolder:
-            trackName = self.getTrackName(inputFolder)
+            trackName = self.getTrackName(inputFolder)["name"]
             _, audioFile, _ = self.getConvertibleFiles(inputFolder)
 
             outputMidiPath = os.path.join(outputFolder, "midi_converted", trackName + ".midi")
@@ -162,8 +77,12 @@ class PhaseShiftConverter(Converter):
 
     def getTrackName(self, inputFolder):
         ini = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
-        if "name" in ini:
-            return ini["name"].replace("/", "-")
+        meta = {
+            "name": os.path.basename(inputFolder),  # ini["name"].replace("/", "-") if "name" in ini else None,
+            "genre": ini["genre"] if "genre" in ini else None,
+            "pro_drums": ini["pro_drums"] if "pro_drums" in ini else None
+        }
+        return meta
 
     def getConvertibleFiles(self, inputFolder):
         """
@@ -277,10 +196,10 @@ class PhaseShiftConverter(Converter):
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to None.
         """
-        converted = self.remap(pitches, PhaseShiftConverter.ANIMATIONS_MIDI)
+        converted = self.remap(pitches, ANIMATIONS_MIDI)
         if len(converted) == 0:
-            converted = self.remap(pitches, PhaseShiftConverter.EXPERT_MIDI)
-        return {k: PhaseShiftConverter.MIDI_REDUCED[v] for k, v in converted.items()}
+            converted = self.remap(pitches, EXPERT_MIDI)
+        return {k: MIDI_REDUCED[v] for k, v in converted.items()}
 
     def remap(self, pitches, mapping):
         """
