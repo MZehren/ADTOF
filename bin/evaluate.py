@@ -36,10 +36,12 @@ def main():
 
     # eval
     tc = TextConverter()
-    results = {}
+    meanResults = {}
+    sumResults = {}
     for algoI, algo in enumerate(estimationPaths):
         algoName = config.THREE_CLASS_EVAL[algoI]
-        results[algoName] = {40: defaultdict(list), 36: defaultdict(list), 46: defaultdict(list)}
+        meanResults[algoName] = {40: defaultdict(list), 36: defaultdict(list), 46: defaultdict(list)}
+        sumResults[algoName] = {40: defaultdict(int), 36: defaultdict(int), 46: defaultdict(int)}
         for i, _ in enumerate(gtPaths):
             gt = midi(gtPaths[i]).getOnsets(separated=True)
             estimations = tc.getOnsets(algo[i], separated=True)
@@ -56,23 +58,70 @@ def main():
                     offset = float(list(reader)[1][2])  #TODO Read second row, second column
                 gt = {k: [t + offset for t in v] for k, v in gt.items()}
 
-            for pitch in results[algoName].keys():
-                if pitch not in estimations or pitch not in gt:
-                    f, p, r = 0, 0, 0
-                else:
-                    f, p, r = mir_eval.onset.f_measure(np.array(gt[pitch]), np.array(estimations[pitch]), window=window)
-                results[algoName][pitch]["F"].append(f)
-                results[algoName][pitch]["P"].append(p)
-                results[algoName][pitch]["R"].append(r)
-                print(config.getFileBasename(gtPaths[i]), pitch, p, r, f)
+            for pitch in meanResults[algoName].keys():
+                y_truth = np.array(gt[pitch]) if pitch in gt else np.array([])
+                y_pred = np.array(estimations[pitch]) if pitch in estimations else np.array([])
 
-    for algoName in results:
+                tp = len(mir_eval.util.match_events(y_truth, y_pred, window))
+                fp = len(y_pred) - tp
+                fn = len(y_truth) - tp
+                f, p, r = getF(tp, fp, fn)
+                meanResults[algoName][pitch]["F"].append(f)
+                meanResults[algoName][pitch]["P"].append(p)
+                meanResults[algoName][pitch]["R"].append(r)
+                sumResults[algoName][pitch]["TP"] += tp
+                sumResults[algoName][pitch]["FP"] += fp
+                sumResults[algoName][pitch]["FN"] += fn
+                if f == 0:
+
+                    print(config.getFileBasename(gtPaths[i]), pitch, p, r, f)
+
+    for algoName in meanResults:
         print(algoName)
-        print("mean F", np.mean([np.array(pitch["F"]) for pitch in results[algoName].values()]))
-        print("mean KD", np.mean(results[algoName][36]["F"]))
-        print("mean SD", np.mean(results[algoName][40]["F"]))
-        print("mean HH", np.mean(results[algoName][46]["F"]))
+        print("mean fm", np.mean([np.array(pitch["F"]) for pitch in meanResults[algoName].values()]))
+        print(
+            "sum fm",
+            getF(np.sum([pitch["TP"] for pitch in sumResults[algoName].values()]),
+                    np.sum([pitch["FP"] for pitch in sumResults[algoName].values()]),
+                    np.sum([pitch["FN"] for pitch in sumResults[algoName].values()]))[0])
+        print("mean KD fm", np.mean(meanResults[algoName][36]["F"]))
+        print("sum KD fm",
+                getF(sumResults[algoName][36]["TP"], sumResults[algoName][36]["FP"], sumResults[algoName][36]["FN"])[0])
+        print("mean SD fm", np.mean(meanResults[algoName][40]["F"]))
+        print("sum SD fm",
+                getF(sumResults[algoName][40]["TP"], sumResults[algoName][40]["FP"], sumResults[algoName][40]["FN"])[0])
+        print("mean HH fm", np.mean(meanResults[algoName][46]["F"]))
+        print("sum HH fm",
+                getF(sumResults[algoName][46]["TP"], sumResults[algoName][46]["FP"], sumResults[algoName][46]["FN"])[0])
+        
+        import matplotlib.pyplot as plt
+        plt.hist(meanResults[algoName][36]["F"])
+        plt.show()
     print("Done!")
+
+
+def hit(y_truth: np.array, y_pred: np.array, window: float):
+    """
+    bla
+    """
+    count = 0
+    cursor = 0
+    for a in y_pred:
+        for i, c in enumerate(y_truth[cursor:]):
+            if np.abs(a - c) <= window:
+                count += 1
+                cursor += i
+                continue
+    return count
+
+
+def getF(tp, fp, fn):
+    if tp == 0:
+        return 0, 0, 0
+    p = tp / (tp + fp)
+    r = tp / (tp + fn)
+    f = 2 * tp / (2 * tp + fp + fn)
+    return f, p, r
 
 
 if __name__ == '__main__':
