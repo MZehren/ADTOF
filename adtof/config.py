@@ -1,6 +1,7 @@
 """
 Config file keeping folder name
 """
+import logging
 import os
 
 # Folder containging .ogg files
@@ -12,6 +13,7 @@ OD_OFFSET = "od_offset"
 # Algo to eval
 THREE_CLASS_EVAL = ["RV-CRNN_3"]
 
+logging.basicConfig(level=logging.DEBUG)
 
 def getFilesInFolder(*path):
     return [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
