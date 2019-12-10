@@ -94,7 +94,7 @@ class Converter(object):
                     print("no pro drums") 
                 genres[meta["genre"]].append(root)
                 if meta["genre"] == "Pop/Dance/Electronic":
-                # TODO: change the hardcoded format to something simpler to use
+                # TODO: change the hardcoded format (root, psc) to something simpler to use
                     results[meta["name"]].append((root, psc))
             # else:
             #     for file in files:

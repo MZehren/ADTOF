@@ -22,7 +22,8 @@ def getFileBasename(path):
 
 
 # Maps Phase shift/rock band expert difficulty to std midi
-# TODO: handle "dico flip" event
+# For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
+# TODO: handle "disco flip" event
 EXPERT_MIDI = {
     95: 35,
     96: 35,
@@ -44,7 +45,8 @@ EXPERT_MIDI = {
     }
 }
 
-# Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes on the official charts released
+# Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes
+# on the official charts released. Not available on all charts
 ANIMATIONS_MIDI = {
     51: 41,
     50: 41,
@@ -81,8 +83,8 @@ ANIMATIONS_MIDI = {
     44: 57,
     45: 57
 }
-# Maps all the midi classes to more abstract consistant ones
-# ie.: removes which to, is played to "a tom is played"
+# Maps all the midi classes to more general consistant ones
+# ie.: converts all tom-tom to a low tom, converts all hi-hat to open hi-hat 
 MIDI_REDUCED = {
     35: 36,
     36: 36,
