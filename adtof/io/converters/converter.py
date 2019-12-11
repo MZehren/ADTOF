@@ -103,6 +103,12 @@ class Converter(object):
             #             results[rbc.getTrackName(path)].append((path, "", psc))
 
         # Remove duplicate
+        genresN = [k for k,v in genres.items()] 
+        genresV = [len(v) for k,v in genres.items()]
+        genrePos= np.arange(len(genresV))
+        plt.bar(genrePos, genresV)
+        plt.xticks(genrePos, genresN, rotation=70)
+        plt.show()
         return results
 
     @staticmethod

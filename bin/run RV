@@ -1,0 +1,1 @@
+python3 DrumTranscriptor -m CRNN_8 batch -o /mnt/e/ADTSets/adtof/parsed/RV-CRNN_8 /mnt/e/ADTSets/adtof/parsed/audio/*.ogg
