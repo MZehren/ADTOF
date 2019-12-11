@@ -12,7 +12,7 @@ import mir_eval
 import numpy as np
 
 from adtof import config
-from adtof.io.converters import OnsetsAlignementConverter, TextConverter
+from adtof.io.converters.textConverter import TextConverter
 from adtof.io.myMidi import MidoProxy as midi  # mido seems faster here
 
 
@@ -29,7 +29,7 @@ def main():
     # load the file path
     gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)
     estimationPaths = [config.getFilesInFolder(args.inputFolder, algo) for algo in config.THREE_CLASS_EVAL]
-    offsetPaths = config.getFilesInFolder(args.inputFolder, config.OD_OFFSET)
+    offsetPaths = config.getFilesInFolder(args.inputFolder, "midi_aligned")
     assert len(gtPaths) == len(estimationPaths[0])
 
     # eval
@@ -53,7 +53,8 @@ def main():
             if onsetOffset:
                 with open(offsetPaths[i], mode="r") as csvFile:
                     reader = csv.reader(csvFile)
-                    offset = float(list(reader)[1][2])  #TODO Read second row, second column
+                    offset = float(list(reader)[1][1])  #TODO Read second row, second column
+                    offset = 0 if np.isnan(offset) else offset
                 gt = {k: [t + offset for t in v] for k, v in gt.items()}
 
             for pitch in meanResults[algoName].keys():
@@ -71,7 +72,6 @@ def main():
                 sumResults[algoName][pitch]["FP"] += fp
                 sumResults[algoName][pitch]["FN"] += fn
                 if f == 0:
-
                     print(config.getFileBasename(gtPaths[i]), pitch, p, r, f)
 
     for algoName in meanResults:
