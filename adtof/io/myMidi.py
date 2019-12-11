@@ -34,9 +34,10 @@ class MidoProxy(MidiFile):
         """
         Returns the beat number and time of the track
         """
-        tpb = self.ticks_per_beat
-        mpbEvents = self.tempoEvents
-        timeSignatures = self.timeSignatureEvents
+        # tpb = self.ticks_per_beat
+        # timeEvents = (self.tempoEvents + self.timeSignatureEvents)
+        # timeEvents.sort(key = lambda y: y[0])
+        
         raise NotImplementedError()
 
     def getTracksName(self):
@@ -90,7 +91,7 @@ class MidoProxy(MidiFile):
         Return a list a tuples
         [(ticks, numerator, denumerator)]
         """
-        events = []
+        events = [(0, mido.MetaMessage('time_signature'))]
         tickCursor = 0
         if self.type != 1:
             raise NotImplementedError()
@@ -98,8 +99,11 @@ class MidoProxy(MidiFile):
         for event in self.tracks[0]:
             tickCursor += event.time
             if event.type == 'time_signature':
-                events.append([tickCursor, event])
-
+                # Make sure there are no overlapping tempo events
+                if events[-1][0] == tickCursor:
+                    events[-1] = (tickCursor, event)
+                else:
+                    events.append((tickCursor, event))
         return events
 
     @lazy_property

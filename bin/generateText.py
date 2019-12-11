@@ -9,7 +9,7 @@ import os
 
 from adtof import config
 
-from adtof.io.myMidi import MidoProxy as Midi  # mido seems faster here
+import pretty_midi
 
 def main():
     # load the arguments
@@ -21,9 +21,8 @@ def main():
     # load the file path
     gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)
     for f in gtPaths:
-        midi = Midi(f)
-        if midi.timeSignatureEvents:
-            midi.getBeats()
+        midi = pretty_midi.PrettyMIDI(f)
+        midi.get_beats(start_time=midi.get_onsets()[0])
     # files = [
     #     os.path.join(args.inputFolder, "midi_aligned", f) for f in os.listdir(os.path.join(args.inputFolder, "midi_aligned"))
     # ]  #TODO: hardcoded .ogg extension

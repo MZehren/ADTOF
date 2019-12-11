@@ -10,7 +10,7 @@ import numpy as np
 import sklearn
 import tensorflow as tf
 
-from adtof.io import MIR
+from adtof.io.mir import MIR
 
 
 class Converter(object):
