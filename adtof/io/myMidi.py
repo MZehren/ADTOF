@@ -30,6 +30,16 @@ class MidoProxy(MidiFile):
     Encapsulating MIDI functionalities in this proxy class to open the possibility of supporting another midi library more easily.
     """
 
+    def getBeats(self):
+        """
+        Returns the beat number and time of the track
+        """
+        # tpb = self.ticks_per_beat
+        # timeEvents = (self.tempoEvents + self.timeSignatureEvents)
+        # timeEvents.sort(key = lambda y: y[0])
+        
+        raise NotImplementedError()
+
     def getTracksName(self):
         tracksName = [[event.name for event in track if event.type == midi.TRACK_NAME_EVENT] for track in self.tracks]
         tracksName = [names[0] if names else None for names in tracksName]
@@ -76,6 +86,27 @@ class MidoProxy(MidiFile):
         event.note = pitch
 
     @lazy_property
+    def timeSignatureEvents(self):
+        """
+        Return a list a tuples
+        [(ticks, numerator, denumerator)]
+        """
+        events = [(0, mido.MetaMessage('time_signature'))]
+        tickCursor = 0
+        if self.type != 1:
+            raise NotImplementedError()
+
+        for event in self.tracks[0]:
+            tickCursor += event.time
+            if event.type == 'time_signature':
+                # Make sure there are no overlapping tempo events
+                if events[-1][0] == tickCursor:
+                    events[-1] = (tickCursor, event)
+                else:
+                    events.append((tickCursor, event))
+        return events
+
+    @lazy_property
     def tempoEvents(self):
         """
         Return a list a tuples
@@ -117,12 +148,7 @@ class MidoProxy(MidiFile):
                     timeCursor += timeIncrement
                     tickCursor += event.time
 
-                positionsLookup[i].append({
-                    "tickAbsolute": tickCursor,
-                    "timeAbsolute": timeCursor,
-                    "tick": event.time,
-                    "time": timeCursor
-                })
+                positionsLookup[i].append({"tickAbsolute": tickCursor, "timeAbsolute": timeCursor, "tick": event.time, "time": timeCursor})
 
         return positionsLookup
 
@@ -137,13 +163,11 @@ class MidoProxy(MidiFile):
         delta = end - start
         if tempo is None:  # get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents
-            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end
-                            ]  # get the tempo changes during the event
+            selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]  # get the tempo changes during the event
             # get the tempo at the start location
             tempo0 = [t[1] for t in tempoEvents if t[0] <= start][-1]
             Tempi = [tempo0] + [t[1] for t in selectedTempo]
-            weight = np.diff([start] + [t[0] for t in selectedTempo] +
-                             [end]) / delta  # get the weighted average of all the tempi
+            weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta  # get the weighted average of all the tempi
             tempo = np.sum(Tempi * weight)
 
         # convert thegetraiseticks in beat and then seconds
@@ -362,12 +386,7 @@ class PythonMidiProxy():
                     timeCursor += timeIncrement
                     tickCursor += event.tick
 
-                positionsLookup[i].append({
-                    "tickAbsolute": tickCursor,
-                    "timeAbsolute": timeCursor,
-                    "tick": event.tick,
-                    "time": timeCursor
-                })
+                positionsLookup[i].append({"tickAbsolute": tickCursor, "timeAbsolute": timeCursor, "tick": event.tick, "time": timeCursor})
 
         return positionsLookup
 
@@ -387,8 +406,7 @@ class PythonMidiProxy():
             # get the tempo at the start location
             tempo0 = [t[1] for t in tempoEvents if t[0] <= start][-1]
             Tempi = [tempo0] + [t[1] for t in selectedTempo]
-            weight = np.diff([start] + [t[0] for t in selectedTempo] +
-                             [end]) / delta  # get the weighted average of all the tempi
+            weight = np.diff([start] + [t[0] for t in selectedTempo] + [end]) / delta  # get the weighted average of all the tempi
             tempo = np.sum(Tempi * weight)
 
         # convert thegetraiseticks in beat and then seconds
@@ -439,6 +457,12 @@ class PythonMidiProxy():
             return notesPositions
         else:
             return allNotesPositions
+
+    def getBeats(self):
+        """
+        Returns the beat number and time of the track
+        """
+        raise NotImplementedError()
 
     def getTrackNames(self):
         """

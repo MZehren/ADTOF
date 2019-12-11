@@ -4,10 +4,9 @@ from bisect import bisect_left
 import librosa
 import madmom
 import numpy as np
+import pretty_midi
 
-from adtof.io.converters import Converter
-from adtof.io import MidiProxy
-from adtof.io.converters import PhaseShiftConverter
+from adtof.io.converters.converter import Converter
 
 # from dtw import dtw
 
@@ -19,6 +18,9 @@ class OnsetsAlignementConverter(Converter):
     """
     CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
     PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
+
+    DBPROC = madmom.features.DBNDownBeatTrackingProcessor(beats_per_bar=[3, 4], fps=100)
+    DBACT = madmom.features.RNNDownBeatProcessor()
 
     # def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
     #     converted = 0
@@ -42,18 +44,22 @@ class OnsetsAlignementConverter(Converter):
     #     print("converted", converted, "failed", failed)
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath):
-        midi = MidiProxy(inputMidiPath)
-        midiOnsets = midi.getOnsets()
+        # midi = MidiProxy(inputMidiPath)
+        # midiOnsets = midi.getOnsets()
+        midi = pretty_midi.PrettyMIDI(inputMidiPath)
+        midiBeats = midi.get_beats(start_time=midi.get_onsets()[0])
 
         # y, sr = librosa.load(inputMusicPath)
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
-        act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
-        musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
+        # act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
+        # musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
+        act = OnsetsAlignementConverter.DBACT(inputMusicPath)
+        musicBeats = OnsetsAlignementConverter.DBPROC(act)
 
-        error, offset = self.getError(midiOnsets, musicOnsets)
+        error, offset = self.getError(midiBeats, musicBeats[:,0])
 
         with open(outputPath + ".txt", "w") as file:
-            file.write("MAE, offset\n" + str(error) + "," + "," + str(offset))
+            file.write("MAE, offset\n" + str(error) + "," + str(offset))
         # midi.addDelay(-offset)
         # midi.save(outputPath)
 

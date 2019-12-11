@@ -4,10 +4,10 @@
 
 """
 import argparse
-import logging
 import os
 
-from adtof.io.converters import OnsetsAlignementConverter
+from adtof import config
+from adtof.io.converters.onsetsAlignementConverter import OnsetsAlignementConverter
 
 
 def main():
@@ -15,12 +15,12 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
-    logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('inputFolder', type=str, help="Path to the chart folder.")
     args = parser.parse_args()
 
     oac = OnsetsAlignementConverter()
+
     files = [f[:-4] for f in os.listdir(os.path.join(args.inputFolder, "audio"))] #TODO: hardcoded .ogg extension
     data = [[
         os.path.join(args.inputFolder, "audio", f + ".ogg"),

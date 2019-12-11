@@ -5,7 +5,6 @@ WIP: evaluate an algorithm
 """
 import argparse
 import csv
-import logging
 import os
 from collections import defaultdict
 
@@ -19,7 +18,6 @@ from adtof.io.myMidi import MidoProxy as midi  # mido seems faster here
 
 def main():
     # load the arguments
-    logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('inputFolder', type=str, help="Path to the chart folder.")
     args = parser.parse_args()

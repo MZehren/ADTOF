@@ -20,7 +20,6 @@ class PhaseShiftConverter(Converter):
     Convert PhaseShift MIDI files into standard MIDI files based on mapping dictionaries
     """
     # Static variables
-    # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
     INI_NAME = "song.ini"
     PS_MIDI_NAME = "notes.mid"  # TODO remove this field
     PS_MIDI_NAMES = ["notes.mid"]
