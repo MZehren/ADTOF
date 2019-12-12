@@ -47,7 +47,8 @@ class OnsetsAlignementConverter(Converter):
         # midi = MidiProxy(inputMidiPath)
         # midiOnsets = midi.getOnsets()
         midi = pretty_midi.PrettyMIDI(inputMidiPath)
-        midiBeats = midi.get_beats(start_time=midi.get_onsets()[0])
+        startNote = midi.get_onsets()[0]
+        midiBeats = [b for b in midi.get_beats() if b > startNote]
 
         # y, sr = librosa.load(inputMusicPath)
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
@@ -57,6 +58,7 @@ class OnsetsAlignementConverter(Converter):
         musicBeats = OnsetsAlignementConverter.DBPROC(act)
 
         error, offset = self.getError(midiBeats, musicBeats[:,0])
+        assert np.isnan(offset) == False
 
         with open(outputPath + ".txt", "w") as file:
             file.write("MAE, offset\n" + str(error) + "," + str(offset))
