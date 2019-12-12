@@ -15,6 +15,7 @@ THREE_CLASS_EVAL = ["RV-CRNN_3"]
 
 logging.basicConfig(level=logging.DEBUG)
 
+
 def getFilesInFolder(*path):
     return [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
 
@@ -86,8 +87,33 @@ ANIMATIONS_MIDI = {
     45: 57
 }
 # Maps all the midi classes to more general consistant ones
-# ie.: converts all tom-tom to a low tom, converts all hi-hat to open hi-hat 
-MIDI_REDUCED = {
+# ie.: converts all tom-tom to a low tom, converts all hi-hat to open hi-hat
+MIDI_REDUCED_3 = {
+    35: 36,
+    36: 36,
+    37: 40,
+    38: 40,
+    40: 40,
+    41: 0,
+    43: 0,
+    45: 0,
+    47: 0,
+    48: 0,
+    50: 0,
+    42: 46,
+    44: 46,
+    46: 46,
+    49: 0,
+    51: 0,
+    52: 0,
+    53: 0,
+    55: 0,
+    57: 0,
+    59: 0,
+    60: 0  # Don't remap the "percussion" as it is inconsistant 
+}
+
+MIDI_REDUCED_5 = {
     35: 36,
     36: 36,
     37: 40,
@@ -109,7 +135,57 @@ MIDI_REDUCED = {
     55: 49,
     57: 49,
     59: 49,
-    60: 0  # Don't remap the "percussion" as it is inconsistant 
+    60: 0
+}
+
+MIDI_REDUCED_6 = {
+    35: 36,
+    36: 36,
+    37: 40,
+    38: 40,
+    40: 40,
+    41: 41,
+    43: 41,
+    45: 41,
+    47: 41,
+    48: 41,
+    50: 41,
+    42: 46,
+    44: 46,
+    46: 46,
+    49: 49,
+    51: 51,
+    52: 49,
+    53: 51,
+    55: 49,
+    57: 49,
+    59: 49,
+    60: 0
+}
+
+MIDI_REDUCED_8 = {
+    35: 36,
+    36: 36,
+    37: 40,
+    38: 40,
+    40: 40,
+    41: 41,
+    43: 41,
+    45: 45,
+    47: 45,
+    48: 45,
+    50: 45,
+    42: 42,
+    44: 42,
+    46: 46,
+    49: 49,
+    51: 51,
+    52: 49,
+    53: 51,
+    55: 49,
+    57: 49,
+    59: 49,
+    60: 0
 }
 
 # MDBS text event to midi pitches
