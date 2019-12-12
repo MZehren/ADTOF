@@ -11,8 +11,8 @@ from collections import defaultdict
 import pkg_resources
 
 from adtof.config import MDBS_MIDI, MIDI_REDUCED, RBMA_MIDI
-from adtof.io import MidiProxy
-from adtof.io.converters import Converter
+from adtof.io.myMidi import MidiProxy
+from adtof.io.converters.converter import Converter
 
 
 class TextConverter(Converter):
