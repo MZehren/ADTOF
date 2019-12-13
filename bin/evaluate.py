@@ -14,7 +14,7 @@ import numpy as np
 from adtof import config
 from adtof.io.converters.textConverter import TextConverter
 from adtof.io.myMidi import MidoProxy as midi  # mido seems faster here
-
+import pretty_midi
 
 def main():
     # load the arguments
@@ -29,7 +29,7 @@ def main():
     # load the file path
     gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)
     estimationPaths = [config.getFilesInFolder(args.inputFolder, algo) for algo in config.THREE_CLASS_EVAL]
-    offsetPaths = config.getFilesInFolder(args.inputFolder, "midi_aligned")
+    offsetPaths = config.getFilesInFolder(args.inputFolder, "od_offset")
     assert len(gtPaths) == len(estimationPaths[0])
 
     # eval
@@ -41,7 +41,11 @@ def main():
         meanResults[algoName] = {40: defaultdict(list), 36: defaultdict(list), 46: defaultdict(list)}
         sumResults[algoName] = {40: defaultdict(int), 36: defaultdict(int), 46: defaultdict(int)}
         for i, _ in enumerate(gtPaths):
-            gt = midi(gtPaths[i]).getOnsets(separated=True)
+            gt = defaultdict(list)
+            for note in pretty_midi.PrettyMIDI(gtPaths[i]).instruments[0].notes:
+                gt[note.pitch].append(note.start)
+
+            # gt = midi(gtPaths[i]).getOnsets(separated=True)
             estimations = tc.getOnsets(algo[i], separated=True)
 
             # Clean the files
@@ -53,15 +57,16 @@ def main():
             if onsetOffset:
                 with open(offsetPaths[i], mode="r") as csvFile:
                     reader = csv.reader(csvFile)
-                    offset = float(list(reader)[1][1])  #TODO Read second row, second column
+                    offset = float(list(reader)[1][2])  #TODO Read second row, second column
                     offset = 0 if np.isnan(offset) else offset
-                gt = {k: [t + offset for t in v] for k, v in gt.items()}
+                gt = {k: [t - offset for t in v] for k, v in gt.items()}
 
             for pitch in meanResults[algoName].keys():
                 y_truth = np.array(gt[pitch]) if pitch in gt else np.array([])
                 y_pred = np.array(estimations[pitch]) if pitch in estimations else np.array([])
 
-                tp = len(mir_eval.util.match_events(y_truth, y_pred, window))
+                matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, window)]
+                tp = len(matches)
                 fp = len(y_pred) - tp
                 fn = len(y_truth) - tp
                 f, p, r = getF(tp, fp, fn)
@@ -71,11 +76,15 @@ def main():
                 sumResults[algoName][pitch]["TP"] += tp
                 sumResults[algoName][pitch]["FP"] += fp
                 sumResults[algoName][pitch]["FN"] += fn
+
+                if tp:
+                    meanResults[algoName][pitch]["DIST"].append(np.mean([np.abs(match[0] - match[1]) for match in matches]))
                 if f == 0:
                     print(config.getFileBasename(gtPaths[i]), pitch, p, r, f)
 
     for algoName in meanResults:
         print(algoName)
+        print("mean dist", np.mean([np.mean(pitch["DIST"]) for pitch in meanResults[algoName].values()]))
         print("mean fm", np.mean([np.array(pitch["F"]) for pitch in meanResults[algoName].values()]))
         print(
             "sum fm",
@@ -95,6 +104,9 @@ def main():
         import matplotlib.pyplot as plt
         plt.hist(meanResults[algoName][36]["F"])
         plt.show()
+        plt.hist(meanResults[algoName][36]["DIST"])
+        plt.show()
+
     print("Done!")
 
 

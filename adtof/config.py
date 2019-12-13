@@ -17,7 +17,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def getFilesInFolder(*path):
-    return [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
+    result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
+    result.sort()
+    return result
 
 
 def getFileBasename(path):

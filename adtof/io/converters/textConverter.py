@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import pkg_resources
 
-from adtof.config import MDBS_MIDI, MIDI_REDUCED, RBMA_MIDI
+from adtof.config import MDBS_MIDI, MIDI_REDUCED_3, RBMA_MIDI
 from adtof.io.myMidi import MidiProxy
 from adtof.io.converters.converter import Converter
 
@@ -47,7 +47,7 @@ class TextConverter(Converter):
                     pitch = MDBS_MIDI[pitch]
                 elif pitch in RBMA_MIDI:
                     pitch = RBMA_MIDI
-                pitch = MIDI_REDUCED[pitch]
+                pitch = MIDI_REDUCED_3[pitch]
 
                 events.append({"time": time, "pitch": pitch})
 
