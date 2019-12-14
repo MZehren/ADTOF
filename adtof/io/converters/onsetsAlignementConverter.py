@@ -7,7 +7,6 @@ import numpy as np
 import pretty_midi
 
 from adtof.io.converters.converter import Converter
-
 # from dtw import dtw
 
 
@@ -16,8 +15,8 @@ class OnsetsAlignementConverter(Converter):
     Converter which tries to align the midi file to the music file as close as possible 
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
-    CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
-    PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
+    # CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
+    # PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
 
     DBPROC = madmom.features.DBNDownBeatTrackingProcessor(beats_per_bar=[3, 4], fps=100)
     DBACT = madmom.features.RNNDownBeatProcessor()
@@ -43,7 +42,7 @@ class OnsetsAlignementConverter(Converter):
     #                 failed += 1
     #     print("converted", converted, "failed", failed)
 
-    def convert(self, inputMusicPath, inputMidiPath, outputPath):
+    def convert(self, inputMusicPath, inputMidiPath, outputPath, beatsPath):
         # midi = MidiProxy(inputMidiPath)
         # midiOnsets = midi.getOnsets()
         midi = pretty_midi.PrettyMIDI(inputMidiPath)
@@ -54,8 +53,12 @@ class OnsetsAlignementConverter(Converter):
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
         # act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
         # musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
-        act = OnsetsAlignementConverter.DBACT(inputMusicPath)
-        musicBeats = OnsetsAlignementConverter.DBPROC(act)
+        if os.path.exists(beatsPath):
+            musicBeats = np.load(beatsPath)
+        else:
+            act = OnsetsAlignementConverter.DBACT(inputMusicPath)
+            musicBeats = OnsetsAlignementConverter.DBPROC(act)
+            np.save(beatsPath, musicBeats)
 
         error, offset = self.getError(midiBeats, musicBeats[:,0])
         assert np.isnan(offset) == False

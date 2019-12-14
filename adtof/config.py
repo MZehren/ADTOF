@@ -10,6 +10,8 @@ AUDIO = "audio"
 MIDI_CONVERTED = "midi_converted"
 # Offset needed for the files
 OD_OFFSET = "od_offset"
+# beats estimated
+BEATS_EST = "beats_est"
 # Algo to eval
 THREE_CLASS_EVAL = ["RV-CRNN_3"]
 

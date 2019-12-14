@@ -25,10 +25,11 @@ def main():
     data = [[
         os.path.join(args.inputFolder, "audio", f + ".ogg"),
         os.path.join(args.inputFolder, "midi_converted", f + ".midi"),
-        os.path.join(args.inputFolder, "midi_aligned", f + ".midi")
+        os.path.join(args.inputFolder, "midi_aligned", f + ".midi"),
+        os.path.join(args.inputFolder, config.BEATS_EST, f + ".npy")
     ] for f in files]
-    for audio, midiIn, midiOut in data:
-        oac.convert(audio, midiIn, midiOut)
+    for audio, midiIn, midiOut, beatsOut in data:
+        oac.convert(audio, midiIn, midiOut, beatsOut)
     print("Done!")
 
 
