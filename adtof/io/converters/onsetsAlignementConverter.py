@@ -7,7 +7,7 @@ import numpy as np
 import pretty_midi
 
 from adtof.io.converters.converter import Converter
-# from dtw import dtw
+from adtof.io.converters.textConverter import TextConverter
 
 
 class OnsetsAlignementConverter(Converter):
@@ -43,28 +43,43 @@ class OnsetsAlignementConverter(Converter):
     #     print("converted", converted, "failed", failed)
 
     def convert(self, inputMusicPath, inputMidiPath, outputPath, beatsPath):
+        # Get midi onsets
         # midi = MidiProxy(inputMidiPath)
         # midiOnsets = midi.getOnsets()
-        midi = pretty_midi.PrettyMIDI(inputMidiPath)
-        startNote = midi.get_onsets()[0]
-        midiBeats = [b for b in midi.get_beats() if b > startNote]
 
+        # get midi beats
+        # midi = pretty_midi.PrettyMIDI(inputMidiPath)
+        # startNote = midi.get_onsets()[0]
+        # midiBeats = [b for b in midi.get_beats() if b > startNote]
+
+        # get midi kicks
+        midi = pretty_midi.PrettyMIDI(inputMidiPath)
+        kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
+
+        # get audio onsets
         # y, sr = librosa.load(inputMusicPath)
         # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
         # act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
         # musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
-        if os.path.exists(beatsPath):
-            musicBeats = np.load(beatsPath)
-        else:
-            act = OnsetsAlignementConverter.DBACT(inputMusicPath)
-            musicBeats = OnsetsAlignementConverter.DBPROC(act)
-            np.save(beatsPath, musicBeats)
 
-        error, offset = self.getError(midiBeats, musicBeats[:,0])
+        # get audio beats
+        # if os.path.exists(beatsPath):
+        #     musicBeats = np.load(beatsPath)
+        # else:
+        #     act = OnsetsAlignementConverter.DBACT(inputMusicPath)
+        #     musicBeats = OnsetsAlignementConverter.DBPROC(act)
+        #     np.save(beatsPath, musicBeats)
+
+        # get audio estimated kicks
+        tc = TextConverter()
+        kicks_audio = tc.getOnsets(inputMusicPath, separated=True)[36]
+
+        print(outputPath)
+        error, offset, diffPlayback = self.getError(kicks_midi, kicks_audio)  #musicBeats[:, 0], midiBeats)
         assert np.isnan(offset) == False
 
         with open(outputPath + ".txt", "w") as file:
-            file.write("MAE, offset\n" + str(error) + "," + str(offset))
+            file.write("MAE, offset, playback\n" + str(error) + "," + str(offset) + "," + str(diffPlayback))
         # midi.addDelay(-offset)
         # midi.save(outputPath)
 
@@ -77,21 +92,30 @@ class OnsetsAlignementConverter(Converter):
         """
         # Get the alignment between the notes and the onsets
         tuples = [(onsetA, self.findNeighboor(onsetsB, onsetA)) for onsetA in onsetsA]
-        tuplesThresholded = [(onsets[0], onsets[1]) for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold]
+        tuplesThresholded = np.array(
+            [[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
 
-        # # Get the playback difference and apply it
-        # # Doesn't work. the playback rate is way too off
-        # diffPlayback = [(tuplesThresholded[i + 1][0] - tuplesThresholded[i][0]) / (tuplesThresholded[i + 1][1] - tuplesThresholded[i][1])
-        #                 for i in range(len(tuplesThresholded) - 1)]
-        # correctionPlayback = np.mean(diffPlayback)
-        # tuplesThresholded = [(a / correctionPlayback, b) for a, b in tuplesThresholded]
+        def getOffset()
+        # get the offset difference
+        diffOffset = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
+        correctionOffset = np.mean(diffOffset)
+        remainingError0 = np.mean(np.abs(diffOffset))  # TODO: MAE vs RMSE?
+        remainingError1 = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
+
+        # Get the playback difference and apply it
+        correctionPlayback = np.mean(np.diff(tuplesThresholded[:, 1])) / np.mean(np.diff(tuplesThresholded[:, 0]))
+        midOffset = (tuplesThresholded[-1][1] / correctionPlayback - tuplesThresholded[-1][1]) / 2
+        tuplesThresholded = [(a, b / correctionPlayback + midOffset) for a, b in tuplesThresholded]
 
         # get the offset difference
         diffOffset = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
-        correctionOffset = np.median(diffOffset)
-        remainingError = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
+        correctionOffset = np.mean(diffOffset)
+        remainingError2 = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
 
-        return remainingError, correctionOffset
+        if remainingError0 > 0.020:
+            print(remainingError0, remainingError1, remainingError2)
+            print()
+        return remainingError2, correctionOffset, correctionPlayback
 
     def findNeighboor(self, grid, value):
         """
