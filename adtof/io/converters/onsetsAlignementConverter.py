@@ -1,3 +1,4 @@
+import logging
 import os
 from bisect import bisect_left
 
@@ -74,16 +75,13 @@ class OnsetsAlignementConverter(Converter):
         tc = TextConverter()
         kicks_audio = tc.getOnsets(inputMusicPath, separated=True)[36]
 
-        print(outputPath)
-        error, offset, diffPlayback = self.getError(kicks_midi, kicks_audio)  #musicBeats[:, 0], midiBeats)
-        assert np.isnan(offset) == False
-
+        error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  #musicBeats[:, 0], midiBeats)
         with open(outputPath + ".txt", "w") as file:
             file.write("MAE, offset, playback\n" + str(error) + "," + str(offset) + "," + str(diffPlayback))
         # midi.addDelay(-offset)
         # midi.save(outputPath)
 
-    def getError(self, onsetsA, onsetsB, maxThreshold=0.05):
+    def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
         Compute the average error of onsets close to each other bellow a maxThreshold
 
@@ -92,30 +90,42 @@ class OnsetsAlignementConverter(Converter):
         """
         # Get the alignment between the notes and the onsets
         tuples = [(onsetA, self.findNeighboor(onsetsB, onsetA)) for onsetA in onsetsA]
-        tuplesThresholded = np.array(
-            [[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
+        tuplesThresholded = np.array([[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
 
-        def getOffset()
-        # get the offset difference
-        diffOffset = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
-        correctionOffset = np.mean(diffOffset)
-        remainingError0 = np.mean(np.abs(diffOffset))  # TODO: MAE vs RMSE?
-        remainingError1 = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
+        if len(tuplesThresholded) < 2:
+            return 0, 0, 1
 
-        # Get the playback difference and apply it
-        correctionPlayback = np.mean(np.diff(tuplesThresholded[:, 1])) / np.mean(np.diff(tuplesThresholded[:, 0]))
-        midOffset = (tuplesThresholded[-1][1] / correctionPlayback - tuplesThresholded[-1][1]) / 2
-        tuplesThresholded = [(a, b / correctionPlayback + midOffset) for a, b in tuplesThresholded]
+        # Compute three version of the alignement
+        offset1, error1 = self.computeOffset(tuplesThresholded)
+        playback2, offset2, error2 = self.computeRate(tuplesThresholded)
 
-        # get the offset difference
-        diffOffset = [onsets[0] - onsets[1] for onsets in tuplesThresholded]
-        correctionOffset = np.mean(diffOffset)
-        remainingError2 = np.mean(np.abs(diffOffset - correctionOffset))  # TODO: MAE vs RMSE?
+        assert np.isnan(offset1) == False and np.isnan(offset2) == False
 
-        if remainingError0 > 0.020:
-            print(remainingError0, remainingError1, remainingError2)
-            print()
-        return remainingError2, correctionOffset, correctionPlayback
+        if error1 < error2:  #TODO: There has to be something wrong in the computation
+            return error1, offset1, 1
+        else:
+            return error2, offset2, playback2
+
+    def computeOffset(self, tuplesThresholded):
+        """
+        Compute on average the offset of the best alignment
+        """
+        diff = [a - b for a, b in tuplesThresholded]
+        offset = np.mean(diff)
+        previousError = np.mean(np.abs(diff))
+        remainingError = np.mean(np.abs(diff - offset))  # TODO: MAE vs RMSE?
+        if previousError < remainingError:
+            logging.error("Check the computation: " + str(remainingError - previousError))
+        return offset, remainingError
+
+    def computeRate(self, tuplesThresholded):
+        """
+        Compute on average the playback speed of the best alignment
+        """
+        playback = np.mean(np.diff(tuplesThresholded[:, 1])) / np.mean(np.diff(tuplesThresholded[:, 0]))
+        tuplesThresholded = [(a, b / playback) for a, b in tuplesThresholded]
+        offset, remainingError = self.computeOffset(tuplesThresholded)
+        return playback, offset, remainingError
 
     def findNeighboor(self, grid, value):
         """

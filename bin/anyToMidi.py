@@ -6,7 +6,7 @@ Convert the PhaseShift's MIDI file format into real MIDI
 import argparse
 import logging
 
-from adtof.io.converters import Converter
+from adtof.io.converters.converter import Converter
 
 def main():
     """
