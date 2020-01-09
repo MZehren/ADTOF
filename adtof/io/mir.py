@@ -8,12 +8,12 @@ class MIR(object):
     Load the track to be fed inside a NN
     """
 
-    def __init__(self):
+    def __init__(self, sampleRate=100):
         # TODO: load the parameters externally
         self.sampleRate = None  # 44100
         # requirement of k*2**(n_octaves - 1) exists so that recursive downsampling inside CQT retains frame alignment.
         # hop length = 448 or frameRate = 98.4375Hz
-        self.frameRate = 100
+        self.frameRate = sampleRate
         self.n_bins = 84
         self.fMin = 32.70  #20
 
@@ -23,8 +23,8 @@ class MIR(object):
         """
         y, sr = librosa.load(path, sr=self.sampleRate)
         # TODO: add 0.25s of zero padding at the start for instant onsets
-
-        result = librosa.feature.melspectrogram(y=y, sr=sr,  hop_length=int(np.round(sr / self.frameRate)))
+        assert (sr / self.frameRate).is_integer()
+        result = librosa.feature.melspectrogram(y=y, sr=sr, hop_length=int(np.round(sr / self.frameRate)))
         result = librosa.amplitude_to_db(result).T
         diff = np.diff(result, axis=0)
         result = result[1:]
@@ -35,7 +35,6 @@ class MIR(object):
         min = np.min(result)
         result = (result - min) / (max - min)
         return result
-
 
     def openCQT(self, path: str):
         """

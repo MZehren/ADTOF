@@ -8,6 +8,8 @@ import os
 AUDIO = "audio"
 # Midi converted from PS charts
 MIDI_CONVERTED = "midi_converted"
+# Offset of the midi computed with either Beat, ADT or OD
+MIDI_ALIGNED = "midi_aligned"
 # Offset needed for the files
 OD_OFFSET = "od_offset"
 # beats estimated

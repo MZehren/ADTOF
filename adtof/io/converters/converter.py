@@ -241,7 +241,7 @@ class Converter(object):
                             warnings.warn("Midi doesn't have notes " + midiPath)
                             continue
 
-                        # Get the x: audio with stft or cqt or whatever + overlqp windows to get some context
+                        # Get the x: audio with stft or cqt or whatever + overlap windows to get some context
                         x = mir.open(audiPath)
                         x = np.array([x[i:i + context] for i in range(len(x) - context)])
                         x = x.reshape(x.shape + (1,))  # Add the channel dimension

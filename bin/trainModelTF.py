@@ -14,8 +14,8 @@ import numpy as np
 import sklearn
 import tensorflow as tf
 
-from adtof.deepModels import RV1
-from adtof.deepModels import PeakPicking
+from adtof.deepModels.rv1tf import RV1TF
+from adtof.deepModels.peakPicking import PeakPicking
 from adtof.io import MIR
 from adtof.io.converters import Converter, PhaseShiftConverter
 
