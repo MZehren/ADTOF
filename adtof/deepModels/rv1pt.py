@@ -41,21 +41,20 @@ class RV1Torch(nn.Module):
         return num_features
 
 
-net = RV1Torch()
-print(net)
+# net = RV1Torch()
+# print(net)
 
-params = list(net.parameters())
-print(len(params))
-print(params[0].size())  # conv1's .weight
+# params = list(net.parameters())
+# print(len(params))
+# print(params[0].size())  # conv1's .weight
 
-context = 32
-n_bins = 32
-input = torch.randn(1, 1, context, n_bins)
-out = net(input)
-print(out)
+# context = 32
+# n_bins = 32
+# input = torch.randn(1, 1, context, n_bins)
+# out = net(input)
+# print(out)
 
-target = torch.tensor([0, 1, 1, 0, 0], dtype=torch.float32)  #  dtype=torch.long a dummy target, for example
-target = target.view(1, -1)  # make it the same shape as output
+# target = torch.tensor([0, 1, 1, 0, 0], dtype=torch.float32)  #  dtype=torch.long a dummy target, for example
+# target = target.view(1, -1)  # make it the same shape as output
 
-# loss = nn.MSELoss()(out, target)
-loss = nn.CrossEntropyLoss
+# loss = nn.CrossEntropyLoss

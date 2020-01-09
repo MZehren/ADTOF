@@ -7,12 +7,14 @@ import argparse
 import datetime
 import logging
 import os
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-import sklearn
-
 import pandas as pd
+import sklearn
+import torch
+
 from adtof import config
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1pt import RV1Torch
@@ -22,31 +24,62 @@ from adtof.io.myMidi import MidiProxy
 
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
 
+class MyIterableDataset(torch.utils.data.IterableDataset):
+    def __init__(self, folderPath, sampleRate=50, context=25, midiLatency=0, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16], train=True, split=0.8):
+        """
+        TODO: change the sampleRate to 100 Hz?
+        sampleRate = if the highest speed is a note each 20ms,    
+                    the sr should be 1/0.02=50 
+        context = how many frames are given with each samples
+        midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
+        """
+        super().__init__()
+        tracks = config.getFilesInFolder(folderPath, config.AUDIO)
+        midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
+        alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
 
-def getDataset(folderPath, sampleRate=25, context=25, midiLatency=0, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
-    """
-    sampleRate = if the highest speed is a note each 20ms,    
-                the sr should be 1/0.02=50 
-    context = how many frames are given with each samples
-    midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
-    """
-    tracks = config.getFilesInFolder(folderPath, config.AUDIO)
-    midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
-    alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
-    mir = MIR(sampleRate=sampleRate)
-    for track, midi, alignment in zip(tracks, midis, alignments):
-        alignmentInput = pd.read_csv(alignment, escapechar=" ")
-        y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate)
-        # y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback= 1/alignmentInput.playback[0])
-        for i, row in enumerate(y):
-            if max(row) == 1:
-                firstNoteIdx = i
-                break
-        x = mir.open(track)
-        for i in range(firstNoteIdx, min(len(y) - 1, len(x) - 26)):
-            yield x[i - midiLatency:i + context - midiLatency], y[i]
+        if train:
+            self.tracks = tracks[: int(len(tracks) * split)]
+            self.midis = midis[: int(len(midis) * split)]
+            self.alignments = alignments[: int(len(alignments) * split)]
+        else:
+            self.tracks = tracks[int(len(tracks) * split):]
+            self.midis = midis[int(len(tracks) * split):]
+            self.alignments = alignments[int(len(tracks) * split) :]
+        self.mir = MIR(frameRate=sampleRate)
+        self.X = {}
+        self.Y = {}
+        self.sampleRate = sampleRate
+        self.midiLatency = midiLatency
+        self.context = context
+    
+    def __iter__(self):
+        i = random.randrange(len(self.tracks))
+        if i not in self.X:
+            track = self.tracks[i]
+            midi =self. midis[i]
+            alignment = self.alignments[i]    
+           
+            alignmentInput = pd.read_csv(alignment, escapechar=" ")
+            y = MidiProxy(midi).getDenseEncoding(sampleRate=self.sampleRate)
+            # TODO apply the offset correction
+            # y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback= 1/alignmentInput.playback[0])
+            x = self.mir.open(track)
 
-def vizDataset(dataset, samples = 50):
+            for rowI, row in enumerate(y):
+                if max(row) == 1:
+                    firstNoteIdx = rowI
+                    break
+            
+            self.X[i] = x[firstNoteIdx - self.midiLatency: min(len(y) - 1, len(x) - self.context - 1) + self.context - self.midiLatency]
+            self.Y[i] = y[firstNoteIdx: min(len(y) - 1, len(x) - self.context - 1)]
+            
+        j = random.randrange(len(self.Y[i]))
+        # for j in range(len(self.Y[i])):
+        yield self.X[i][j:j+self.context], self.Y[i][j]
+            # TODO change the track for each minibatch
+
+def vizDataset(dataset, samples = 1):
     X = []
     Y = []
     for i in range(samples):
@@ -70,10 +103,12 @@ def main():
     args = parser.parse_args()
 
     # Get the data
-    dataset = getDataset(args.folderPath)
-    while(True):
-        vizDataset(dataset, samples=2000)
+    trainLoader = torch.utils.data.DataLoader(MyIterableDataset(args.folderPath, train=True), batch_size=100)
+    testLoader = torch.utils.data.DataLoader(MyIterableDataset(args.folderPath, train=False), batch_size=100)
+    classes = [36, 40, 41, 46, 49]
 
+    dataiter = iter(trainLoader)
+    images, labels = dataiter.next()
     print("Done!")
 
 

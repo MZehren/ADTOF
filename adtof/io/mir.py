@@ -1,6 +1,7 @@
 import librosa
-import numpy as np
+import madmom
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class MIR(object):
@@ -8,16 +9,33 @@ class MIR(object):
     Load the track to be fed inside a NN
     """
 
-    def __init__(self, sampleRate=100):
+    def __init__(self, frameRate=100, frameSize=2048):
         # TODO: load the parameters externally
-        self.sampleRate = None  # 44100
-        # requirement of k*2**(n_octaves - 1) exists so that recursive downsampling inside CQT retains frame alignment.
-        # hop length = 448 or frameRate = 98.4375Hz
-        self.frameRate = sampleRate
+        self.sampleRate = 44100
+        self.frameRate = frameRate
+        self.frameSize = frameSize
         self.n_bins = 84
         self.fMin = 32.70  #20
 
     def open(self, path: str):
+        """
+        Load an audio track and return an array numpy
+        """
+        # Log spec
+        hopSize = self.sampleRate / self.frameRate
+        spec = madmom.audio.FilteredSpectrogram(path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, num_channels=1, fmax=20000)
+        # norm
+        max = np.max(spec)
+        min = np.min(spec)
+        spec = (spec - min) / (max - min)
+        # stack diff
+        # diff = np.diff(spec, axis=0)
+        # spec = spec[1:]
+        diff = madmom.audio.spectrogram.SpectrogramDifference(spec)
+        result = np.concatenate((spec, diff), axis=1)
+        return result
+
+    def openLibrosa(self, path: str):
         """
         Load an audio track and return an array numpy
         """
@@ -40,6 +58,8 @@ class MIR(object):
         """
         Load an audio track and return an array numpy
         """
+        # requirement of k*2**(n_octaves - 1) exists so that recursive downsampling inside CQT retains frame alignment.
+        # hop length = 448 or frameRate = 98.4375Hz
         y, sr = librosa.load(path, sr=self.sampleRate)
         # TODO: add 0.25s of zero padding at the start for instant onsets
         cqt = librosa.cqt(y, sr=sr, hop_length=int(np.round(sr / self.frameRate)), n_bins=self.n_bins, fmin=self.fMin)
