@@ -11,7 +11,7 @@ class RV1TF(object):
     #     # self.model = self.createModel()
     #     pass
 
-    def createModel(self, context=25, n_bins=256, output=5):
+    def createModel(self, context=25, n_bins=168, output=5):
         """Return a ts model based 
         
         Keyword Arguments:
@@ -51,8 +51,7 @@ class RV1TF(object):
 
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.keras.backend.
-            binary_crossentropy,  #tf.compat.v2.nn.sigmoid_cross_entropy_with_logits, those two are equivalent if binary_crossentropy(logits=True), since the activation is already the probabilty because of the sigmoid and not logits, do not use those
+            loss=tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
             metrics=["accuracy", tf.keras.metrics.BinaryAccuracy()]  # PeakPicking()
         )
         return model

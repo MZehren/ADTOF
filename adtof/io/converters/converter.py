@@ -214,53 +214,7 @@ class Converter(object):
         for path, converter in candidates.values():
             converter.convert(path, outputFolder)
 
-    @staticmethod
-    def getTFGenerator(candidateName, test_size=0.1):
-        """
-        WIP: Create a generator dynamically generating converted tracks        
-        """
 
-        def generateGenerator(data):
-            """
-            Create a generator with the tracks in data
-            TODO: this is ugly
-            """
-
-            def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
-                """
-                [36, 40, 41, 46, 49]
-                """
-                mir = MIR()
-                for midiPath, audiPath, converter in data:
-                    try:
-                        # TODO: update: _, audio, _ = converter.getConvertibleFiles(path)
-                        # Get the y: midi in dense matrix representation
-                        y = converter.convert(midiPath).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
-                        y = y[midiLatency:]
-                        if np.sum(y) == 0:
-                            warnings.warn("Midi doesn't have notes " + midiPath)
-                            continue
-
-                        # Get the x: audio with stft or cqt or whatever + overlap windows to get some context
-                        x = mir.open(audiPath)
-                        x = np.array([x[i:i + context] for i in range(len(x) - context)])
-                        x = x.reshape(x.shape + (1,))  # Add the channel dimension
-
-                        for i in range(min(len(y) - 1, len(x) - 1)):
-                            # sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
-                            yield x[i], y[i]
-                    except Exception as e:
-                        print(midiPath, e)
-                print("DEBUG: real new epoch")
-
-            return gen
-
-        train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
-
-        # next(Converter.generateGenerator(train)())
-        trainDS = tf.data.Dataset.from_generator(generateGenerator(train), (tf.float64, tf.int64))
-        testDS = tf.data.Dataset.from_generator(generateGenerator(test), (tf.float64, tf.int64))
-        return trainDS, testDS
 
     @staticmethod
     def vizDataset(iterator):

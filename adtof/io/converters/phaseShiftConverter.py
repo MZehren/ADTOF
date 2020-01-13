@@ -11,7 +11,7 @@ from shutil import copyfile
 
 import pkg_resources
 
-from adtof.io import MidiProxy
+from adtof.io.myMidi import MidiProxy
 from adtof.io.converters import Converter
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED
 
