@@ -9,7 +9,7 @@ import logging
 import os
 import random
 
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import sklearn
@@ -25,19 +25,7 @@ from adtof.io.myMidi import MidiProxy
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
 
 
-def vizDataset(dataset, samples = 1):
-    X = []
-    Y = []
-    for i in range(samples):
-        x, y = next(dataset)
-        X.append(x[0])
-        Y.append(y)
-    plt.matshow(np.array(X).T)
-    print(np.sum(Y))
-    for i in range(len(Y[0])):
-        times = [t for t, y in enumerate(Y) if y[i]]
-        plt.plot(times, np.ones(len(times)) * i * 10, "or")
-    plt.show()
+
 
 def main():
     """

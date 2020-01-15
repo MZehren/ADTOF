@@ -39,7 +39,7 @@ class Converter(object):
 
     def checkPathExists(self, path):
         """ 
-            Generate the tree of folder if it doesn't exist
+        Generate the tree of folder if it doesn't exist
         """
         directory = os.path.dirname(path)
         if not os.path.exists(directory):

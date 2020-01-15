@@ -32,6 +32,7 @@ class MIR(object):
         # diff = np.diff(spec, axis=0)
         # spec = spec[1:]
         diff = madmom.audio.spectrogram.SpectrogramDifference(spec)
+        diff = (diff + 1) /2
         result = np.concatenate((spec, diff), axis=1)
         return result
 

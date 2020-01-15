@@ -7,6 +7,8 @@ import argparse
 import datetime
 import logging
 import os
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import numpy as np
 import sklearn
@@ -57,14 +59,15 @@ def main():
 
     log_dir = os.path.join("logs", "fit", "rv1.2")  #datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=False, profile_batch=0),
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True)
+        tf.keras.callbacks.ModelCheckpoint(checkpoint_path)
     ]
 
     model.fit(
         dataset,
         epochs=60,
+        initial_epoch=36,
         steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,

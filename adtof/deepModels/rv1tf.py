@@ -28,15 +28,15 @@ class RV1TF(object):
         # How to handle the context for the learning 400 samples before learning?
 
         model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation='relu', name="conv11"),
             tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', name="conv12"),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
             tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv21"),
             tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv22"),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
             tf.keras.layers.Dropout(0.3),
@@ -44,14 +44,14 @@ class RV1TF(object):
             # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
-            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
-            tf.keras.layers.Dense(output, activation=tf.keras.activations.sigmoid)
+            tf.keras.layers.Dense(256, activation='relu', name="dense1"),
+            tf.keras.layers.Dense(256, activation='relu', name="dense2"),
+            tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput")
         ])
 
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
+            loss= tf.keras.backend.binary_crossentropy, #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
             metrics=["accuracy", tf.keras.metrics.BinaryAccuracy()]  # PeakPicking()
         )
         return model
