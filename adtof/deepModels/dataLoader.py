@@ -51,9 +51,9 @@ class TorchIterableDataset(torch.utils.data.IterableDataset):
             alignment = self.alignments[i]
 
             alignmentInput = pd.read_csv(alignment, escapechar=" ")
-            y = MidiProxy(midi).getDenseEncoding(sampleRate=self.sampleRate)
+            # y = MidiProxy(midi).getDenseEncoding(sampleRate=self.sampleRate)
             # TODO apply the offset correction
-            # y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback= 1/alignmentInput.playback[0])
+            y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback= 1/alignmentInput.playback[0])
             x = self.mir.open(track)
 
             for rowI, row in enumerate(y):
@@ -71,7 +71,7 @@ class TorchIterableDataset(torch.utils.data.IterableDataset):
 
 
 def getTFGenerator(
-    folderPath, sampleRate=50, context=25, midiLatency=0, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16], train=True, split=0.8
+    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8
 ):
     """
         TODO: change the sampleRate to 100 Hz?
@@ -104,39 +104,48 @@ def getTFGenerator(
     # ----gen----
     def gen():
         while True:
-        # for i, _ in enumerate(tracks):
-            i = random.randrange(len(tracks))
-            if i not in X:
-                print("new track read:", i)
-                track = tracks[i]
-                midi = midis[i]
-                alignment = alignments[i]
+            for i, _ in enumerate(tracks):
+            # i = random.randrange(len(tracks))
+                if i not in X:
+                    print("new track read:", i)
+                    track = tracks[i]
+                    midi = midis[i]
+                    alignment = alignments[i]
 
-                alignmentInput = pd.read_csv(alignment, escapechar=" ")
-                y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate)
-                # TODO apply the offset correction
-                # y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback= 1/alignmentInput.playback[0])
-                x = mir.open(track)
-                x = x.reshape(x.shape + (1, ))  # TODO: remove Add the channel dimension
+                    alignmentInput = pd.read_csv(alignment, escapechar=" ")
+                    # y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate)
+                    # TODO apply the offset correction
+                    y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback=1 / alignmentInput.playback[0])
+                    x = mir.open(track)
+                    x = x.reshape(x.shape + (1, ))  # TODO: remove Add the channel dimension
 
-                for rowI, row in enumerate(y):
-                    if max(row) == 1:
-                        firstNoteIdx = rowI
-                        break
+                    for rowI, row in enumerate(y):
+                        if max(row) == 1:
+                            firstNoteIdx = rowI
+                            break
 
-                X[i] = x[firstNoteIdx - midiLatency:min(len(y) - 1, len(x) - context - 1) + context - midiLatency]
-                Y[i] = y[firstNoteIdx:min(len(y) - 1, len(x) - context - 1)]
+                    X[i] = x[firstNoteIdx - midiLatency:min(len(y) - 1, len(x) - context - 1) + context - midiLatency]
+                    Y[i] = y[firstNoteIdx:min(len(y) - 1, len(x) - context - 1)]
 
-            # TODO change the track only between each minibatch?
-            j = random.randrange(len(Y[i]))
-            # for j in range(len(Y[i])):
-            #     if sum(Y[i][j]) == 0:
-            #         continue
-            yield X[i][j:j + context], Y[i][j]
+                # TODO change the track only between each minibatch?
+                j = random.randrange(len(Y[i]))
+                for j in range(len(Y[i])):
+                    # if sum(Y[i][j]) == 0:
+                    #     continue
+                    yield X[i][j:j + context], Y[i][j]
 
     return gen
 
-def vizDataset(dataset, samples = 1):
+def getClassWeight(folderPath):
+    # midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
+    # Y = [MidiProxy(midi).getDenseEncoding(sampleRate=50) for midi in midis]
+    # concat = np.concatenate(Y)
+    # # https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#calculate_class_weights
+    # weights = {i: 1 / concat[:, i].sum() * len(concat) / len(concat[0]) for i in range(len(concat[0]))}
+    weights = {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
+    return weights  
+
+def vizDataset(dataset, samples=1):
     X = []
     Y = []
     for i in range(samples):
@@ -149,6 +158,8 @@ def vizDataset(dataset, samples = 1):
         times = [t for t, y in enumerate(Y) if y[i]]
         plt.plot(times, np.ones(len(times)) * i * 10, "or")
     plt.show()
+
+
 # def getTFGenerator(candidateName, test_size=0.1):
 #     """
 #     WIP: Create a generator dynamically generating converted tracks

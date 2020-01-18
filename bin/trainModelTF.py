@@ -13,6 +13,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import numpy as np
 import sklearn
 import tensorflow as tf
+tf.config.experimental_run_functions_eagerly(True)
 
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
@@ -33,6 +34,7 @@ def main():
     args = parser.parse_args()
 
     # Get the data
+    classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
         dataLoader.getTFGenerator(args.folderPath, train=True), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((5, )))
@@ -61,17 +63,18 @@ def main():
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path)
+        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,)
     ]
 
     model.fit(
         dataset,
-        epochs=60,
-        initial_epoch=36,
+        epochs=120,
+        initial_epoch=0,
         steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,
         validation_steps=10,
+        class_weight=classWeight
     )
 
     for x, y in dataset_test:

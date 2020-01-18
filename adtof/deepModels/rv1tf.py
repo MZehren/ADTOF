@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+from adtof.deepModels.peakPicking import PeakPicking
 
 class RV1TF(object):
     """
@@ -23,10 +23,8 @@ class RV1TF(object):
         Returns:
             [type] -- [description]
         """
-        # When to apply the dropout?
         # How to handle the bidirectional aggregation ? Sum, or nothing ?
-        # How to handle the context for the learning 400 samples before learning?
-
+        # TODO: https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#optional_set_the_correct_initial_bias
         model = tf.keras.Sequential([
             tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation='relu', name="conv11"),
             tf.keras.layers.BatchNormalization(),
@@ -45,14 +43,19 @@ class RV1TF(object):
             # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(256, activation='relu', name="dense1"),
+            tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dense(256, activation='relu', name="dense2"),
+            tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput")
         ])
 
+        # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
+        # How softmax cross entropy can be used in multilabel classification,
+        # and how binary cross entropy work for multi label 
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
             loss= tf.keras.backend.binary_crossentropy, #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
-            metrics=["accuracy", tf.keras.metrics.BinaryAccuracy()]  # PeakPicking()
+            metrics=["Precision", "Recall", PeakPicking()]
         )
         return model
 
