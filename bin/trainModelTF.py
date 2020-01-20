@@ -46,10 +46,11 @@ def main():
     #     testDS = tf.data.Dataset.from_generator(generateGenerator(test), (tf.float64, tf.int64))
     #     return trainDS, testDS
 
-    dataset = dataset.batch(100).repeat()
-    dataset_test = dataset_test.batch(100).repeat()
-    dataset = dataset.prefetch(buffer_size=100)
-    dataset_test = dataset_test.prefetch(buffer_size=100)
+    batch_size = 10
+    dataset = dataset.batch(batch_size).repeat()
+    dataset_test = dataset_test.batch(batch_size).repeat()
+    dataset = dataset.prefetch(buffer_size=batch_size)
+    dataset_test = dataset_test.prefetch(buffer_size=batch_size)
 
     # Get the model
     model = RV1TF().createModel()
