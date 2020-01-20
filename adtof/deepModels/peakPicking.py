@@ -9,20 +9,27 @@ class PeakPicking(tf.keras.metrics.Metric):
         super(tf.keras.metrics.Metric, self).__init__(name=name, **kwargs)
         self.sampleRate = sampleRate
         self.hitDistance = hitDistance
-        self.batch_y_true = None #self.add_weight(name='true', aggregation=tf.compat.v2.VariableAggregation.NONE)
-        self.batch_y_pred = None #self.add_weight(name='pred', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_y_true = None  #self.add_weight(name='true', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_y_pred = None  #self.add_weight(name='pred', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_index = 0
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+        dense_peaks_pred = self._dense_peak_picking(y_pred)
+
+        offset = self.batch_index * len(y_true)
+        self.batch_index += 1
+        sparse_pred = [self.sparsify(dense_peaks_pred[:, drumClass], offset) for drumClass in range(y_pred.shape[1])]
+        sparse_true = [self.sparsify(y_true[:, drumClass], offset) for drumClass in range(y_true.shape[1])]
+
         if self.batch_y_true is None:
-            self.batch_y_true = y_true
-            self.batch_y_pred = y_pred
+            self.batch_y_pred = sparse_pred
+            self.batch_y_true = sparse_true
         else:
-            self.batch_y_true = np.concatenate((self.batch_y_true, y_true))
-            self.batch_y_pred = np.concatenate((self.batch_y_pred, y_pred))
+            self.batch_y_pred = [self.batch_y_pred[i] + sparse_pred[i] for i in range(len(sparse_pred))]
+            self.batch_y_true = [self.batch_y_true[i] + sparse_true[i] for i in range(len(sparse_true))]
 
     def result(self):
-        peaks = self._dense_peak_picking(self.batch_y_pred)
-        score = self._get_f_measure(peaks, self.batch_y_true, self.hitDistance * self.sampleRate)
+        score = self._get_f_measure(self.batch_y_pred, self.batch_y_true, self.hitDistance * self.sampleRate)
         return score
 
     def _dense_peak_picking(self, values, threshold: float = 0.2, windowSize: int = 2):
@@ -53,24 +60,23 @@ class PeakPicking(tf.keras.metrics.Metric):
         # TODO is min distance peaks usefull ?
         return tf.math.logical_and(thresholded, maximised)
 
-    def sparsify(self, denseVector):
-        return [i for i, v in enumerate(denseVector) if v]
+    def sparsify(self, denseVector, offset):
+        return [i + offset for i, v in enumerate(denseVector) if v]
 
-    def _get_f_measure(self, peaksIndexes, yTrue, distance):
+    def _get_f_measure(self, peaksIndexesPred, peaksIndexesTrue, distance):
         """
         peaksIndexes: Sparse list of the peaks in each class
         yTrue: Dense list of the truth values in each class
         """
         F = 0
-        for drumClass in range(peaksIndexes.shape[1]):
-            estSparse = self.sparsify(peaksIndexes[:,drumClass])
-            annotSparse = self.sparsify(yTrue[:, drumClass])
-            f, p, r = mir_eval.onset.f_measure(np.array(estSparse), np.array(annotSparse), window=distance)
+        for drumClass in range(len(peaksIndexesPred)):
+            f, p, r = mir_eval.onset.f_measure(np.array(peaksIndexesPred[drumClass]), np.array(peaksIndexesTrue[drumClass]), window=distance)
             F += f
 
-        return F/peaksIndexes.shape[1]
+        return F / len(peaksIndexesPred)
 
     def reset_states(self):
         # The state of the metric will be reset at the start of each epoch.
         self.batch_y_true = None
         self.batch_y_pred = None
+        self.batch_index = 0
