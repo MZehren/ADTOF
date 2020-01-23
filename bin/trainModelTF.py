@@ -46,7 +46,7 @@ def main():
     #     testDS = tf.data.Dataset.from_generator(generateGenerator(test), (tf.float64, tf.int64))
     #     return trainDS, testDS
 
-    batch_size = 10
+    batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
     dataset = dataset.prefetch(buffer_size=batch_size)

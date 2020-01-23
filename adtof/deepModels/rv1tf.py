@@ -55,7 +55,7 @@ class RV1TF(object):
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
             loss= tf.keras.backend.binary_crossentropy, #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
-            metrics=["Precision", "Recall", PeakPicking()]
+            metrics=["Precision", "Recall"] #, PeakPicking()
         )
         return model
 
