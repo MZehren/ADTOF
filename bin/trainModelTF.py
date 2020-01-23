@@ -7,13 +7,10 @@ import argparse
 import datetime
 import logging
 import os
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import numpy as np
 import sklearn
 import tensorflow as tf
-tf.config.experimental_run_functions_eagerly(True)
 
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
@@ -21,6 +18,9 @@ from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 from adtof.io.converters.converter import Converter
 
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# tf.config.experimental_run_functions_eagerly(True)
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
 
 

@@ -137,11 +137,11 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
     def gen():
         trackIdx = 0
         while True:
-            trackIdx = trackIdx + 1 % len(tracks)
+            trackIdx = (trackIdx + 1) % len(tracks)
             if trackIdx not in DATA:
                 X, Y = readTrack(trackIdx, tracks, midis, alignments, sampleRate=sampleRate, context=context, midiLatency=midiLatency)
                 indexes = balanceDistribution(X, Y)
-                DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0}
+                DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": len(indexes)//2}
 
             data = DATA[trackIdx]
             for _ in range(2):
