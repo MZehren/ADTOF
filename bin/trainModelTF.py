@@ -34,17 +34,16 @@ def main():
     args = parser.parse_args()
 
     # Get the data
-    classWeight = dataLoader.getClassWeight(args.folderPath)
+    labels = [36] #[36, 40, 41, 46, 49]
+    # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True), (tf.float64, tf.float64),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((5, )))
+        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels), (tf.float64, tf.float64),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False), (tf.float64, tf.float64),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((5, )))
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels), (tf.float64, tf.float64),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
-    #     testDS = tf.data.Dataset.from_generator(generateGenerator(test), (tf.float64, tf.int64))
-    #     return trainDS, testDS
 
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
@@ -53,7 +52,7 @@ def main():
     dataset_test = dataset_test.prefetch(buffer_size=batch_size)
 
     # Get the model
-    model = RV1TF().createModel()
+    model = RV1TF().createModel(output=len(labels))
     checkpoint_path = "models/rv1.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
     latest = tf.train.latest_checkpoint(checkpoint_dir)
@@ -67,16 +66,16 @@ def main():
         tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,)
     ]
 
-    model.fit(
-        dataset,
-        epochs=120,
-        initial_epoch=0,
-        steps_per_epoch=100,
-        callbacks=callbacks,
-        validation_data=dataset_test,
-        validation_steps=10,
-        class_weight=classWeight
-    )
+    # model.fit(
+    #     dataset,
+    #     epochs=120,
+    #     initial_epoch=0,
+    #     steps_per_epoch=100,
+    #     callbacks=callbacks,
+    #     validation_data=dataset_test,
+    #     validation_steps=10
+    #     # class_weight=classWeight
+    # )
 
     for x, y in dataset_test:
         predictions = model.predict(x)
