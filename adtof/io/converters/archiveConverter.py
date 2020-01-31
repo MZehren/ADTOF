@@ -2,7 +2,7 @@ import os
 
 from pyunpack import Archive
 
-from adtof.io.converters import Converter
+from adtof.io.converters.converter import Converter
 
 
 class ArchiveConverter(Converter):

@@ -12,8 +12,8 @@ from shutil import copyfile
 import pkg_resources
 
 from adtof.io.myMidi import MidiProxy
-from adtof.io.converters import Converter
-from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED
+from adtof.io.converters.converter import Converter
+from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_8
 
 class PhaseShiftConverter(Converter):
     """
@@ -115,7 +115,7 @@ class PhaseShiftConverter(Converter):
         ...
 
         """
-        with open(iniPath, "rU") as iniFile:
+        with open(iniPath, "rU", errors='ignore') as iniFile:
             rows = iniFile.read().split("\n")
             items = [row.split(" = ") for row in rows]
             return {item[0]: item[1] for item in items if len(item) == 2}
@@ -198,7 +198,7 @@ class PhaseShiftConverter(Converter):
         converted = self.remap(pitches, ANIMATIONS_MIDI)
         if len(converted) == 0:
             converted = self.remap(pitches, EXPERT_MIDI)
-        return {k: MIDI_REDUCED[v] for k, v in converted.items()}
+        return {k: MIDI_REDUCED_8[v] for k, v in converted.items()}
 
     def remap(self, pitches, mapping):
         """

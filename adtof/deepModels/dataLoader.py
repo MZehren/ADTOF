@@ -52,7 +52,7 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49]):
+def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minF=0.5):
     """
     TODO: change the sampleRate to 100 Hz?
     sampleRate = if the highest speed is a note each 20ms,    
@@ -60,10 +60,15 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
     context = how many frames are given with each samples
     midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
     """
-    # ----INIT----
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
     midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
     alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
+
+    # F-Measure filtering
+    bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minF for alignment in alignments]
+    tracks = tracks[bools].tolist() # TODO why tracks[0] returns a np._str, how to get the value?
+    midis = midis[bools].tolist()
+    alignments = alignments[bools].tolist()
 
     # train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
     if train:
@@ -75,9 +80,9 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
         midis = midis[int(len(tracks) * split):]
         alignments = alignments[int(len(tracks) * split):]
 
+    # Lazy cache dictionnary
     DATA = {}
 
-    # ----gen----
     def gen():
         trackIdx = 0
         while True:
@@ -86,11 +91,11 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
                 X, Y = readTrack(trackIdx, tracks, midis, alignments, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
                 indexes = balanceDistribution(X, Y)
                 DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": len(indexes) // 2}
-            
+
             data = DATA[trackIdx]
             if len(data["y"]) == 0:  # In case the tracks doesn't have notes
                 continue
-            n = 2 if train else 100 
+            n = 2 if train else 100
             for _ in range(n):
                 cursor = data["cursor"]
                 sampleIdx = data["indexes"][cursor]

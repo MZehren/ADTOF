@@ -486,10 +486,10 @@ class PythonMidiProxy():
         result = []
         for key in keys:
             # Size of the dense matrix
-            row = np.zeros(int(np.round((length*playback + offset) * sampleRate)) + 1)
+            row = np.zeros(int(np.round((length/playback + offset) * sampleRate)) + 1)
             for time in notes[key]:
                 # indexs at 1 in the dense matrix
-                index = int(np.round((time * playback + offset) * sampleRate))
+                index = int(np.round((time / playback + offset) * sampleRate))
                 for i in range(index - radiation, min(index + radiation + 1, len(row))):
                     row[i] = 1
             result.append(row)

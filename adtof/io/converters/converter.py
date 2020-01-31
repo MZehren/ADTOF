@@ -51,7 +51,10 @@ class Converter(object):
         go recursively inside all folders, identify the format available and list all the tracks
         """
         # TODO clean the circle dependency by ,oving the code in a better location
-        from adtof.io.converters import ArchiveConverter, RockBandConverter, PhaseShiftConverter, TextConverter
+        from adtof.io.converters.archiveConverter import ArchiveConverter
+        from adtof.io.converters.rockBandConverter import RockBandConverter
+        from adtof.io.converters.phaseShiftConverter import PhaseShiftConverter
+        from adtof.io.converters.textConverter import TextConverter
 
         # Decompress all the files
         ac = ArchiveConverter()

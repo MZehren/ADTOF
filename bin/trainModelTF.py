@@ -32,16 +32,17 @@ def main():
     parser = argparse.ArgumentParser(description='todo')
     parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
+    labels = [36]  #[36, 40, 41, 46, 49]
+    sampleRate = 50
 
     # Get the data
-    labels = [36] #[36, 40, 41, 46, 49]
     # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels), (tf.float64, tf.float64),
+        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels), (tf.float64, tf.float64),
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
 
@@ -66,16 +67,16 @@ def main():
         tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,)
     ]
 
-    # model.fit(
-    #     dataset,
-    #     epochs=120,
-    #     initial_epoch=0,
-    #     steps_per_epoch=100,
-    #     callbacks=callbacks,
-    #     validation_data=dataset_test,
-    #     validation_steps=10
-    #     # class_weight=classWeight
-    # )
+    model.fit(
+        dataset,
+        epochs=120,
+        initial_epoch=0,
+        steps_per_epoch=100,
+        callbacks=callbacks,
+        validation_data=dataset_test,
+        validation_steps=10
+        # class_weight=classWeight
+    )
 
     for x, y in dataset_test:
         predictions = model.predict(x)

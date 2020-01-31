@@ -3,6 +3,7 @@ Config file keeping folder name
 """
 import logging
 import os
+import numpy as np
 
 # Folder containging .ogg files
 AUDIO = "audio"
@@ -23,7 +24,7 @@ logging.basicConfig(level=logging.DEBUG)
 def getFilesInFolder(*path):
     result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
     result.sort()
-    return result
+    return np.array(result)
 
 
 def getFileBasename(path):

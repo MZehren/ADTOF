@@ -21,7 +21,7 @@ def main():
 
     oac = OnsetsAlignementConverter()
 
-    files = [f[:-4] for f in os.listdir(os.path.join(args.inputFolder, "audio"))] #TODO: hardcoded .ogg extension
+    files = [f[:-4] for f in os.listdir(os.path.join(args.inputFolder, "audio"))]  #TODO: hardcoded .ogg extension
     data = [[
         os.path.join(args.inputFolder, "audio", f + ".ogg"),
         os.path.join(args.inputFolder, "midi_converted", f + ".midi"),

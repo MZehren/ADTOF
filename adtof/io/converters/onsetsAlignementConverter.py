@@ -5,11 +5,13 @@ from bisect import bisect_left
 import librosa
 import madmom
 import numpy as np
+import pandas as pd
 import pretty_midi
+from mir_eval.onset import f_measure
 
 from adtof.io.converters.converter import Converter
 from adtof.io.converters.textConverter import TextConverter
-
+from adtof import config
 
 class OnsetsAlignementConverter(Converter):
     """
@@ -76,10 +78,15 @@ class OnsetsAlignementConverter(Converter):
         kicks_audio = tc.getOnsets(inputMusicPath, separated=True)[36]
 
         error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  #musicBeats[:, 0], midiBeats)
-        with open(outputPath + ".txt", "w") as file:
-            file.write("MAE, offset, playback\n" + str(error) + "," + str(offset) + "," + str(diffPlayback))
-        # midi.addDelay(-offset)
-        # midi.save(outputPath)
+        f, p, r = f_measure(np.array(kicks_midi) * diffPlayback - offset, np.array(kicks_audio), window=0.01)
+        pd.DataFrame({
+            "MAE": [error],
+            "offset": [offset],
+            "playback": [diffPlayback],
+            "F-measure": [f],
+            "precision": [p],
+            "recall": [r]
+        }).to_csv(outputPath + ".txt")
 
     def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
@@ -95,7 +102,7 @@ class OnsetsAlignementConverter(Converter):
         if len(tuplesThresholded) < 2:
             return 0, 0, 1
 
-        # Compute three version of the alignement
+        # Compute two versions of the alignement
         offset1, error1 = self.computeOffset(tuplesThresholded)
         playback2, offset2, error2 = self.computeRate(tuplesThresholded)
 

@@ -1,6 +1,6 @@
 import os
 
-from adtof.io.converters import Converter
+from adtof.io.converters.converter import Converter
 
 
 class RockBandConverter(Converter):
