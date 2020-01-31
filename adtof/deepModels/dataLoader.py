@@ -16,7 +16,7 @@ def readTrack(i, tracks, midis, alignments, sampleRate=50, context=25, midiLaten
     Read the mp3, the midi and the alignment files and generate a balanced list of samples 
     """
     # initiate vars
-    print("new track read:", i)
+    print("new track read:", tracks[i])
     track = tracks[i]
     midi = midis[i]
     alignment = alignments[i]
@@ -77,8 +77,8 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
         alignments = alignments[:int(len(alignments) * split)]
     else:
         tracks = tracks[int(len(tracks) * split):]
-        midis = midis[int(len(tracks) * split):]
-        alignments = alignments[int(len(tracks) * split):]
+        midis = midis[int(len(midis) * split):]
+        alignments = alignments[int(len(alignments) * split):]
 
     # Lazy cache dictionnary
     DATA = {}
@@ -143,61 +143,33 @@ def getClassWeight(folderPath):
     return weights
 
 
-def vizDataset(dataset, samples=1):
+def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed = False):
+    gen = getTFGenerator(folderPath, train=False, labels=labels, sampleRate=sampleRate, midiLatency=10)()
+
     X = []
     Y = []
-    for i in range(samples):
-        x, y = next(dataset)
-        X.append(x[0].reshape((168)))
-        Y.append(y)
-    plt.matshow(np.array(X).T)
-    print(np.sum(Y))
-    for i in range(len(Y[0])):
-        times = [t for t, y in enumerate(Y) if y[i]]
-        plt.plot(times, np.ones(len(times)) * i * 10, "or")
-    plt.show()
+    if condensed:
+        for i in range(samples):
+            x, y = next(gen)
+            X.append(x[0].reshape((168)))
+            Y.append(y)
 
+        plt.matshow(np.array(X).T)
+        print(np.sum(Y))
+        for i in range(len(Y[0])):
+            times = [t for t, y in enumerate(Y) if y[i]]
+            plt.plot(times, np.ones(len(times)) * i * 10, "or")
+        plt.show()
+    else:
+        fig = plt.figure(figsize=(8, 8))
+        columns = 2
+        rows = 5
+        for i in range(1, columns*rows+1):
+            fig.add_subplot(rows, columns, i)
+            x, y = next(gen)
+            
+            plt.imshow(np.reshape(x, (25,168)))
+            if y[0]:
+                plt.plot([0], [0], "or")
+        plt.show()
 
-# def getTFGenerator(candidateName, test_size=0.1):
-#     """
-#     WIP: Create a generator dynamically generating converted tracks
-#     """
-
-#     def generateGenerator(data):
-#         """
-#         Create a generator with the tracks in data
-#         TODO: this is ugly
-#         """
-
-#         def gen(context=25, midiLatency=12, classWeight=[2 / 16, 8 / 16, 16 / 16, 2 / 16, 4 / 16]):
-#             """
-#             [36, 40, 41, 46, 49]
-#             """
-#             mir = MIR()
-#             for midiPath, audiPath, converter in data:
-#                 try:
-#                     # TODO: update: _, audio, _ = converter.getConvertibleFiles(path)
-#                     # Get the y: midi in dense matrix representation
-#                     y = converter.convert(midiPath).getDenseEncoding(sampleRate=100, timeShift=0, radiation=0)
-#                     y = y[midiLatency:]
-#                     if np.sum(y) == 0:
-#                         warnings.warn("Midi doesn't have notes " + midiPath)
-#                         continue
-
-#                     # Get the x: audio with stft or cqt or whatever + overlap windows to get some context
-#                     x = mir.open(audiPath)
-#                     x = np.array([x[i:i + context] for i in range(len(x) - context)])
-#                     x = x.reshape(x.shape + (1, ))  # Add the channel dimension
-
-#                     for i in range(min(len(y) - 1, len(x) - 1)):
-#                         # sampleWeight = 1  #max(1/16, np.sum(classWeight * y[i])) #TODO: compute the ideal weight based on the distribution of the samples
-#                         yield x[i], y[i]
-#                 except Exception as e:
-#                     print(midiPath, e)
-#             print("DEBUG: real new epoch")
-
-#         return gen
-
-#     train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
-
-#     # next(Converter.generateGenerator(train)())

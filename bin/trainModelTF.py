@@ -18,7 +18,6 @@ from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 from adtof.io.converters.converter import Converter
 
-
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # tf.config.experimental_run_functions_eagerly(True)
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
@@ -35,6 +34,13 @@ def main():
     labels = [36]  #[36, 40, 41, 46, 49]
     sampleRate = 50
 
+    # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
+    # Plot the first image of the dataset
+    # for x, y in dataset:
+    #     file_writer = tf.summary.create_file_writer(log_dir)
+    #     with file_writer.as_default():
+    #         tf.summary.image(str(list(np.reshape(y, (batch_size)))), x, step=0, max_outputs=20, description=str(list(np.reshape(y, (batch_size)))))
+
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
@@ -45,12 +51,12 @@ def main():
         dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
-
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
     dataset = dataset.prefetch(buffer_size=batch_size)
     dataset_test = dataset_test.prefetch(buffer_size=batch_size)
+
 
     # Get the model
     model = RV1TF().createModel(output=len(labels))
@@ -64,7 +70,10 @@ def main():
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,)
+        tf.keras.callbacks.ModelCheckpoint(
+            checkpoint_path,
+            save_weights_only=True,
+        )
     ]
 
     model.fit(

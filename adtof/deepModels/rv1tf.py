@@ -1,6 +1,7 @@
 import tensorflow as tf
 from adtof.deepModels.peakPicking import PeakPicking
 
+
 class RV1TF(object):
     """
     Richard Vogl model
@@ -51,11 +52,11 @@ class RV1TF(object):
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
-        # and how binary cross entropy work for multi label 
+        # and how binary cross entropy work for multi label
         model.compile(
             optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss= tf.keras.backend.binary_crossentropy, #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
-            metrics=["Precision", "Recall"] #, PeakPicking()
+            loss=tf.keras.backend.binary_crossentropy,  #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
+            metrics=["Precision", "Recall"]  # PeakPicking(hitDistance=0.05)  
         )
         return model
 
