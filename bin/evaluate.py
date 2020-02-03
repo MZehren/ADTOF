@@ -27,9 +27,9 @@ def main():
     onsetOffset = True
 
     # load the file path
-    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)
-    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo) for algo in config.THREE_CLASS_EVAL]
-    offsetPaths = config.getFilesInFolder(args.inputFolder, "od_offset")
+    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)[:100]
+    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo)[:100] for algo in ["MZ-CNN_1"]] # config.THREE_CLASS_EVAL
+    offsetPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_ALIGNED)[:100]
     assert len(gtPaths) == len(estimationPaths[0])
 
     # eval

@@ -28,7 +28,7 @@ def readTrack(i, tracks, midis, alignments, sampleRate=50, context=25, midiLaten
         sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback=1 / alignmentInput.playback[0], keys=labels
     )
     x = mir.open(track)
-    x = x.reshape(x.shape + (1, ))  # Add the channel dimension TODO: remove?
+    x = x.reshape(x.shape + (1, ))  # Add the channel dimension
 
     # Trim before the first midi note and after the last uncovered part
     firstNoteIdx = -1
@@ -52,21 +52,24 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minF=0.5):
+def getTFGenerator(
+    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True
+):
     """
     TODO: change the sampleRate to 100 Hz?
     sampleRate = if the highest speed is a note each 20ms,    
                 the sr should be 1/0.02=50 
     context = how many frames are given with each samples
     midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
+    minFTrackFiltering = At which threshold should we remove the tracks performing badly with RV model 
     """
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
     midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
     alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
 
     # F-Measure filtering
-    bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minF for alignment in alignments]
-    tracks = tracks[bools].tolist() # TODO why tracks[0] returns a np._str, how to get the value?
+    bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minFTrackFiltering for alignment in alignments]
+    tracks = tracks[bools].tolist()  # TODO why tracks[0] returns a np._str, how to get the value?
     midis = midis[bools].tolist()
     alignments = alignments[bools].tolist()
 
@@ -95,7 +98,7 @@ def getTFGenerator(folderPath, sampleRate=50, context=25, midiLatency=0, train=T
             data = DATA[trackIdx]
             if len(data["y"]) == 0:  # In case the tracks doesn't have notes
                 continue
-            n = 2 if train else 100
+            n = 2  # if train else 100
             for _ in range(n):
                 cursor = data["cursor"]
                 sampleIdx = data["indexes"][cursor]
@@ -143,7 +146,7 @@ def getClassWeight(folderPath):
     return weights
 
 
-def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed = False):
+def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed=False):
     gen = getTFGenerator(folderPath, train=False, labels=labels, sampleRate=sampleRate, midiLatency=10)()
 
     X = []
@@ -164,12 +167,11 @@ def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed = 
         fig = plt.figure(figsize=(8, 8))
         columns = 2
         rows = 5
-        for i in range(1, columns*rows+1):
+        for i in range(1, columns * rows + 1):
             fig.add_subplot(rows, columns, i)
             x, y = next(gen)
-            
-            plt.imshow(np.reshape(x, (25,168)))
+
+            plt.imshow(np.reshape(x, (25, 168)))
             if y[0]:
                 plt.plot([0], [0], "or")
         plt.show()
-

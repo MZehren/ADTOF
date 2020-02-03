@@ -14,6 +14,11 @@ class PeakPicking(tf.keras.metrics.Metric):
         self.batch_index = 0
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+        """
+        Called when an iteration is done. Y_true is a mini_batch
+
+        Compute the peaks of this batch in the format: TODO
+        """
         dense_peaks_pred = self._dense_peak_picking(y_pred)
 
         offset = self.batch_index * len(y_true)
