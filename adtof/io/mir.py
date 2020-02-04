@@ -23,7 +23,9 @@ class MIR(object):
         """
         # Log spec
         hopSize = self.sampleRate / self.frameRate
-        spec = madmom.audio.FilteredSpectrogram(path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, num_channels=1, fmax=20000)
+        spec = madmom.audio.FilteredSpectrogram(
+            path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, num_channels=1, fmax=20000
+        )
         # norm
         max = np.max(spec)
         min = np.min(spec)
@@ -32,7 +34,7 @@ class MIR(object):
         # diff = np.diff(spec, axis=0)
         # spec = spec[1:]
         diff = madmom.audio.spectrogram.SpectrogramDifference(spec)
-        diff = (diff + 1) /2
+        diff = np.abs(diff)  # (diff + 1) /2
         result = np.concatenate((spec, diff), axis=1)
         return result
 

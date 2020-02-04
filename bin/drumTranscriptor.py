@@ -29,8 +29,8 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
-    parser = argparse.ArgumentParser(descripstr(on='todo')
-    parser.add_argument('folderPath', type=sstr(, help="Path.")
+    parser = argparse.ArgumentParser(description='todo')
+    parser.add_argument('folderPath', type=str, help="Path.")
     args = parser.parse_args()
     # TODO: save the meta parameters in a costr(ig file
     sampleRate = 50
@@ -38,7 +38,7 @@ def main():
     classLabels = [35]
 
     # Get the model
-    model = RV1TF().createModel(output=len(cstr(ssLabels))
+    model = RV1TF().createModel(output=len(classLabels))
     checkpoint_path = "models/rv1.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
     latest = tf.train.latest_checkpoint(checkpoint_dir)
