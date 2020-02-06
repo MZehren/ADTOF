@@ -10,11 +10,13 @@ from collections import defaultdict
 
 import mir_eval
 import numpy as np
+import pandas as pd
+import pretty_midi
 
 from adtof import config
 from adtof.io.converters.textConverter import TextConverter
 from adtof.io.myMidi import MidoProxy as midi  # mido seems faster here
-import pretty_midi
+
 
 def main():
     # load the arguments
@@ -23,13 +25,13 @@ def main():
     args = parser.parse_args()
     # parameters of the evaluation
     removeStart = True
-    window = 0.03
+    window = 0.1
     onsetOffset = True
 
     # load the file path
-    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)[:100]
-    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo)[:100] for algo in ["MZ-CNN_1"]] # config.THREE_CLASS_EVAL
-    offsetPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_ALIGNED)[:100]
+    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)[:25]
+    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo)[:25] for algo in ["MZ-CNN_1"]] # config.THREE_CLASS_EVAL
+    offsetPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_ALIGNED)[:25]
     assert len(gtPaths) == len(estimationPaths[0])
 
     # eval
@@ -55,11 +57,8 @@ def main():
                 estimations = {k: [t for t in v if t > firstOnset] for k, v in estimations.items()}
 
             if onsetOffset:
-                with open(offsetPaths[i], mode="r") as csvFile:
-                    reader = csv.reader(csvFile)
-                    offset = float(list(reader)[1][2])  #TODO Read second row, second column
-                    offset = 0 if np.isnan(offset) else offset
-                gt = {k: [t - offset for t in v] for k, v in gt.items()}
+                alignmentInput = pd.read_csv(offsetPaths[i], escapechar=" ")
+                gt = {k: [t * alignmentInput.playback[0] - alignmentInput.offset[0] for t in v] for k, v in gt.items()}
 
             for pitch in meanResults[algoName].keys():
                 y_truth = np.array(gt[pitch]) if pitch in gt else np.array([])

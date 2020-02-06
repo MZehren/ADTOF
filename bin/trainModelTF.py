@@ -124,7 +124,7 @@ def main():
         dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
-    batch_size = 1
+    batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
     dataset = dataset.prefetch(buffer_size=batch_size)
@@ -155,17 +155,17 @@ def main():
             checkpoint_path,
             save_weights_only=True,
         ),
-        tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda batch, logs: log_layer_activation(batch, viz_example, model, activation_model, file_writer))
+        tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
     ]
 
     model.fit(
         dataset,
-        epochs=1,
+        epochs=100,
         initial_epoch=0,
-        steps_per_epoch=1,
+        steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,
-        validation_steps=1
+        validation_steps=20
         # class_weight=classWeight
     )
 

@@ -53,9 +53,11 @@ def main():
     for track in tracks:
         X = mir.open(track)
         X = X.reshape(X.shape + (1, ))
-        Y = model.predict(np.array([X[i:i + context] for i in range(len(X) - context)]))
+        Y = model.predict(np.array([X[i: i + context] for i in range(len(X) - context)]))
+        # import matplotlib.pyplot as plt
         # plt.plot([i/sampleRate for i in range(len(Y))], Y)
-        
+        # plt.show()
+
         denseResult = PeakPicking()._dense_peak_picking(Y) # denseResult is of the shape:(timestep, class)
         sparseResult = [str(i / sampleRate) + "\t" + str(classLabels[j]) for i, y in enumerate(denseResult.numpy()) for j, isPeak in enumerate(y) if isPeak]
         with open(os.path.join(args.folderPath, "MZ-CNN_1", config.getFileBasename(track) + ".txt"), "w") as outputFile:

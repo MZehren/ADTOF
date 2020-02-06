@@ -18,7 +18,8 @@ BEATS_EST = "beats_est"
 # Algo to eval
 THREE_CLASS_EVAL = ["RV-CRNN_3"]
 
-logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 def getFilesInFolder(*path):
