@@ -21,6 +21,12 @@ class MIR(object):
         """
         Load an audio track and return an array numpy
         """
+        return self.openMadmom(path)
+
+    def openMadmom(self, path: str):
+        """
+        
+        """
         # Log spec
         hopSize = self.sampleRate / self.frameRate
         spec = madmom.audio.FilteredSpectrogram(
@@ -40,8 +46,18 @@ class MIR(object):
 
     def openLibrosa(self, path: str):
         """
-        Load an audio track and return an array numpy
+        
         """
+        # TODO: change from librosa and use ffmpeg instead
+        # TODO: Given a mono audio input signal, sampled at 44.1 kHz,
+        # the input representation is derived from a set of log magnitude spectrograms which are grouped to have approximately
+        # logarithmic frequency spacing between adjacent bins. Three
+        # such spectrograms are calculated at a fixed hop size of 10 ms
+        # with increasing window sizes of 23.2 ms, 46.4 ms and 92.9 ms.
+        # From each, the per-bin first-order difference spectorgram is
+        # calculated, where only the positive differences are retained to
+        # capture the energy rise in individual frequency bands.
+
         y, sr = librosa.load(path, sr=self.sampleRate)
         # TODO: add 0.25s of zero padding at the start for instant onsets
         assert (sr / self.frameRate).is_integer()
