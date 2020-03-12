@@ -48,7 +48,7 @@ class MIR(object):
         """
         
         """
-        # TODO: change from librosa and use ffmpeg instead
+        # TODO: change from librosa and use ffmpeg instead, or sox ?
         # TODO: Given a mono audio input signal, sampled at 44.1 kHz,
         # the input representation is derived from a set of log magnitude spectrograms which are grouped to have approximately
         # logarithmic frequency spacing between adjacent bins. Three
