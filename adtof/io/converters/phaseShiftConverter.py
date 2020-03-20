@@ -171,11 +171,13 @@ class PhaseShiftConverter(Converter):
                 if midi.isEventNoteOn(event):
                     if notePitch in notesOn:
                         warnings.warn("error MIDI Note On overriding existing note")
-                    notesOn[notePitch] = event
+                    else:
+                        notesOn[notePitch] = event
                 elif midi.isEventNoteOff(event):
                     if notePitch not in notesOn:
                         warnings.warn("error MIDI Note Off not existing")
-                    midi.setEventPitch(event, notesOn[notePitch].pitch)
+                    else:
+                        midi.setEventPitch(event, notesOn[notePitch].pitch)
                     notesOn.pop(notePitch, None)
 
             # Remove empty events with a pitch set to 0 from the convertPitches method:

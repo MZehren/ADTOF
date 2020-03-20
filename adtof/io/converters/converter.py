@@ -8,7 +8,6 @@ import jellyfish
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
-import tensorflow as tf
 
 from adtof.io.mir import MIR
 
@@ -90,25 +89,29 @@ class Converter(object):
             #         raise Exception("the rbma audio files without drums are not removed (6-7-26) ")
             #     for i, _ in enumerate(midiFiles):
             #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
-
-            if psc.isConvertible(root):
-                meta = psc.getTrackName(root)
-                if not meta["pro_drums"]:
-                    print("no pro drums") 
-                genres[meta["genre"]].append(root)
-                if meta["genre"] == "Pop/Dance/Electronic":
-                # TODO: change the hardcoded format (root, psc) to something simpler to use
-                    results[meta["name"]].append((root, psc))
             # else:
             #     for file in files:
             #         path = os.path.join(root, file)
             #         if rbc.isConverinputFolder):
             #             results[rbc.getTrackName(path)].append((path, "", psc))
 
+            if psc.isConvertible(root):
+                meta = psc.getTrackName(root)
+                if not meta["pro_drums"]:
+                    print("no pro drums")
+                    genres["pro_drums:False"].append(root)
+                    continue
+                else:
+                    genres["pro_drums:True"].append(root)
+                genres[meta["genre"]].append(root)
+                # if meta["genre"] == "Pop/Dance/Electronic":
+                results[meta["name"]].append({"path": root, "convertor": psc})
+
+
         # Remove duplicate
-        genresN = [k for k,v in genres.items()] 
-        genresV = [len(v) for k,v in genres.items()]
-        genrePos= np.arange(len(genresV))
+        genresN = [k for k, v in genres.items()]
+        genresV = [len(v) for k, v in genres.items()]
+        genrePos = np.arange(len(genresV))
         plt.bar(genrePos, genresV)
         plt.xticks(genrePos, genresN, rotation=70)
         plt.show()
@@ -121,9 +124,8 @@ class Converter(object):
         if it contains ainy, remove them and return a priority score
         """
         keywords = [
-            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)",
-            "(2x Bass Pedals)", "2xbp", "2x", "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)",
-            "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
+            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)", "(2x Bass Pedals)", "2xbp", "2x",
+            "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)", "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
         ]
 
         contained = [k for k in keywords if k in name]
@@ -182,13 +184,11 @@ class Converter(object):
         PhaseShift > rockBand
         PhaseShift with more notes > Phase shift with less notes 
         """
-        from adtof.io.converters import PhaseShiftConverter
+        from adtof.io.converters.phaseShiftConverter import PhaseShiftConverter
         # from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
-            psTrakcs = [
-                convertor for convertor in candidates[candidate] if isinstance(convertor[1], PhaseShiftConverter)
-            ]
+            psTrakcs = [convertor for convertor in candidates[candidate] if isinstance(convertor["convertor"], PhaseShiftConverter)]
             if len(psTrakcs) > 0:
                 # TODO: select the best one
                 candidates[candidate] = psTrakcs[0]
@@ -210,14 +210,12 @@ class Converter(object):
         candidates = Converter._mergeFileNames(candidates)
         candidates = Converter._pickVersion(candidates)
         candidateName = list(candidates.values())
-        candidateName.sort(key=lambda x: x[0])
+        candidateName.sort(key=lambda x: x["path"])
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         # Do the conversion
-        for path, converter in candidates.values():
-            converter.convert(path, outputFolder)
-
-
+        for name, candidate in candidates.items():
+            candidate["convertor"].convert(candidate["path"], outputFolder)
 
     @staticmethod
     def vizDataset(iterator):
