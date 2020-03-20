@@ -19,14 +19,17 @@ def readTrack(i, tracks, midis, alignments, sampleRate=50, context=25, midiLaten
     print("new track read:", tracks[i])
     track = tracks[i]
     midi = midis[i]
-    alignment = alignments[i]
+    alignment = alignments[i] if i in alignments else None
     mir = MIR(frameRate=sampleRate)
 
     # read files
-    alignmentInput = pd.read_csv(alignment, escapechar=" ")
-    y = MidiProxy(midi).getDenseEncoding(
-        sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback=1 / alignmentInput.playback[0], keys=labels
-    )
+    if alignment is not None:
+        alignmentInput = pd.read_csv(alignment, escapechar=" ")
+        y = MidiProxy(midi).getDenseEncoding(
+            sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback=1 / alignmentInput.playback[0], keys=labels
+        )
+    else:
+        y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, keys=labels)
     x = mir.open(track)
     x = x.reshape(x.shape + (1, ))  # Add the channel dimension
 
@@ -53,7 +56,7 @@ def balanceDistribution(X, Y):
 
 
 def getTFGenerator(
-    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True
+    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True, samplPerTrack=2, balanceClasses=True
 ):
     """
     TODO: change the sampleRate to 100 Hz?
@@ -68,20 +71,21 @@ def getTFGenerator(
     alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
 
     # F-Measure filtering
-    bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minFTrackFiltering for alignment in alignments]
-    tracks = tracks[bools].tolist()  # TODO why tracks[0] returns a np._str, how to get the value?
-    midis = midis[bools].tolist()
-    alignments = alignments[bools].tolist()
+    if len(alignments):
+        bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minFTrackFiltering for alignment in alignments]
+        tracks = tracks[bools]  # TODO why tracks[0] returns a np._str, how to get the value?
+        midis = midis[bools]
+        alignments = alignments[bools]
 
     # train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
     if train:
-        tracks = tracks[:int(len(tracks) * split)]
-        midis = midis[:int(len(midis) * split)]
-        alignments = alignments[:int(len(alignments) * split)]
+        tracks = tracks[:int(len(tracks) * split)].tolist()
+        midis = midis[:int(len(midis) * split)].tolist()
+        alignments = alignments[:int(len(alignments) * split)].tolist()
     else:
-        tracks = tracks[int(len(tracks) * split):]
-        midis = midis[int(len(midis) * split):]
-        alignments = alignments[int(len(alignments) * split):]
+        tracks = tracks[int(len(tracks) * split):].tolist()
+        midis = midis[int(len(midis) * split):].tolist()
+        alignments = alignments[int(len(alignments) * split):].tolist()
 
     # Lazy cache dictionnary
     DATA = {}
@@ -98,11 +102,15 @@ def getTFGenerator(
             data = DATA[trackIdx]
             if len(data["y"]) == 0:  # In case the tracks doesn't have notes
                 continue
-            n = 2  # if train else 100
-            for _ in range(n):
+            # samplPerTrack = 2  # if train else 100
+            for _ in range(samplPerTrack):
                 cursor = data["cursor"]
-                sampleIdx = data["indexes"][cursor]
-                data["cursor"] = (cursor + 1) % len(data["indexes"])
+                if balanceClasses:
+                    data["cursor"] = (cursor + 1) % len(data["indexes"])
+                    sampleIdx = data["indexes"][cursor]
+                else:
+                    data["cursor"] = (cursor + 1) % len(data["x"])
+                    sampleIdx = cursor
                 yield data["x"][sampleIdx:sampleIdx + context], data["y"][sampleIdx]
 
     return gen
