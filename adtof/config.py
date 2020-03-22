@@ -23,12 +23,17 @@ log.setLevel(logging.DEBUG)
 
 
 def getFilesInFolder(*path):
-    if os.path.exists(os.path.join(*path)) == False:
+    """
+    Get the files in the folder, or the file pointed by the path
+    """
+    if os.path.exists(os.path.join(*path)) == False: #if it doesn't exist
         return np.array([])
-
-    result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
-    result.sort()
-    return np.array(result)
+    elif os.path.isfile(os.path.join(*path)): #if it's a file
+        return np.array([os.path.join(*path)])
+    else: #if it's a folder
+        result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
+        result.sort()
+        return np.array(result)
 
 
 def getFileBasename(path):

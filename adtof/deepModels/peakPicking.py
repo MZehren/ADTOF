@@ -37,7 +37,32 @@ class PeakPicking(tf.keras.metrics.Metric):
         score = self._get_f_measure(self.batch_y_pred, self.batch_y_true, self.hitDistance * self.sampleRate)
         return score
 
-    def _dense_peak_picking(self, values, threshold: float = 0.2, windowSize: int = 2):
+    def serialPeakPicking(self, values: np.array, relativeDelta=0, absoluteDelta=0.5, m=2, a=2, w=2):
+        """
+        a peak must be the maximum value within a window of size 2m (i.e.: fa(n) = max(fa(n − m), · · · , fa(n+m))), 
+        and exceeding the mean value plus a threshold δ within a window of size 2a (i.e.: fa(n) ≥ mean(fa(n − a), · · · , fa(n+a)) +δ). 
+        Additionally, a peak must have at least a distance of 2w to the last detected peak nlp (i.e.: n − nlp > w,).
+        The parameters for peak picking are the same as used in [1]: m = a = w = 2. 
+        """
+        peaksValue = []
+        peaksPosition = []
+        lookdistance = 1
+        mySortedList = sorted([(i, value) for i, value in enumerate(values)], key=lambda x: x[1], reverse=True)
+        for i, value in mySortedList:  #For all the values by decreasing order TODO: implement a different distance to the peak ?
+            if value >= relativeDelta and value >= absoluteDelta:
+                isMaximum = value == np.max(values[max(i - m, 0):i + m + 1])
+                isAboveMean = value >= np.mean(values[max(i - a, 0):i + a + 1]) + relativeDelta
+                if isMaximum and isAboveMean:
+                    peaksValue.append(value)
+                    peaksPosition.append(i)
+            else:
+                break
+        peaksPosition.sort()
+        return peaksPosition #, peaksValue
+        
+
+
+    def _dense_peak_picking(self, values, threshold: float = 0.5, windowSize: int = 2):
         """
         Return a dense representation of the peaks
         from [0,10,1,0]
@@ -54,7 +79,10 @@ class PeakPicking(tf.keras.metrics.Metric):
         # https://www.tensorflow.org/api_docs/python/tf/math/unsorted_segment_max ?
         maximised = tf.constant(True, shape=values.shape)
         for i in range(windowSize):
-            segments = tf.constant([(j + i) // windowSize for j in range(len(values))])
+            # find the max in
+            tf.max.argmax()
+
+            # segments = tf.constant([(j + i) // windowSize for j in range(len(values))])
             # TODO: is there a better way to get the peaks of a overlaping segments?
             segmentsMax = tf.math.segment_max(values, segments)
             argSegmentsMax = [[segmentsMax[r // windowSize][c] == values[r][c] for c, _ in enumerate(values[r])] for r, _ in enumerate(values)]
