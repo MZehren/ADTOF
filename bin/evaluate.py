@@ -26,12 +26,12 @@ def main():
     # parameters of the evaluation
     removeStart = True
     window = 0.1
-    onsetOffset = True
+    onsetOffset = False
 
     # load the file path
-    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)[:25]
-    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo)[:25] for algo in ["MZ-CNN_1"]] # config.THREE_CLASS_EVAL
-    offsetPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_ALIGNED)[:25]
+    gtPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_CONVERTED)
+    estimationPaths = [config.getFilesInFolder(args.inputFolder, algo) for algo in ["MZ-CNN_1"]] # config.THREE_CLASS_EVAL
+    offsetPaths = config.getFilesInFolder(args.inputFolder, config.MIDI_ALIGNED)
     assert len(gtPaths) == len(estimationPaths[0])
 
     # eval
@@ -91,6 +91,8 @@ def main():
                     np.sum([pitch["FP"] for pitch in sumResults[algoName].values()]),
                     np.sum([pitch["FN"] for pitch in sumResults[algoName].values()]))[0])
         print("mean KD fm", np.mean(meanResults[algoName][36]["F"]))
+        print("mean KD P", np.mean(meanResults[algoName][36]["P"]))
+        print("mean KD R", np.mean(meanResults[algoName][36]["R"]))
         print("sum KD fm",
                 getF(sumResults[algoName][36]["TP"], sumResults[algoName][36]["FP"], sumResults[algoName][36]["FN"])[0])
         print("mean SD fm", np.mean(meanResults[algoName][40]["F"]))

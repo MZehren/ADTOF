@@ -21,7 +21,9 @@ from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 from adtof.io.converters.converter import Converter
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+tf.config.threading.set_intra_op_parallelism_threads(12)
+tf.config.threading.set_inter_op_parallelism_threads(12)
 # tf.config.experimental_run_functions_eagerly(True)
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
 
@@ -89,16 +91,16 @@ def main():
         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
     ]
 
-    # model.fit(
-    #     dataset,
-    #     epochs=100,
-    #     initial_epoch=0,
-    #     steps_per_epoch=100,
-    #     callbacks=callbacks,
-    #     validation_data=dataset_test,
-    #     validation_steps=100
-    #     # class_weight=classWeight
-    # )
+    model.fit(
+        dataset,
+        epochs=100,
+        initial_epoch=0,
+        steps_per_epoch=100,
+        callbacks=callbacks,
+        validation_data=dataset_test,
+        validation_steps=100
+        # class_weight=classWeight
+    )
 
     for x, y in dataset_test:
         predictions = model.predict(x)

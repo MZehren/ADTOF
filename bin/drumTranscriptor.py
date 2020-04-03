@@ -38,7 +38,7 @@ def main():
     sampleRate = 50
     context = 25
     classLabels = [35]
-    plot = True
+    plot = False
 
     # Get the model
     model = RV1TF().createModel(output=len(classLabels))
