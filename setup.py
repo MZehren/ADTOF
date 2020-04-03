@@ -1,8 +1,8 @@
 import setuptools
 import glob
 
-requirements = ["mido", "librosa", "pyunpack", "patool", "jellyfish", "pydot", "graphviz", "pyguitarpro", "beautifulsoup4"]
-
+# requirements = ["mido", "librosa", "pyunpack", "patool", "jellyfish", "pydot", "graphviz", "pyguitarpro", "beautifulsoup4"]
+requirements = ["librosa", "cython", "madmom", "sklearn", "tensorflow", "matplotlib"]
 with open("README.rst", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
