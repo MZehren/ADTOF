@@ -33,7 +33,7 @@ class MIR(object):
         # Log spec
         hopSize = int(self.sampleRate / self.frameRate)
         spec = madmom.audio.FilteredSpectrogram(
-            path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, fmin=self.fmin, fmax=self.fmax, num_channels=1
+            path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, fmin=self.fmin, fmax=self.fmax, num_channels=1, dtype="int16"
         )
 
         # norm
