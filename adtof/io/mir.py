@@ -10,12 +10,14 @@ class MIR(object):
     """
 
     def __init__(self, frameRate=100, frameSize=2048):
-        # TODO: load the parameters externally
-        self.sampleRate = 44100
+        """
+        Configure the parameters for the feature extraction
+        """
         self.frameRate = frameRate
         self.frameSize = frameSize
         self.n_bins = 84
-        self.fMin = 32.70  #20
+        self.fmin = 20  #20
+        self.fmax = 20000
 
     def open(self, path: str):
         """
@@ -25,22 +27,24 @@ class MIR(object):
 
     def openMadmom(self, path: str):
         """
-        
+        follow Vogl article
         """
+        # Load track
+        y, sampleRate = madmom.io.audio.load_audio_file(path, num_channels=1)
+        hopSize = int(sampleRate / self.frameRate)
         # Log spec
-        hopSize = self.sampleRate / self.frameRate
-        spec = madmom.audio.FilteredSpectrogram(
-            path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, num_channels=1, fmax=20000
-        )
+        spec = madmom.audio.FilteredSpectrogram(y, sample_rate=sampleRate, frame_size=self.frameSize, hop_size=hopSize, fmin=self.fmin, fmax=self.fmax)
+
         # norm
         max = np.max(spec)
         min = np.min(spec)
         spec = (spec - min) / (max - min)
+
         # stack diff
         # diff = np.diff(spec, axis=0)
         # spec = spec[1:]
-        diff = madmom.audio.spectrogram.SpectrogramDifference(spec)
-        diff = np.abs(diff)  #diff.clip(min=0) #np.abs(diff)  # (diff + 1) /2
+        diff = madmom.audio.spectrogram.SpectrogramDifference(spec, diff_frames=1, positive_diffs=True)
+        # diff = np.abs(diff)  #diff.clip(min=0) #np.abs(diff)  # (diff + 1) /2
         result = np.concatenate((spec, diff), axis=1)
         return result
 
@@ -103,3 +107,4 @@ class MIR(object):
         """
         plt.matshow(result)
         plt.show()
+

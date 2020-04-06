@@ -55,12 +55,14 @@ def balanceDistribution(X, Y):
 
 
 def getTFGenerator(
-    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.8, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True, samplPerTrack=2, balanceClasses=True
+    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.85, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True, samplePerTrack=20, balanceClasses=False
 ):
     """
     TODO: change the sampleRate to 100 Hz?
-    sampleRate = if the highest speed is a note each 20ms,    
-                the sr should be 1/0.02=50 
+    sampleRate = 
+        - If the highest speed we need to discretize is 20Hz, then we should double the speed 40Hz ->  0.025ms of window
+        - Realisticly speaking the fastest tempo I witnessed is around 250 bpm at 16th notes -> 250/60*16 = 66Hz the sr should be 132Hz
+
     context = how many frames are given with each samples
     midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
     minFTrackFiltering = At which threshold should we remove the tracks performing badly with RV model 
@@ -96,19 +98,19 @@ def getTFGenerator(
             if trackIdx not in DATA:
                 X, Y = readTrack(trackIdx, tracks, midis, alignments, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
                 indexes = balanceDistribution(X, Y)
-                DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": len(indexes) // 2}
+                DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0}
 
             data = DATA[trackIdx]
             if len(data["y"]) == 0:  # In case the tracks doesn't have notes
                 continue
-            # samplPerTrack = 2  # if train else 100
-            for _ in range(samplPerTrack):
+
+            for _ in range(samplePerTrack):
                 cursor = data["cursor"]
                 if balanceClasses:
                     data["cursor"] = (cursor + 1) % len(data["indexes"])
                     sampleIdx = data["indexes"][cursor]
                 else:
-                    data["cursor"] = (cursor + 1) % len(data["x"])
+                    data["cursor"] = (cursor + 1) % (len(data["x"]) - context)
                     sampleIdx = cursor
                 yield data["x"][sampleIdx:sampleIdx + context], data["y"][sampleIdx]
 

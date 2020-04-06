@@ -56,7 +56,7 @@ class RV1TF(object):
         # How softmax cross entropy can be used in multilabel classification,
         # and how binary cross entropy work for multi label
         model.compile(
-            optimizer="adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), #"adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
             loss=tf.keras.backend.binary_crossentropy,  #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
             metrics=["Precision", "Recall"]  # PeakPicking(hitDistance=0.05)  
         )
