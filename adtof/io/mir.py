@@ -15,6 +15,7 @@ class MIR(object):
         """
         self.frameRate = frameRate
         self.frameSize = frameSize
+        self.sampleRate = 44100
         self.n_bins = 84
         self.fmin = 20  #20
         self.fmax = 20000
@@ -29,11 +30,11 @@ class MIR(object):
         """
         follow Vogl article
         """
-        # Load track
-        y, sampleRate = madmom.io.audio.load_audio_file(path, num_channels=1)
-        hopSize = int(sampleRate / self.frameRate)
         # Log spec
-        spec = madmom.audio.FilteredSpectrogram(y, sample_rate=sampleRate, frame_size=self.frameSize, hop_size=hopSize, fmin=self.fmin, fmax=self.fmax)
+        hopSize = int(self.sampleRate / self.frameRate)
+        spec = madmom.audio.FilteredSpectrogram(
+            path, sample_rate=self.sampleRate, frame_size=self.frameSize, hop_size=hopSize, fmin=self.fmin, fmax=self.fmax
+        )
 
         # norm
         max = np.max(spec)
@@ -107,4 +108,3 @@ class MIR(object):
         """
         plt.matshow(result)
         plt.show()
-
