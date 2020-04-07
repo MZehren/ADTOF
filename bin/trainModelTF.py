@@ -97,22 +97,22 @@ def main():
         steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,
-        validation_steps=100
+        validation_steps=30
         # class_weight=classWeight
     )
 
-    for x, y in dataset_test:
-        predictions = model.predict(x)
+    # for x, y in dataset_test:
+    #     predictions = model.predict(x)
 
-        import matplotlib.pyplot as plt
-        f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-        ax1.plot(predictions)
-        ax1.set_ylabel("Prediction")
-        ax2.plot(y)
-        ax2.set_ylabel("Truth")
-        ax2.set_xlabel("Time step")
-        plt.show()
-        print("Done!")
+    #     import matplotlib.pyplot as plt
+    #     f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    #     ax1.plot(predictions)
+    #     ax1.set_ylabel("Prediction")
+    #     ax2.plot(y)
+    #     ax2.set_ylabel("Truth")
+    #     ax2.set_xlabel("Time step")
+    #     plt.show()
+    #     print("Done!")
 
 
 if __name__ == '__main__':
