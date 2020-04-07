@@ -55,7 +55,17 @@ def balanceDistribution(X, Y):
 
 
 def getTFGenerator(
-    folderPath, sampleRate=50, context=25, midiLatency=0, train=True, split=0.85, labels=[36, 40, 41, 46, 49], minFTrackFiltering=0.5, shuffle=True, samplePerTrack=20, balanceClasses=False
+    folderPath,
+    sampleRate=50,
+    context=25,
+    midiLatency=0,
+    train=True,
+    split=0.85,
+    labels=[36, 40, 41, 46, 49],
+    minFTrackFiltering=0.5,
+    shuffle=True,
+    samplePerTrack=20,
+    balanceClasses=False
 ):
     """
     TODO: change the sampleRate to 100 Hz?
@@ -87,6 +97,11 @@ def getTFGenerator(
         tracks = tracks[int(len(tracks) * split):].tolist()
         midis = midis[int(len(midis) * split):].tolist()
         alignments = alignments[int(len(alignments) * split):].tolist()
+
+    if len(alignments):
+        tracks, midis, alignments = sklearn.utils.shuffle(tracks, midis, alignments)
+    else:
+        tracks, midis = sklearn.utils.shuffle(tracks, midis)
 
     # Lazy cache dictionnary
     DATA = {}

@@ -21,12 +21,10 @@ from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 from adtof.io.converters.converter import Converter
 
-
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
-
 
 
 def main():
@@ -54,14 +52,14 @@ def main():
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=True), (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
     )
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
-    dataset = dataset.prefetch(buffer_size=batch_size)
-    dataset_test = dataset_test.prefetch(buffer_size=batch_size)
+    dataset = dataset.prefetch(buffer_size=batch_size // 2)
+    dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
     model = RV1TF().createModel(output=len(labels))
@@ -105,7 +103,7 @@ def main():
 
     for x, y in dataset_test:
         predictions = model.predict(x)
-        
+
         import matplotlib.pyplot as plt
         f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
         ax1.plot(predictions)
