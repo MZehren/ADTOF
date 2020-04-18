@@ -9,11 +9,15 @@ import sys
 import warnings
 from shutil import copyfile
 
+import numpy as np
 import pkg_resources
 
-from adtof.io.myMidi import MidiProxy
-from adtof.io.converters.converter import Converter
+import ffmpeg
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_8
+from adtof.io.converters.converter import Converter
+from adtof.io.mir import MIR
+from adtof.io.myMidi import MidiProxy
+
 
 class PhaseShiftConverter(Converter):
     """
@@ -29,8 +33,6 @@ class PhaseShiftConverter(Converter):
     DRUM_ROLLS = 126  # TODO: implement
     CYMBAL_SWELL = 127  # TODO: implement
 
-
-
     def convert(self, inputFolder, outputFolder, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events
@@ -40,7 +42,7 @@ class PhaseShiftConverter(Converter):
         try:
             metadata = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
             delay = float(metadata["delay"]) / \
-                1000 if "delay" in metadata else 0.
+                1000 if "delay" in metadata and metadata["delay"]!="" else 0.
 
             if not metadata["pro_drums"] or metadata["pro_drums"] != "True":
                 warnings.warn("song.ini doesn't contain pro_drums = True")
@@ -59,17 +61,43 @@ class PhaseShiftConverter(Converter):
         # Write the resulting file
         if outputFolder:
             trackName = self.getTrackName(inputFolder)["name"]
-            _, audioFile, _ = self.getConvertibleFiles(inputFolder)
+            _, audioFiles, _ = self.getConvertibleFiles(inputFolder)
 
+            inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
             outputMidiPath = os.path.join(outputFolder, "midi_converted", trackName + ".midi")
             outputAudioPath = os.path.join(outputFolder, "audio", trackName + ".ogg")
             self.checkPathExists(outputMidiPath)
             self.checkPathExists(outputAudioPath)
 
             midi.save(outputMidiPath)
-            copyfile(os.path.join(inputFolder, audioFile), outputAudioPath)
+            self.cleanAudio(inputAudioFiles, outputAudioPath)
 
         return midi
+
+    def cleanAudio(self, audioFiles, outputAudioPath):
+        """
+        Copy the audio file or generate one from multi inputs
+        """
+        if len(audioFiles) == 1:
+            copyfile(os.path.join(inputFolder, audioFile), outputAudioPath)
+        else:
+            ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix",
+                          inputs=len(audioFiles)).filter("volume", len(audioFiles)).output(outputAudioPath, **{
+                              "b:a": "128k"
+                          }).run(overwrite_output=True)
+            # # Read files
+            # loads = [MIR.loadSamples(file) for file in audioFiles]
+            # audios = [l[0] for l in loads]
+            # sampleRates = [l[1] for l in loads]
+            # medianDuration = np.median([len(audio) for audio in audios])
+            # medianSampleRate = np.median(sampleRates)
+
+            # # Add the signals together
+            # audios = [audio for audio in audios if len(audio) == medianDuration]
+            # audio = np.sum(audios, axis=1)
+
+            # # write the output
+            # MIR.writeSamples
 
     def isConvertible(self, inputFolder):
         return all(self.getConvertibleFiles(inputFolder))
@@ -85,7 +113,6 @@ class PhaseShiftConverter(Converter):
 
     def getConvertibleFiles(self, inputFolder):
         """
-        Return the name of the midiFile and AudioFile of a Phaseshift folder
         """
 
         #Util function to select the first file
@@ -100,9 +127,11 @@ class PhaseShiftConverter(Converter):
 
         files = os.listdir(inputFolder)
         midiFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files)
-        audioFile = getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
+        audioFiles = [
+            file for file in files if ".ogg" in file and file != "preview.ogg"
+        ]  #getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
         iniFile = PhaseShiftConverter.INI_NAME if PhaseShiftConverter.INI_NAME in files else None
-        return midiFile, audioFile, iniFile
+        return midiFile, audioFiles, iniFile
 
     def readIni(self, iniPath):
         """
@@ -139,9 +168,7 @@ class PhaseShiftConverter(Converter):
         for name in PhaseShiftConverter.PS_DRUM_TRACK_NAMES:
             if name in tracksName:  # if a name is found in the tracks
                 drumTrackFlag = True
-                tracksToRemove = [
-                    i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0
-                ]
+                tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != name and i != 0]
                 for trackId in sorted(tracksToRemove, reverse=True):
                     del midi.tracks[trackId]
                 break
@@ -182,8 +209,7 @@ class PhaseShiftConverter(Converter):
 
             # Remove empty events with a pitch set to 0 from the convertPitches method:
             eventsToRemove = [
-                j for j, event in enumerate(track)
-                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+                j for j, event in enumerate(track) if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
             ]
             for j in sorted(eventsToRemove, reverse=True):
                 # Save to time information from the event removed in the next event

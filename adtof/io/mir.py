@@ -26,6 +26,7 @@ class MIR(object):
         """
         return self.openMadmom(path)
 
+
     def openMadmom(self, path: str):
         """
         follow Vogl article
