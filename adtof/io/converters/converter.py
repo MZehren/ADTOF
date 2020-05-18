@@ -71,7 +71,7 @@ class Converter(object):
         tc = TextConverter()
         results = defaultdict(list)
         genres = defaultdict(list)
-        #Check anything convertible
+        # Check anything convertible
         for root, _, files in os.walk(rootFolder):
             # if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
             #                                            root.split("/")[-1] == ""):  # Add rbma files
@@ -96,44 +96,61 @@ class Converter(object):
             #             results[rbc.getTrackName(path)].append((path, "", psc))
 
             if psc.isConvertible(root):
-                meta = psc.getTrackName(root)
+                meta = psc.getMetaInfo(root)
                 if not meta["pro_drums"]:
-                    print("no pro drums")
                     genres["pro_drums:False"].append(root)
-                    continue
+                    # continue
                 else:
                     genres["pro_drums:True"].append(root)
                 genres[meta["genre"]].append(root)
                 # if meta["genre"] == "Pop/Dance/Electronic":
                 results[meta["name"]].append({"path": root, "convertor": psc})
 
-
         # Remove duplicate
-        genresN = [k for k, v in genres.items()]
-        genresV = [len(v) for k, v in genres.items()]
-        genrePos = np.arange(len(genresV))
-        plt.bar(genrePos, genresV)
-        plt.xticks(genrePos, genresN, rotation=70)
-        plt.show()
+        # genresN = [k for k, v in genres.items()]
+        # genresV = [len(v) for k, v in genres.items()]
+        # genrePos = np.arange(len(genresV))
+        # plt.bar(genrePos, genresV)
+        # plt.xticks(genrePos, genresN, rotation=70)
+        # plt.show()
         return results
 
     @staticmethod
     def _cleanName(name):
         """
         Look at keywords in the name.
-        if it contains ainy, remove them and return a priority score
+        if it contains any, remove them and return a priority score
         """
         keywords = [
-            "2xBP_Plus", "2xBP", "2xBPv3", "2xBPv1a", "2xBPv2", "2xBPv1", "(2x Bass Pedal+)", "(2x Bass Pedal)", "(2x Bass Pedals)", "2xbp", "2x",
-            "X+", "Expert+", "Expert_Plus", "(Expert+G)", "Expert", "(Expert G)", "(Reduced 2x Bass Pedal+)", "(Reduced 2x Bass Pedal)", "1x", "(B)"
+            "2xBP_Plus",
+            "2xBP",
+            "2xBPv3",
+            "2xBPv1a",
+            "2xBPv2",
+            "2xBPv1",
+            "(2x Bass Pedal+)",
+            "(2x Bass Pedal)",
+            "(2x Bass Pedals)",
+            "2xbp",
+            "2x",
+            "X+",
+            "Expert+",
+            "Expert_Plus",
+            "(Expert+G)",
+            "Expert",
+            "(Expert G)",
+            "(Reduced 2x Bass Pedal+)",
+            "(Reduced 2x Bass Pedal)",
+            "1x",
+            "(B)",
         ]
 
         contained = [k for k in keywords if k in name]
         if len(contained):
             longest = max(contained, key=lambda k: len(k))
-            return name.replace(longest, '').replace(' ', ''), keywords.index(longest)
+            return name.replace(longest, "").replace(" ", ""), keywords.index(longest)
         else:
-            return name.replace(' ', ''), 10000
+            return name.replace(" ", ""), 10000
 
     @staticmethod
     def _mergeFileNames(candidates, similitudeThreshold=0.9):
@@ -185,6 +202,7 @@ class Converter(object):
         PhaseShift with more notes > Phase shift with less notes 
         """
         from adtof.io.converters.phaseShiftConverter import PhaseShiftConverter
+
         # from adtof.io.converters import RockBandConverter
 
         for candidate in candidates:
@@ -215,7 +233,12 @@ class Converter(object):
 
         # Do the conversion
         for name, candidate in candidates.items():
-            candidate["convertor"].convert(candidate["path"], outputFolder)
+            try:
+                candidate["convertor"].convert(candidate["path"], outputFolder)
+            except Exception as e:
+                import warnings
+
+                warnings.warn(name + " not converted: " + str(e))
 
     @staticmethod
     def vizDataset(iterator):

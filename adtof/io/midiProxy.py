@@ -7,13 +7,15 @@ import midi
 from mido import MidiFile
 import mido
 
+# TODO Remove those two implementations and use only one class and pretty midi or something
+
 
 def lazy_property(fn):
-    '''
+    """
     Decorator that makes a property lazy-evaluated.
     TODO change the location ?
-    '''
-    attr_name = '_lazy_' + fn.__name__
+    """
+    attr_name = "_lazy_" + fn.__name__
 
     @property
     def _lazy_property(self):
@@ -37,7 +39,7 @@ class MidoProxy(MidiFile):
         # tpb = self.ticks_per_beat
         # timeEvents = (self.tempoEvents + self.timeSignatureEvents)
         # timeEvents.sort(key = lambda y: y[0])
-        
+
         raise NotImplementedError()
 
     def getTracksName(self):
@@ -91,14 +93,14 @@ class MidoProxy(MidiFile):
         Return a list a tuples
         [(ticks, numerator, denumerator)]
         """
-        events = [(0, mido.MetaMessage('time_signature'))]
+        events = [(0, mido.MetaMessage("time_signature"))]
         tickCursor = 0
         if self.type != 1:
             raise NotImplementedError()
 
         for event in self.tracks[0]:
             tickCursor += event.time
-            if event.type == 'time_signature':
+            if event.type == "time_signature":
                 # Make sure there are no overlapping tempo events
                 if events[-1][0] == tickCursor:
                     events[-1] = (tickCursor, event)
@@ -119,7 +121,7 @@ class MidoProxy(MidiFile):
 
         for tempoEvent in self.tracks[0]:
             tickCursor += tempoEvent.time
-            if tempoEvent.type == 'set_tempo':
+            if tempoEvent.type == "set_tempo":
                 currentMpqn = tempoEvent.tempo
                 # Make sure there are no overlapping tempo events
                 if tempoEvents[-1][0] == tickCursor:
@@ -161,7 +163,9 @@ class MidoProxy(MidiFile):
         """
         end = ticks
         delta = end - start
-        if tempo is None:  # get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
+        if (
+            tempo is None
+        ):  # get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents
             selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]  # get the tempo changes during the event
             # get the tempo at the start location
@@ -253,7 +257,7 @@ class MidoProxy(MidiFile):
         raise NotImplementedError()
 
 
-class PythonMidiProxy():
+class PythonMidiProxy:
     """
     Encapsulating MIDI functionalities in this proxy class to open the possibility of supporting another midi library more easily.
     """
@@ -280,7 +284,7 @@ class PythonMidiProxy():
         if len(track):
             tickOn -= np.sum([n.tick for n in track])
         tickOff = 0
-        if duration:  #TODO
+        if duration:  # TODO
             raise NotImplementedError()
 
         on = midi.NoteOnEvent(tick=tickOn, velocity=velocity, pitch=pitch)
@@ -296,7 +300,7 @@ class PythonMidiProxy():
             list -- name of each track
         """
         tracksName = [[event.text for event in track if event.name == "Track Name"] for track in self.tracks]
-        tracksName = [names[0] if names else None for names in tracksName]
+        tracksName = [names if names else None for names in tracksName]
         return tracksName
 
     def addDelay(self, delay):
@@ -318,12 +322,18 @@ class PythonMidiProxy():
                     # If this is a standard track, add a delay of 4 beats to the first event
                     track[0].tick += 4 * self.tracks.resolution
         elif delay < 0:
-            raise NotImplementedError()
-            # for i, track in enumerate(self.tracks):
-            #     for note in track[:1]:
-            #         if note.tick == 0:
-            #             continue
-            #         note.tick += self.getSecondToTicks(delay, tempo=self.tempoEvents())
+            # reduce the position of the events until the delay is consummed
+            warnings.warn("Track with negatie delay, the corrected midi has now misaligned beats")
+            ticksToRemove = self.getSecondToTicks(-delay)
+            for i, track in enumerate(self.tracks):
+                decrement = ticksToRemove
+                for event in track:
+                    if event.tick >= decrement:
+                        event.tick -= decrement
+                        break
+                    else:
+                        decrement -= event.tick
+                        event.tick = 0
 
     def getEventTick(self, event):
         return event.tick
@@ -358,7 +368,7 @@ class PythonMidiProxy():
 
         for tempoEvent in self.tracks[0]:
             tickCursor += tempoEvent.tick
-            if tempoEvent.name == 'Set Tempo':
+            if tempoEvent.name == "Set Tempo":
                 currentMpqn = tempoEvent.mpqn
                 # Make sure there are no overlapping tempo events
                 if tempoEvents[-1][0] == tickCursor:
@@ -399,7 +409,9 @@ class PythonMidiProxy():
         """
         end = ticks
         delta = end - start
-        if tempo is None:  # get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
+        if (
+            tempo is None
+        ):  # get all the tempo changes occuring between the start and end locations. The resulting tempo is the weighted average
             tempoEvents = self.tempoEvents()
             # get the tempo changes during the event
             selectedTempo = [t for t in tempoEvents if t[0] > start and t[0] < end]
@@ -423,7 +435,7 @@ class PythonMidiProxy():
         """
         if tempo is None:  # TODO: test if it's working
             tempo = self.tempoEvents()[0][1]
-            warnings.warn("naive tempo implementation. change that")
+            warnings.warn("naive tempo implementation: get secondToTicks doesn't take into account changes in tempo")
             # tempoEvents = self.tempoEvents()
 
             # # get the tempo changes during the event
@@ -486,7 +498,7 @@ class PythonMidiProxy():
         result = []
         for key in keys:
             # Size of the dense matrix
-            row = np.zeros(int(np.round((length/playback + offset) * sampleRate)) + 1)
+            row = np.zeros(int(np.round((length / playback + offset) * sampleRate)) + 1)
             for time in notes[key]:
                 # indexs at 1 in the dense matrix
                 index = int(np.round((time / playback + offset) * sampleRate))

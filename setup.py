@@ -2,7 +2,10 @@ import setuptools
 import glob
 
 # requirements = ["mido", "librosa", "pyunpack", "patool", "jellyfish", "pydot", "graphviz", "pyguitarpro", "beautifulsoup4"]
-requirements = ["librosa", "cython", "madmom", "sklearn", "tensorflow", "matplotlib", "pandas", "mir_eval"]
+requirements = [
+    "librosa", "cython", "madmom", "sklearn", "tensorflow", "matplotlib",
+    "pandas", "mir_eval", "jellyfish", "pyunpack", "ffmpeg", "python-midi"
+]
 # TODO python-midi needs pip install git+https://github.com/vishnubob/python-midi@feature/python3
 
 with open("README.rst", "r") as fh:
