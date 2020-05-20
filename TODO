@@ -1,7 +1,0 @@
-- try the onset dtw with madmon's
-- Load the broken midi
-    - Correct the midi wrapper
-
-- Load all the dataset to train the model
-    - Correct the converters to simple loaders. (factorize the loading from the serialization) 
-    - remove the automix dependency
