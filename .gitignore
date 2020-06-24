@@ -1,6 +1,7 @@
 #Visual Studio Code files
 .vscode
 .style.yapf
+.DS_store
 
 # Compiled Python files
 *.pyc
@@ -15,3 +16,6 @@ bin/profile
 
 # Sphinx documentation
 /docs/_build/
+
+# vendors
+/vendors/madmom*

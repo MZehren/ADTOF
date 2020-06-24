@@ -36,7 +36,8 @@ class Converter(object):
         """
         raise NotImplementedError()
 
-    def checkPathExists(self, path):
+    @staticmethod
+    def checkPathExists(path):
         """ 
         Generate the tree of folder if it doesn't exist
         """
@@ -50,10 +51,10 @@ class Converter(object):
         go recursively inside all folders, identify the format available and list all the tracks
         """
         # TODO clean the circle dependency by ,oving the code in a better location
-        from adtof.io.converters.archiveConverter import ArchiveConverter
-        from adtof.io.converters.rockBandConverter import RockBandConverter
-        from adtof.io.converters.phaseShiftConverter import PhaseShiftConverter
-        from adtof.io.converters.textConverter import TextConverter
+        from adtof.converters.archiveConverter import ArchiveConverter
+        from adtof.converters.rockBandConverter import RockBandConverter
+        from adtof.converters.phaseShiftConverter import PhaseShiftConverter
+        from adtof.converters.textConverter import TextConverter
 
         # Decompress all the files
         ac = ArchiveConverter()
@@ -201,7 +202,7 @@ class Converter(object):
         PhaseShift > rockBand
         PhaseShift with more notes > Phase shift with less notes 
         """
-        from adtof.io.converters.phaseShiftConverter import PhaseShiftConverter
+        from adtof.converters.phaseShiftConverter import PhaseShiftConverter
 
         # from adtof.io.converters import RockBandConverter
 
@@ -221,6 +222,8 @@ class Converter(object):
         """
         convert all tracks in the good format
         """
+        from adtof.converters.RVCRNNConverter import RVCRNNConverter
+        from adtof import config
 
         # Get all possible convertible files
         candidates = Converter._getFileCandidates(inputFolder)
@@ -232,13 +235,25 @@ class Converter(object):
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         # Do the conversion
-        for name, candidate in candidates.items():
+        rv = RVCRNNConverter()
+        for trackName, candidate in list(candidates.items())[:10]:
             try:
-                candidate["convertor"].convert(candidate["path"], outputFolder)
+                inputPath = candidate["path"]
+                outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
+                Converter.checkPathExists(outputMidiPath)
+                outputRawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
+                Converter.checkPathExists(outputRawMidiPath)
+                outputAudioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
+                Converter.checkPathExists(outputAudioPath)
+                # candidate["convertor"].convert(inputPath, outputMidiPath,outputRawMidiPath, outputAudioPath)
+
+                outputRVEstimations = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".txt")
+                Converter.checkPathExists(outputRVEstimations)
+                rv.convert(outputAudioPath, outputRVEstimations)
             except Exception as e:
                 import warnings
 
-                warnings.warn(name + " not converted: " + str(e))
+                warnings.warn(trackName + " not converted: " + str(e))
 
     @staticmethod
     def vizDataset(iterator):

@@ -1,21 +1,22 @@
 import os
 
-from adtof.io.converters.converter import Converter
+from adtof.converters.converter import Converter
 
 
 class RockBandConverter(Converter):
     """
     Convert a RockBand file in TODO
     """
+
     BEGINNING_OF_FILES = ["CON", "RBSF"]
     FILE_EXTENSION = [".rba", "_rb3con"]
 
     def isConvertible(self, file):
-        #Check if the extension is known
+        # Check if the extension is known
         if any([True for i in RockBandConverter.FILE_EXTENSION if i in file]):
             return True
-        
-        #Check if the file starts with the good string
+
+        # Check if the file starts with the good string
         try:
             with open(file, "r") as f:
                 firstLine = f.readline()
@@ -23,7 +24,6 @@ class RockBandConverter(Converter):
                     return True
         except:
             return False
-
 
     def getTrackName(self, file):
         # TODO: improve that by reading the binary file maybe

@@ -6,7 +6,8 @@ Convert the PhaseShift's MIDI file format into real MIDI
 import argparse
 import logging
 
-from adtof.io.converters.converter import Converter
+from adtof.converters.converter import Converter
+
 
 def main():
     """
@@ -14,9 +15,9 @@ def main():
     Parse the arguments and call the conversion
     """
     logging.basicConfig(level=logging.DEBUG)
-    parser = argparse.ArgumentParser(description='Process a Phase Shift chart folder and convert the MIDI file to standard MIDI')
-    parser.add_argument('inputFolder', type=str, help="Path to the chart folder.")
-    parser.add_argument('outputFolder', type=str, help="Path to the destination folder")
+    parser = argparse.ArgumentParser(description="Process a Phase Shift chart folder and convert the MIDI file to standard MIDI")
+    parser.add_argument("inputFolder", type=str, help="Path to the chart folder.")
+    parser.add_argument("outputFolder", type=str, help="Path to the destination folder")
     args = parser.parse_args()
 
     Converter.convertAll(args.inputFolder, args.outputFolder)
@@ -24,5 +25,5 @@ def main():
     print("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

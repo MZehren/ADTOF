@@ -17,15 +17,14 @@ class MIR(object):
         self.frameSize = frameSize
         self.sampleRate = 44100
         self.n_bins = 84
-        self.fmin = 20  #20
+        self.fmin = 20  # 20
         self.fmax = 20000
 
     def open(self, path: str):
         """
-        Load an audio track and return an array numpy
+        Load an audio track and return a numpy array
         """
         return self.openMadmom(path)
-
 
     def openMadmom(self, path: str):
         """

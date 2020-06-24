@@ -12,13 +12,14 @@ import pkg_resources
 
 from adtof.config import MDBS_MIDI, MIDI_REDUCED_3, RBMA_MIDI
 from adtof.io.midiProxy import MidiProxy
-from adtof.io.converters.converter import Converter
+from adtof.converters.converter import Converter
 
 
 class TextConverter(Converter):
     """
     Convert the text format from rbma_13 and MDBDrums to midi
     """
+
     def castInt(self, s):
         """
         Try to convert a string in int if possible
@@ -38,9 +39,7 @@ class TextConverter(Converter):
         events = []
         with open(txtFilePath, "r") as f:
             for line in f:
-                time, pitch = line.replace(" ",
-                                           "").replace("\r\n", "").replace(
-                                               "\n", "").split("\t")
+                time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
                 time = float(time)
                 pitch = self.castInt(pitch)
 
@@ -75,7 +74,7 @@ class TextConverter(Converter):
         for event in events:
             midi.addNote(e["time"], e["pitch"])
 
-        #return
+        # return
         if outputName:
             midi.save(outputName)
         return midi

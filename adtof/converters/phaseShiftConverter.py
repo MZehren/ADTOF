@@ -14,10 +14,10 @@ import ffmpeg
 import numpy as np
 import pkg_resources
 
+from adtof import config
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_8
-from adtof.io.converters.converter import Converter
+from adtof.converters.converter import Converter
 from adtof.io.midiProxy import MidiProxy
-from adtof.io.mir import MIR
 
 
 class PhaseShiftConverter(Converter):
@@ -54,7 +54,8 @@ class PhaseShiftConverter(Converter):
             delay = 0
 
         # Read the midi file
-        midi = MidiProxy(os.path.join(inputFolder, PhaseShiftConverter.PS_MIDI_NAME))
+        inputMidiPath = os.path.join(inputFolder, PhaseShiftConverter.PS_MIDI_NAME)
+        midi = MidiProxy(inputMidiPath)
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)
@@ -65,12 +66,9 @@ class PhaseShiftConverter(Converter):
             _, audioFiles, _ = self.getConvertibleFiles(inputFolder)
 
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
-            outputMidiPath = os.path.join(outputFolder, "midi_converted", trackName + ".midi")
-            outputAudioPath = os.path.join(outputFolder, "audio", trackName + ".ogg")
-            self.checkPathExists(outputMidiPath)
-            self.checkPathExists(outputAudioPath)
 
             midi.save(outputMidiPath)
+            copyfile(inputMidiPath, outputRawMidiPath)
             self.cleanAudio(inputAudioFiles, outputAudioPath)
 
         return midi

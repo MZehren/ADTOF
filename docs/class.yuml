@@ -1,0 +1,8 @@
+
+// {type:class}
+// {direction:topDown}
+// {generate:true}
+
+[Converter||convert();isConvertible()]
+[phaseShiftConverter||convert(inputFolder, outputFolder)]
+[Converter]^-[phaseShiftConverter]
