@@ -9,54 +9,21 @@ import pandas as pd
 import pretty_midi
 from mir_eval.onset import f_measure
 
-from adtof.io.converters.converter import Converter
-from adtof.io.converters.textConverter import TextConverter
 from adtof import config
+from adtof.converters.converter import Converter
+from adtof.io.textReader import TextReader
+import matplotlib.pyplot as plt
 
-class OnsetsAlignementConverter(Converter):
+
+class CorrectAlignmentConverter(Converter):
     """
     Converter which tries to align the midi file to the music file as close as possible 
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
-    # CNNPROC = madmom.features.onsets.CNNOnsetProcessor()
-    # PEAKPROC = madmom.features.onsets.OnsetPeakPickingProcessor(fps=100)
 
-    DBPROC = madmom.features.DBNDownBeatTrackingProcessor(beats_per_bar=[3, 4], fps=100)
-    DBACT = madmom.features.RNNDownBeatProcessor()
-
-    # def convertRecursive(self, rootFodler, outputName, midiCandidates=None, musicCandidates=None):
-    #     converted = 0
-    #     failed = 0
-    #     if midiCandidates is None:
-    #         midiCandidates = PhaseShiftConverter.PS_MIDI_NAMES
-    #     if musicCandidates is None:
-    #         musicCandidates = PhaseShiftConverter.PS_AUDIO_NAMES
-    #     for root, _, files in os.walk(rootFodler):
-    #         midiFiles = [file for file in midiCandidates if file in files]
-    #         musicFiles = [file for file in musicCandidates if file in files]
-
-    #         if midiFiles and musicFiles:
-    #             try:
-    #                 self.convert(os.path.join(root, musicFiles[0]), os.path.join(root, midiFiles[0]), os.path.join(root, outputName))
-    #                 print("converted", root)
-    #                 converted += 1
-    #             except ValueError:
-    #                 print(ValueError)
-    #                 failed += 1
-    #     print("converted", converted, "failed", failed)
-
-    def convert(self, inputMusicPath, inputMidiPath, outputPath, beatsPath):
-        # Get midi onsets
-        # midi = MidiProxy(inputMidiPath)
-        # midiOnsets = midi.getOnsets()
-
-        # get midi beats
-        # midi = pretty_midi.PrettyMIDI(inputMidiPath)
-        # startNote = midi.get_onsets()[0]
-        # midiBeats = [b for b in midi.get_beats() if b > startNote]
-
+    def convert(self, alignedInput, missalignedInput, alignedDrumOutput, alignedBeatOutput):
         # get midi kicks
-        midi = pretty_midi.PrettyMIDI(inputMidiPath)
+        midi = pretty_midi.PrettyMIDI(missalignedInput)
         kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
 
         # get audio onsets
@@ -74,19 +41,14 @@ class OnsetsAlignementConverter(Converter):
         #     np.save(beatsPath, musicBeats)
 
         # get audio estimated kicks
-        tc = TextConverter()
-        kicks_audio = tc.getOnsets(inputMusicPath, separated=True)[36]
+        tr = TextReader()
+        kicks_audio = tr.getOnsets(alignedInput, separated=True)[36]
 
-        error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  #musicBeats[:, 0], midiBeats)
-        f, p, r = f_measure(np.array(kicks_midi) * diffPlayback - offset, np.array(kicks_audio), window=0.01)
-        pd.DataFrame({
-            "MAE": [error],
-            "offset": [offset],
-            "playback": [diffPlayback],
-            "F-measure": [f],
-            "precision": [p],
-            "recall": [r]
-        }).to_csv(outputPath + ".txt")
+        error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  # musicBeats[:, 0], midiBeats)
+        # f, p, r = f_measure(np.array(kicks_midi) * diffPlayback - offset, np.array(kicks_audio), window=0.01)
+        # pd.DataFrame(
+        #     {"MAE": [error], "offset": [offset], "playback": [diffPlayback], "F-measure": [f], "precision": [p], "recall": [r]}
+        # ).to_csv(outputPath + ".txt")
 
     def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
@@ -100,18 +62,26 @@ class OnsetsAlignementConverter(Converter):
         tuplesThresholded = np.array([[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
 
         if len(tuplesThresholded) < 2:
-            return 0, 0, 1
+            return
 
-        # Compute two versions of the alignement
-        offset1, error1 = self.computeOffset(tuplesThresholded)
-        playback2, offset2, error2 = self.computeRate(tuplesThresholded)
+        self.computeDynamicOffset(tuplesThresholded)
 
-        assert np.isnan(offset1) == False and np.isnan(offset2) == False
-
-        if error1 < error2:  #TODO: There has to be something wrong in the computation
-            return error1, offset1, 1
-        else:
-            return error2, offset2, playback2
+    def computeDynamicOffset(self, tuplesThresholded, smoothWindow=5):
+        """
+        Compute the difference between all the tuples, smoothed on 10s windows
+        """
+        # annotations - estimations =
+        diff = np.array([a - b for a, b in tuplesThresholded])
+        averagedDiff = [
+            np.mean(diff[np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)])
+            for a, b in tuplesThresholded
+        ]
+        weightedAverage = []
+        for a, b in tuplesThresholded:
+            mask = np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)
+            localDiff = diff[mask]
+            weights = smoothWindow - np.abs(a - tuplesThresholded[:, 0][mask])
+            weightedAverage.append(np.average(localDiff, weights=weights))
 
     def computeOffset(self, tuplesThresholded):
         """

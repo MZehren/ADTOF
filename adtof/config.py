@@ -10,14 +10,10 @@ AUDIO = "audio/audio"  # Folder containging .ogg files
 FEATURES = "audio/features"  # Folder containging features extracted for the neural network
 RAW_MIDI = "annotations/raw_midi"  # Original midi in PhaseShift format
 CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi format
-RV_ESTIMATIONS = "estimations/RV_CRNN8"
+ALIGNED_DRUM = "annotations/aligned_drum"  # aligned onsets of the converted annotations
+ALIGNED_BEATS = "annotations/aligned_beats"  # aligned beats of the converted annotations
+RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 
-# Offset of the midi computed with either Beat, ADT or OD
-MIDI_ALIGNED = "midi_aligned"
-# Offset needed for the files
-OD_OFFSET = "od_offset"
-# beats estimated
-BEATS_EST = "beats_est"
 # Algo to eval
 THREE_CLASS_EVAL = ["RV-CRNN_3"]
 

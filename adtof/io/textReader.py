@@ -12,10 +12,9 @@ import pkg_resources
 
 from adtof.config import MDBS_MIDI, MIDI_REDUCED_3, RBMA_MIDI
 from adtof.io.midiProxy import MidiProxy
-from adtof.converters.converter import Converter
 
 
-class TextConverter(Converter):
+class TextReader(object):
     """
     Convert the text format from rbma_13 and MDBDrums to midi
     """
@@ -46,10 +45,11 @@ class TextConverter(Converter):
                 if pitch in MDBS_MIDI:
                     pitch = MDBS_MIDI[pitch]
                 elif pitch in RBMA_MIDI:
-                    pitch = RBMA_MIDI
-                pitch = MIDI_REDUCED_3[pitch]
+                    pitch = RBMA_MIDI[pitch]
 
-                events.append({"time": time, "pitch": pitch})
+                if pitch in MIDI_REDUCED_3:
+                    pitch = MIDI_REDUCED_3[pitch]
+                    events.append({"time": time, "pitch": pitch})
 
         if separated:
             result = defaultdict(list)
@@ -59,22 +59,22 @@ class TextConverter(Converter):
 
         return events
 
-    def convert(self, txtFilePath, outputName=None):
-        """
-        Convert a text file of the shape:
-        float string/int\n
+    # def convert(self, txtFilePath, outputName=None):
+    #     """
+    #     Convert a text file of the shape:
+    #     float string/int\n
 
-        returns and save a midi object 
-        """
-        # read the file
-        events = self.getOnsets(txtFilePath)
+    #     returns and save a midi object
+    #     """
+    #     # read the file
+    #     events = self.getOnsets(txtFilePath)
 
-        # create the midi
-        midi = MidiProxy(None)
-        for event in events:
-            midi.addNote(e["time"], e["pitch"])
+    #     # create the midi
+    #     midi = MidiProxy(None)
+    #     for event in events:
+    #         midi.addNote(e["time"], e["pitch"])
 
-        # return
-        if outputName:
-            midi.save(outputName)
-        return midi
+    #     # return
+    #     if outputName:
+    #         midi.save(outputName)
+    #     return midi

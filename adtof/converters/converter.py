@@ -54,7 +54,6 @@ class Converter(object):
         from adtof.converters.archiveConverter import ArchiveConverter
         from adtof.converters.rockBandConverter import RockBandConverter
         from adtof.converters.phaseShiftConverter import PhaseShiftConverter
-        from adtof.converters.textConverter import TextConverter
 
         # Decompress all the files
         ac = ArchiveConverter()
@@ -69,7 +68,6 @@ class Converter(object):
 
         rbc = RockBandConverter()
         psc = PhaseShiftConverter()
-        tc = TextConverter()
         results = defaultdict(list)
         genres = defaultdict(list)
         # Check anything convertible
@@ -223,6 +221,7 @@ class Converter(object):
         convert all tracks in the good format
         """
         from adtof.converters.RVCRNNConverter import RVCRNNConverter
+        from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
         from adtof import config
 
         # Get all possible convertible files
@@ -235,7 +234,7 @@ class Converter(object):
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         # Do the conversion
-        rv = RVCRNNConverter()
+
         for trackName, candidate in list(candidates.items())[:10]:
             try:
                 inputPath = candidate["path"]
@@ -247,9 +246,30 @@ class Converter(object):
                 Converter.checkPathExists(outputAudioPath)
                 # candidate["convertor"].convert(inputPath, outputMidiPath,outputRawMidiPath, outputAudioPath)
 
-                outputRVEstimations = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".txt")
-                Converter.checkPathExists(outputRVEstimations)
-                rv.convert(outputAudioPath, outputRVEstimations)
+            except Exception as e:
+                import warnings
+
+                warnings.warn(trackName + " not converted: " + str(e))
+
+        # rv = RVCRNNConverter()
+        # outputRVEstimations = os.path.join(outputFolder, config.RV_ESTIMATIONS)
+        # Converter.checkPathExists(outputRVEstimations)
+        # rv.convert(os.path.join(outputFolder, config.AUDIO, "*.ogg"), outputRVEstimations)
+
+        ca = CorrectAlignmentConverter()
+        for trackName, candidate in list(candidates.items())[:10]:
+            try:
+                outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
+                alignedBeatsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
+                alignedDrumPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+
+                ca.convert(
+                    os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt"),
+                    outputMidiPath,
+                    alignedDrumPath,
+                    alignedBeatsPath,
+                )
+
             except Exception as e:
                 import warnings
 
