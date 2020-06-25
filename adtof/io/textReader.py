@@ -29,7 +29,7 @@ class TextReader(object):
         except ValueError:
             return s
 
-    def getOnsets(self, txtFilePath, separated=False):
+    def getOnsets(self, txtFilePath, convertPitches=True, separated=False):
         """
         Parse the file and return a list of {"time": int, "pitch": int}
 
@@ -42,14 +42,18 @@ class TextReader(object):
                 time = float(time)
                 pitch = self.castInt(pitch)
 
-                if pitch in MDBS_MIDI:
-                    pitch = MDBS_MIDI[pitch]
-                elif pitch in RBMA_MIDI:
-                    pitch = RBMA_MIDI[pitch]
+                if convertPitches:
+                    if pitch in MDBS_MIDI:
+                        pitch = MDBS_MIDI[pitch]
+                    elif pitch in RBMA_MIDI:
+                        pitch = RBMA_MIDI[pitch]
 
-                if pitch in MIDI_REDUCED_3:
-                    pitch = MIDI_REDUCED_3[pitch]
-                    events.append({"time": time, "pitch": pitch})
+                    if pitch in MIDI_REDUCED_3:
+                        pitch = MIDI_REDUCED_3[pitch]
+                    else:
+                        continue
+
+                events.append({"time": time, "pitch": pitch})
 
         if separated:
             result = defaultdict(list)
@@ -58,6 +62,12 @@ class TextReader(object):
             return result
 
         return events
+
+    def writteBeats(self, path, beats):
+        """
+        """
+        with open(path, "w") as f:
+            f.write("\n".join([str(time) + "\t" + str(beatNumber) for time, beatNumber in beats]))
 
     # def convert(self, txtFilePath, outputName=None):
     #     """

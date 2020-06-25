@@ -13,7 +13,7 @@ CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi
 ALIGNED_DRUM = "annotations/aligned_drum"  # aligned onsets of the converted annotations
 ALIGNED_BEATS = "annotations/aligned_beats"  # aligned beats of the converted annotations
 RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
-
+BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
 # Algo to eval
 THREE_CLASS_EVAL = ["RV-CRNN_3"]
 

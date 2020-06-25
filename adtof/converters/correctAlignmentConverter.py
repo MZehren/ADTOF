@@ -21,29 +21,22 @@ class CorrectAlignmentConverter(Converter):
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
-    def convert(self, alignedInput, missalignedInput, alignedDrumOutput, alignedBeatOutput):
+    def convert(self, alignedDrumsInput, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput):
         # get midi kicks
-        midi = pretty_midi.PrettyMIDI(missalignedInput)
+        midi = pretty_midi.PrettyMIDI(missalignedMidiInput)
         kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
 
-        # get audio onsets
-        # y, sr = librosa.load(inputMusicPath)
-        # musicOnsets = librosa.onset.onset_detect(y=y, sr=sr, units="time")
-        # act = OnsetsAlignementConverter.CNNPROC(inputMusicPath)
-        # musicOnsets = OnsetsAlignementConverter.PEAKPROC(act)
+        # get midi beats
+        beats_midi = midi.get_beats()
 
+        tr = TextReader()
         # get audio beats
-        # if os.path.exists(beatsPath):
-        #     musicBeats = np.load(beatsPath)
-        # else:
-        #     act = OnsetsAlignementConverter.DBACT(inputMusicPath)
-        #     musicBeats = OnsetsAlignementConverter.DBPROC(act)
-        #     np.save(beatsPath, musicBeats)
+        musicBeats = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
 
         # get audio estimated kicks
-        tr = TextReader()
-        kicks_audio = tr.getOnsets(alignedInput, separated=True)[36]
+        kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
 
+        self.computeAlignment(beats_midi, musicBeats)
         error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  # musicBeats[:, 0], midiBeats)
         # f, p, r = f_measure(np.array(kicks_midi) * diffPlayback - offset, np.array(kicks_audio), window=0.01)
         # pd.DataFrame(
@@ -82,6 +75,11 @@ class CorrectAlignmentConverter(Converter):
             localDiff = diff[mask]
             weights = smoothWindow - np.abs(a - tuplesThresholded[:, 0][mask])
             weightedAverage.append(np.average(localDiff, weights=weights))
+
+        # plt.plot([a for a, b in tuplesThresholded], diff)
+        # plt.plot([a for a, b in tuplesThresholded], averagedDiff)
+        plt.plot([a for a, b in tuplesThresholded], weightedAverage)
+        # plt.show()
 
     def computeOffset(self, tuplesThresholded):
         """

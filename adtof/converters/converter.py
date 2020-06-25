@@ -221,6 +221,7 @@ class Converter(object):
         convert all tracks in the good format
         """
         from adtof.converters.RVCRNNConverter import RVCRNNConverter
+        from adtof.converters.madmomBeatConverter import MadmomBeatConverter
         from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
         from adtof import config
 
@@ -234,7 +235,7 @@ class Converter(object):
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         # Do the conversion
-
+        mbc = MadmomBeatConverter()
         for trackName, candidate in list(candidates.items())[:10]:
             try:
                 inputPath = candidate["path"]
@@ -245,6 +246,9 @@ class Converter(object):
                 outputAudioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
                 Converter.checkPathExists(outputAudioPath)
                 # candidate["convertor"].convert(inputPath, outputMidiPath,outputRawMidiPath, outputAudioPath)
+                outputBeatsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
+                Converter.checkPathExists(outputBeatsPath)
+                # mbc.convert(outputAudioPath, outputBeatsPath)
 
             except Exception as e:
                 import warnings
@@ -260,11 +264,13 @@ class Converter(object):
         for trackName, candidate in list(candidates.items())[:10]:
             try:
                 outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
+                outputBeatsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
                 alignedBeatsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
                 alignedDrumPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
 
                 ca.convert(
                     os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt"),
+                    outputBeatsPath,
                     outputMidiPath,
                     alignedDrumPath,
                     alignedBeatsPath,
