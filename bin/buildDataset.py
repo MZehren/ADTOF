@@ -4,9 +4,11 @@
 Convert the PhaseShift's MIDI file format into real MIDI
 """
 import argparse
+import concurrent.futures
 import logging
 
 from adtof.converters.converter import Converter
+import os
 
 
 def main():

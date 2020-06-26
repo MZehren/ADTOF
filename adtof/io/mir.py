@@ -1,4 +1,3 @@
-import librosa
 import madmom
 import matplotlib.pyplot as plt
 import numpy as np
@@ -60,6 +59,7 @@ class MIR(object):
         """
         
         """
+        raise DeprecationWarning()
         # TODO: change from librosa and use ffmpeg instead, or sox ?
         # TODO: Given a mono audio input signal, sampled at 44.1 kHz,
         # the input representation is derived from a set of log magnitude spectrograms which are grouped to have approximately
@@ -69,6 +69,7 @@ class MIR(object):
         # From each, the per-bin first-order difference spectorgram is
         # calculated, where only the positive differences are retained to
         # capture the energy rise in individual frequency bands.
+        import librosa
 
         y, sr = librosa.load(path, sr=self.sampleRate)
         # TODO: add 0.25s of zero padding at the start for instant onsets

@@ -35,7 +35,7 @@ class PhaseShiftConverter(Converter):
     DRUM_ROLLS = 126  # TODO: implement
     CYMBAL_SWELL = 127  # TODO: implement
 
-    def convert(self, inputFolder, outputFolder, addDelay=True):
+    def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events
         """
@@ -45,7 +45,7 @@ class PhaseShiftConverter(Converter):
             metadata = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
             delay = float(metadata["delay"]) / 1000 if "delay" in metadata and metadata["delay"] != "" else 0.0
 
-            if not metadata["pro_drums"] or metadata["pro_drums"] != "True":
+            if "pro_drums" not in metadata or not metadata["pro_drums"] or metadata["pro_drums"] != "True":
                 warnings.warn("song.ini doesn't contain pro_drums = True  " + inputFolder)
         except:
             warnings.warn("song.ini not found " + inputFolder)
@@ -61,12 +61,11 @@ class PhaseShiftConverter(Converter):
         midi = self.cleanMidi(midi, delay=delay)
 
         # Write the resulting file
-        if outputFolder:
+        if outputMidiPath:
             trackName = self.getMetaInfo(inputFolder)["name"]
             _, audioFiles, _ = self.getConvertibleFiles(inputFolder)
 
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
-
             midi.save(outputMidiPath)
             copyfile(inputMidiPath, outputRawMidiPath)
             self.cleanAudio(inputAudioFiles, outputAudioPath)
@@ -95,8 +94,11 @@ class PhaseShiftConverter(Converter):
         Read the ini file to get meta infos
         """
         ini = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
+
         meta = {
-            "name": os.path.basename(inputFolder),  # ini["name"].replace("/", "-") if "name" in ini else None,
+            "name": ini["artist"].replace("/", "-") + " - " + ini["name"].replace("/", "-")
+            if "name" in ini and "artist" in ini
+            else os.path.basename(inputFolder),
             "genre": ini["genre"] if "genre" in ini else None,
             "pro_drums": ini["pro_drums"] if "pro_drums" in ini else None,
         }

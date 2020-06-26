@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 import os
 import sys
@@ -17,33 +18,38 @@ class Converter(object):
     Base class to convert file formats
     """
 
-    def convert(self, inputPath, outputFolder):
+    def convert(self, inputs, outputs):
         """
         Base method to convert a file
-        if the outputName is not None, the file is also written to the disk
         """
         raise NotImplementedError()
 
     def isConvertible(self, path):
         """
-        return True or False if it's convertible
-        """
-        raise NotImplementedError()
-
-    def getTrackName(self, path):
-        """
-        return the name of the track 
+        return wether the path is a suitable input
         """
         raise NotImplementedError()
 
     @staticmethod
     def checkPathExists(path):
         """ 
-        Generate the tree of folder if it doesn't exist
+        return if the path exists and generate the tree of folder if it doesn't
         """
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
             os.makedirs(directory)
+        return os.path.exists(path)
+
+    @staticmethod
+    def checkAllPathsExist(*outputs):
+        """
+        Check if all the path exist
+        """
+        allPathsExist = True
+        for output in outputs:
+            if not Converter.checkPathExists(output):
+                allPathsExist = False
+        return allPathsExist
 
     @staticmethod
     def _getFileCandidates(rootFolder):
@@ -177,8 +183,8 @@ class Converter(object):
                     continue
 
                 bClean, priorityB = cleanedNames[j]
-                similitude = jellyfish.jaro_distance(aClean, bClean)
-                if similitude > similitudeThreshold:
+                # similitude = jellyfish.jaro_distance(aClean, bClean)
+                if aClean == bClean:  # similitude > similitudeThreshold:
                     analysed.add(j)
                     row.append((b, priorityB))
             group.append(row)
@@ -216,13 +222,14 @@ class Converter(object):
         return candidates
 
     @staticmethod
-    def convertAll(inputFolder, outputFolder):
+    def convertAll(inputFolder, outputFolder, parallelProcess=True):
         """
         convert all tracks in the good format
         """
         from adtof.converters.RVCRNNConverter import RVCRNNConverter
         from adtof.converters.madmomBeatConverter import MadmomBeatConverter
         from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
+        from adtof.converters.featuresExctractorConverter import FeaturesExtractorConverter
         from adtof import config
 
         # Get all possible convertible files
@@ -235,53 +242,54 @@ class Converter(object):
         logging.info("number of tracks in the dataset: " + str(len(candidates)))
 
         # Do the conversion
-        mbc = MadmomBeatConverter()
-        for trackName, candidate in list(candidates.items())[:10]:
-            try:
-                inputPath = candidate["path"]
-                outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
-                Converter.checkPathExists(outputMidiPath)
-                outputRawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
-                Converter.checkPathExists(outputRawMidiPath)
-                outputAudioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
-                Converter.checkPathExists(outputAudioPath)
-                # candidate["convertor"].convert(inputPath, outputMidiPath,outputRawMidiPath, outputAudioPath)
-                outputBeatsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
-                Converter.checkPathExists(outputBeatsPath)
-                # mbc.convert(outputAudioPath, outputBeatsPath)
+        if parallelProcess:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                futures = [
+                    executor.submit(Converter.runConvertors, candidate, outputFolder, trackName)
+                    for trackName, candidate in list(candidates.items())
+                ]
+                concurrent.futures.wait(futures)
+        else:
+            for trackName, candidate in list(candidates.items()):
+                Converter.runConvertors(candidate, outputFolder, trackName)
 
-            except Exception as e:
-                import warnings
+    @staticmethod
+    def runConvertors(candidate, outputFolder, trackName):
+        try:
+            from adtof.converters.madmomBeatConverter import MadmomBeatConverter
+            from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
+            from adtof import config
 
-                warnings.warn(trackName + " not converted: " + str(e))
+            mbc = MadmomBeatConverter()
+            ca = CorrectAlignmentConverter()
+            # # Convert the chart into standard midi
+            inputChartPath = candidate["path"]
+            convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
+            rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
+            audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
+            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+                # print(trackName + "TODO ")
+                candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
-        # rv = RVCRNNConverter()
-        # outputRVEstimations = os.path.join(outputFolder, config.RV_ESTIMATIONS)
-        # Converter.checkPathExists(outputRVEstimations)
-        # rv.convert(os.path.join(outputFolder, config.AUDIO, "*.ogg"), outputRVEstimations)
+            # # Align the annotations by looking at the average beat estimation difference
+            # # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
+            # beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
+            # alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
+            # alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+            # if not Converter.checkPathExists(beatsEstimationsPath):
+            #     mbc.convert(audioPath, beatsEstimationsPath)
+            # if not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath, alignedDrumAnotationsPath):
+            #     ca.convert(
+            #         beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
+            #     )
 
-        ca = CorrectAlignmentConverter()
-        for trackName, candidate in list(candidates.items())[:10]:
-            try:
-                outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
-                outputBeatsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
-                alignedBeatsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
-                Converter.checkPathExists(alignedBeatsPath)
-                alignedDrumPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
-                Converter.checkPathExists(alignedDrumPath)
-
-                ca.convert(
-                    os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt"),
-                    outputBeatsPath,
-                    outputMidiPath,
-                    alignedDrumPath,
-                    alignedBeatsPath,
-                )
-
-            except Exception as e:
-                import warnings
-
-                warnings.warn(trackName + " not converted: " + str(e))
+            # # Extract Features
+            # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
+            # if not Converter.checkPathExists(featuresExtractedPath):
+            #     fe.convert(audioPath, featuresExtractedPath)
+            print(trackName + "Done.")
+        except Exception as e:
+            print(trackName + " not converted: " + str(e))
 
     @staticmethod
     def vizDataset(iterator):

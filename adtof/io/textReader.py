@@ -40,9 +40,9 @@ class TextReader(object):
             for line in f:
                 time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
                 time = float(time)
-                pitch = self.castInt(pitch)
 
                 if convertPitches:
+                    pitch = self.castInt(pitch)
                     if pitch in MDBS_MIDI:
                         pitch = MDBS_MIDI[pitch]
                     elif pitch in RBMA_MIDI:

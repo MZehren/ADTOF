@@ -22,15 +22,15 @@ class CorrectAlignmentConverter(Converter):
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
-    def convert(self, alignedDrumsInput, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput):
+    def convert(self, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput):
         # get midi kicks and beats
         midi = pretty_midi.PrettyMIDI(missalignedMidiInput)
-        kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
+        # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
         beats_midi = midi.get_beats()
 
         # get audio beats
         tr = TextReader()
-        kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
+        # kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
         beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
 
         # correction = self.computeAlignment(kicks_midi, kicks_audio)
