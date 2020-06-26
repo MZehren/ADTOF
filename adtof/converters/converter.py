@@ -266,7 +266,9 @@ class Converter(object):
                 outputMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
                 outputBeatsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
                 alignedBeatsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
+                Converter.checkPathExists(alignedBeatsPath)
                 alignedDrumPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+                Converter.checkPathExists(alignedDrumPath)
 
                 ca.convert(
                     os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt"),

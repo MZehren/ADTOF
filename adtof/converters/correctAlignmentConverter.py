@@ -4,15 +4,16 @@ from bisect import bisect_left
 
 import librosa
 import madmom
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pretty_midi
 from mir_eval.onset import f_measure
+from scipy.interpolate import interp1d
 
 from adtof import config
 from adtof.converters.converter import Converter
 from adtof.io.textReader import TextReader
-import matplotlib.pyplot as plt
 
 
 class CorrectAlignmentConverter(Converter):
@@ -22,30 +23,29 @@ class CorrectAlignmentConverter(Converter):
     """
 
     def convert(self, alignedDrumsInput, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput):
-        # get midi kicks
+        # get midi kicks and beats
         midi = pretty_midi.PrettyMIDI(missalignedMidiInput)
         kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
-
-        # get midi beats
         beats_midi = midi.get_beats()
 
-        tr = TextReader()
         # get audio beats
-        musicBeats = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
-
-        # get audio estimated kicks
+        tr = TextReader()
         kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
+        beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
 
-        self.computeAlignment(beats_midi, musicBeats)
-        error, offset, diffPlayback = self.computeAlignment(kicks_midi, kicks_audio)  # musicBeats[:, 0], midiBeats)
-        # f, p, r = f_measure(np.array(kicks_midi) * diffPlayback - offset, np.array(kicks_audio), window=0.01)
-        # pd.DataFrame(
-        #     {"MAE": [error], "offset": [offset], "playback": [diffPlayback], "F-measure": [f], "precision": [p], "recall": [r]}
-        # ).to_csv(outputPath + ".txt")
+        # correction = self.computeAlignment(kicks_midi, kicks_audio)
+        correction = self.computeAlignment(beats_midi, beats_audio)
+
+        # writte the output
+        drumsPitches = [note.pitch for note in midi.instruments[0].notes]
+        drumstimes = [note.start for note in midi.instruments[0].notes]
+        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
+        tr.writteBeats(alignedDrumOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
+        # midi.get_dow()
 
     def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
-        Compute the average error of onsets close to each other bellow a maxThreshold
+        Compute the average offset of close elements of A to B
 
         the correction tells how much you should shift B to align with A
         or -correction you need to shift A to align with B 
@@ -57,18 +57,28 @@ class CorrectAlignmentConverter(Converter):
         if len(tuplesThresholded) < 2:
             return
 
-        self.computeDynamicOffset(tuplesThresholded)
+        return self.getDynamicOffset(tuplesThresholded)
 
-    def computeDynamicOffset(self, tuplesThresholded, smoothWindow=5):
+    def setDynamicOffset(self, offset, onsets):
+        """
+        Shift the onsets with the offset linearly interpolated
+        """
+        x = [o["time"] for o in offset]
+        y = [o["diff"] for o in offset]
+        interpolation = interp1d(x, y, kind="cubic", fill_value="extrapolate")
+
+        return onsets - interpolation(onsets)
+
+    def getDynamicOffset(self, tuplesThresholded, smoothWindow=5):
         """
         Compute the difference between all the tuples, smoothed on 10s windows
         """
         # annotations - estimations =
         diff = np.array([a - b for a, b in tuplesThresholded])
-        averagedDiff = [
-            np.mean(diff[np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)])
-            for a, b in tuplesThresholded
-        ]
+        # averagedDiff = [
+        #     np.mean(diff[np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)])
+        #     for a, b in tuplesThresholded
+        # ]
         weightedAverage = []
         for a, b in tuplesThresholded:
             mask = np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)
@@ -78,8 +88,9 @@ class CorrectAlignmentConverter(Converter):
 
         # plt.plot([a for a, b in tuplesThresholded], diff)
         # plt.plot([a for a, b in tuplesThresholded], averagedDiff)
-        plt.plot([a for a, b in tuplesThresholded], weightedAverage)
+        # plt.plot([a for a, b in tuplesThresholded], weightedAverage)
         # plt.show()
+        return [{"time": tuplesThresholded[i][0], "diff": weightedAverage[i]} for i in range(len(weightedAverage))]
 
     def computeOffset(self, tuplesThresholded):
         """
