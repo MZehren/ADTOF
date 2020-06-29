@@ -271,17 +271,18 @@ class Converter(object):
                 # print(trackName + "TODO ")
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
-            # # Align the annotations by looking at the average beat estimation difference
-            # # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
-            # beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
-            # alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
-            # alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
-            # if not Converter.checkPathExists(beatsEstimationsPath):
-            #     mbc.convert(audioPath, beatsEstimationsPath)
-            # if not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath, alignedDrumAnotationsPath):
-            #     ca.convert(
-            #         beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
-            #     )
+            # Align the annotations by looking at the average beat estimation difference
+            # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
+            beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
+            alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
+            alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+            if not Converter.checkPathExists(beatsEstimationsPath):
+                # TODO: Add F-measure measure to see the precision of the annotations
+                mbc.convert(audioPath, beatsEstimationsPath)
+            if not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath, alignedDrumAnotationsPath):
+                ca.convert(
+                    beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
+                )
 
             # # Extract Features
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")

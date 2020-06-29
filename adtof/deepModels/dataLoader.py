@@ -1,3 +1,5 @@
+import logging
+import os
 import random
 
 import matplotlib.pyplot as plt
@@ -6,43 +8,67 @@ import pandas as pd
 import sklearn
 
 from adtof import config
-from adtof.io.converters.converter import Converter
+from adtof.io.midiProxy import MidiProxy
 from adtof.io.mir import MIR
-from adtof.io.myMidi import MidiProxy
+from adtof.io.textReader import TextReader
 
 
-def readTrack(i, tracks, midis, alignments, sampleRate=50, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49]):
+def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49]):
     """
     Read the mp3, the midi and the alignment files and generate a balanced list of samples 
     """
     # initiate vars
     print("new track read:", tracks[i])
     track = tracks[i]
-    midi = midis[i]
-    alignment = alignments[i] if i in alignments else None
+    drum = drums[i]
     mir = MIR(frameRate=sampleRate)
 
     # read files
-    if alignment is not None:
-        alignmentInput = pd.read_csv(alignment, escapechar=" ")
-        y = MidiProxy(midi).getDenseEncoding(
-            sampleRate=sampleRate, offset=-alignmentInput.offset[0], playback=1 / alignmentInput.playback[0], keys=labels
-        )
-    else:
-        y = MidiProxy(midi).getDenseEncoding(sampleRate=sampleRate, keys=labels)
+    # notes = MidiProxy(midi).getOnsets(separated=True)
+    notes = TextReader().getOnsets(drum, convertPitches=False, separated=True)
+    y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels)
     x = mir.open(track)
-    x = x.reshape(x.shape + (1, ))  # Add the channel dimension
+    x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
-    # Trim before the first midi note and after the last uncovered part
-    firstNoteIdx = -1
-    for rowI, row in enumerate(y):
-        if max(row) == 1:
-            firstNoteIdx = rowI
-            break
+    # Trim before the first midi note (to remove the unannotated count in)
+    # and after the last uncovered part
+    firstNoteIdx = round(min([notes[pitch][0] for pitch in labels]) * sampleRate)
     lastSampleIdx = min(len(y) - 1, len(x) - context - 1)
-    X = x[firstNoteIdx - midiLatency:lastSampleIdx + context - midiLatency]
+    X = x[firstNoteIdx - midiLatency : lastSampleIdx + context - midiLatency]
     Y = y[firstNoteIdx:lastSampleIdx]
     return X, Y
+
+
+def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys=[36, 40, 41, 46, 49], radiation=1):
+    """
+    Encode in a dense matrix the midi onsets
+
+    sampleRate = sampleRate
+    timeShift = offset of the midi, so the event is actually annotated later
+    keys = pitch of the offset in each column of the matrix
+    radiation = how many rows from the event are also set to 1
+    
+    """
+    length = np.max([values[-1] for values in notes.values()])
+    result = []
+    for key in keys:
+        # Size of the dense matrix
+        row = np.zeros(int(np.round((length / playback + offset) * sampleRate)) + 1)
+        for time in notes[key]:
+            # indexs at 1 in the dense matrix
+            index = int(np.round((time / playback + offset) * sampleRate))
+            if index <= 0:
+                print(str(time), filename)
+
+            for i in range(max(0, index - radiation), min(index + radiation + 1, len(row) - 1)):
+                row[i] = 0.5
+            row[index] = 1
+
+        result.append(row)
+        if len(notes[key]) == 0:
+            logging.info(filename + " " + str(key) + " is not represented in this track")
+
+    return np.array(result).T
 
 
 def balanceDistribution(X, Y):
@@ -57,16 +83,14 @@ def balanceDistribution(X, Y):
 
 def getTFGenerator(
     folderPath,
-    sampleRate=50,
+    sampleRate=100,
     context=25,
     midiLatency=0,
     train=True,
     split=0.85,
     labels=[36, 40, 41, 46, 49],
-    minFTrackFiltering=0.5,
-    shuffle=True,
     samplePerTrack=20,
-    balanceClasses=False
+    balanceClasses=False,
 ):
     """
     TODO: change the sampleRate to 100 Hz?
@@ -76,33 +100,25 @@ def getTFGenerator(
 
     context = how many frames are given with each samples
     midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
-    minFTrackFiltering = At which threshold should we remove the tracks performing badly with RV model 
     """
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
-    midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
-    alignments = config.getFilesInFolder(folderPath, config.MIDI_ALIGNED)
+    drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
 
-    # F-Measure filtering
-    if len(alignments):
-        bools = [pd.read_csv(alignment, escapechar=" ")["F-measure"][0] > minFTrackFiltering for alignment in alignments]
-        tracks = tracks[bools]  # TODO why tracks[0] returns a np._str, how to get the value?
-        midis = midis[bools]
-        alignments = alignments[bools]
+    # Getting the intersection of audio and annotations
+    trackSet = set([os.path.splitext(os.path.basename(track))[0] for track in tracks])
+    drumSet = set([os.path.splitext(os.path.basename(drum))[0] for drum in drums])
+    tracks = tracks[[os.path.splitext(os.path.basename(track))[0] in drumSet for track in tracks]]
+    drums = drums[[os.path.splitext(os.path.basename(drum))[0] in trackSet for drum in drums]]
 
+    # Split
+    # shuffle is a bad idea here because the network could overfit to the same artist
     # train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
     if train:
-        tracks = tracks[:int(len(tracks) * split)].tolist()
-        midis = midis[:int(len(midis) * split)].tolist()
-        alignments = alignments[:int(len(alignments) * split)].tolist()
+        tracks = tracks[: int(len(tracks) * split)].tolist()
+        drums = drums[: int(len(drums) * split)].tolist()
     else:
-        tracks = tracks[int(len(tracks) * split):].tolist()
-        midis = midis[int(len(midis) * split):].tolist()
-        alignments = alignments[int(len(alignments) * split):].tolist()
-
-    if len(alignments):
-        tracks, midis, alignments = sklearn.utils.shuffle(tracks, midis, alignments)
-    else:
-        tracks, midis = sklearn.utils.shuffle(tracks, midis)
+        tracks = tracks[int(len(tracks) * split) :].tolist()
+        drums = drums[int(len(drums) * split) :].tolist()
 
     # Lazy cache dictionnary
     DATA = {}
@@ -112,7 +128,7 @@ def getTFGenerator(
         while True:
             trackIdx = (trackIdx + 1) % len(tracks)
             if trackIdx not in DATA:
-                X, Y = readTrack(trackIdx, tracks, midis, alignments, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
+                X, Y = readTrack(trackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
                 indexes = balanceDistribution(X, Y)
                 DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0}
 
@@ -128,7 +144,7 @@ def getTFGenerator(
                 else:
                     data["cursor"] = (cursor + 1) % (len(data["x"]) - context)
                     sampleIdx = cursor
-                yield data["x"][sampleIdx:sampleIdx + context], data["y"][sampleIdx]
+                yield data["x"][sampleIdx : sampleIdx + context], data["y"][sampleIdx]
 
     return gen
 

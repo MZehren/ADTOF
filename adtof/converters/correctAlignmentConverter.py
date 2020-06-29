@@ -34,6 +34,7 @@ class CorrectAlignmentConverter(Converter):
         beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
 
         # correction = self.computeAlignment(kicks_midi, kicks_audio)
+        # TODO Remove tracks with low F-measure?
         correction = self.computeAlignment(beats_midi, beats_audio)
 
         # writte the output

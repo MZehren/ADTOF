@@ -19,12 +19,13 @@ from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
-from adtof.io.converters.converter import Converter
 
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
-logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
+if not os.path.exists("logs"):
+    os.makedirs("logs")
+logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
 
 
 def main():
@@ -32,10 +33,10 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
-    parser = argparse.ArgumentParser(description='todo')
-    parser.add_argument('folderPath', type=str, help="Path.")
+    parser = argparse.ArgumentParser(description="todo")
+    parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()
-    labels = [36]  #[36, 40, 41, 46, 49]
+    labels = ["36"]  # [36, 40, 41, 46, 49]
     sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
@@ -48,12 +49,14 @@ def main():
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate), (tf.float64, tf.float64),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
+        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate),
+        (tf.float64, tf.float64),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=True), (tf.float64, tf.float64),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels), )))
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=True),
+        (tf.float64, tf.float64),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
@@ -64,7 +67,7 @@ def main():
     # Get the model
     model = RV1TF().createModel(output=len(labels))
     checkpoint_path = "models/rv1.ckpt"
-    log_dir = os.path.join("logs", "fit", "rv1.2")  #datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = os.path.join("logs", "fit", "rv1.2")  # datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     checkpoint_dir = os.path.dirname(checkpoint_path)
     file_writer = tf.summary.create_file_writer(log_dir)
     latest = tf.train.latest_checkpoint(checkpoint_dir)
@@ -77,14 +80,11 @@ def main():
         inputs=model.input, outputs=layer_outputs
     )  # Creates a model that will return these outputs, given the model input
     viz_example, _ = next(dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate)())
-    viz_example = viz_example.reshape([1] + list(viz_example.shape))  #Adding mini-batch
+    viz_example = viz_example.reshape([1] + list(viz_example.shape))  # Adding mini-batch
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
-        tf.keras.callbacks.ModelCheckpoint(
-            checkpoint_path,
-            save_weights_only=True,
-        ),
+        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
         tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
         # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
@@ -115,5 +115,5 @@ def main():
     #     print("Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

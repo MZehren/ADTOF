@@ -483,33 +483,6 @@ class PythonMidiProxy:
         tracksNames = [[event.name for event in track if event.type == "track_name"] for track in self.tracks]
         return [names[0] if names else None for names in tracksNames]
 
-    def getDenseEncoding(self, sampleRate=100, offset=0, playback=1, keys=[36, 40, 41, 46, 49], radiation=0):
-        """
-        Encode in a dense matrix the midi onsets
-
-        sampleRate = sampleRate
-        timeShift = offset of the midi, so the event is actually annotated later
-        keys = pitch of the offset in each column of the matrix
-        radiation = how many rows from the event are also set to 1
-        
-        """
-        notes = self.getOnsets(separated=True)
-        length = np.max([values[-1] for values in notes.values()])
-        result = []
-        for key in keys:
-            # Size of the dense matrix
-            row = np.zeros(int(np.round((length / playback + offset) * sampleRate)) + 1)
-            for time in notes[key]:
-                # indexs at 1 in the dense matrix
-                index = int(np.round((time / playback + offset) * sampleRate))
-                for i in range(index - radiation, min(index + radiation + 1, len(row))):
-                    row[i] = 1
-            result.append(row)
-            if len(notes[key]) == 0:
-                logging.info(self.filename + " " + str(key) + " is not represented in this track")
-
-        return np.array(result).T
-
     @staticmethod
     def fromDenseEncoding(sampleRate, timeShift=0):
         raise NotImplementedError()
