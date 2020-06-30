@@ -22,7 +22,10 @@ class CorrectAlignmentConverter(Converter):
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
-    def convert(self, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput):
+    def convert(self, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput, thresholdFMeasure=0.5):
+        """
+        ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed
+        """
         # get midi kicks and beats
         midi = pretty_midi.PrettyMIDI(missalignedMidiInput)
         # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
@@ -34,7 +37,11 @@ class CorrectAlignmentConverter(Converter):
         beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
 
         # correction = self.computeAlignment(kicks_midi, kicks_audio)
-        # TODO Remove tracks with low F-measure?
+        F, P, R = f_measure(np.array(beats_midi), np.array(beats_audio), window=0.05)
+        if F < thresholdFMeasure:
+            raise ValueError(
+                "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of " + str(F) + "%)"
+            )
         correction = self.computeAlignment(beats_midi, beats_audio)
 
         # writte the output
@@ -56,7 +63,7 @@ class CorrectAlignmentConverter(Converter):
         tuplesThresholded = np.array([[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
 
         if len(tuplesThresholded) < 2:
-            return
+            return []
 
         return self.getDynamicOffset(tuplesThresholded)
 
@@ -66,9 +73,12 @@ class CorrectAlignmentConverter(Converter):
         """
         x = [o["time"] for o in offset]
         y = [o["diff"] for o in offset]
-        interpolation = interp1d(x, y, kind="cubic", fill_value="extrapolate")
+        interpolation = interp1d(x, y, kind="cubic", fill_value="extrapolate")(onsets)
 
-        return onsets - interpolation(onsets)
+        if max(interpolation) > 0.5:
+            raise ValueError("Extrapolation of annotations offset seems too extreme")
+
+        return onsets - interpolation
 
     def getDynamicOffset(self, tuplesThresholded, smoothWindow=5):
         """

@@ -89,8 +89,9 @@ def getTFGenerator(
     train=True,
     split=0.85,
     labels=[36, 40, 41, 46, 49],
-    samplePerTrack=20,
+    samplePerTrack=100,
     balanceClasses=False,
+    limitInstances=-1,
 ):
     """
     TODO: change the sampleRate to 100 Hz?
@@ -125,8 +126,9 @@ def getTFGenerator(
 
     def gen():
         trackIdx = 0
+        maxTrackIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
         while True:
-            trackIdx = (trackIdx + 1) % len(tracks)
+            trackIdx = (trackIdx + 1) % maxTrackIdx
             if trackIdx not in DATA:
                 X, Y = readTrack(trackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
                 indexes = balanceDistribution(X, Y)

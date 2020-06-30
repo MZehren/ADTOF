@@ -54,7 +54,7 @@ def main():
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=True),
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=False),
         (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )

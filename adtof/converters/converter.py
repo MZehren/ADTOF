@@ -222,7 +222,7 @@ class Converter(object):
         return candidates
 
     @staticmethod
-    def convertAll(inputFolder, outputFolder, parallelProcess=True):
+    def convertAll(inputFolder, outputFolder, parallelProcess=False):
         """
         convert all tracks in the good format
         """
@@ -279,7 +279,7 @@ class Converter(object):
             if not Converter.checkPathExists(beatsEstimationsPath):
                 # TODO: Add F-measure measure to see the precision of the annotations
                 mbc.convert(audioPath, beatsEstimationsPath)
-            if not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath, alignedDrumAnotationsPath):
+            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath):
                 ca.convert(
                     beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
                 )
@@ -288,7 +288,7 @@ class Converter(object):
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
             # if not Converter.checkPathExists(featuresExtractedPath):
             #     fe.convert(audioPath, featuresExtractedPath)
-            print(trackName + "Done.")
+            # print(trackName + "Done.")
         except Exception as e:
             print(trackName + " not converted: " + str(e))
 
