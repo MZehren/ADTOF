@@ -18,12 +18,12 @@ from adtof import config
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
-from adtof.io.converters.converter import Converter
+from adtof.converters.converter import Converter
 from adtof.io.mir import MIR
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 # tf.config.experimental_run_functions_eagerly(True)
-logging.basicConfig(filename='logs/conversion.log', level=logging.DEBUG)
+logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
 
 
 def main():
@@ -31,13 +31,13 @@ def main():
     Entry point of the program
     Parse the arguments and call the conversion
     """
-    parser = argparse.ArgumentParser(description='todo')
-    parser.add_argument('folderPath', type=str, help="Path.")
+    parser = argparse.ArgumentParser(description="todo")
+    parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()
     # TODO: save the meta parameters in a costr(ig file
-    sampleRate = 50
+    sampleRate = 100
     context = 25
-    classLabels = [35]
+    classLabels = [36]
     plot = False
 
     # Get the model
@@ -50,13 +50,14 @@ def main():
 
     # Get the data
     tracks = config.getFilesInFolder(args.folderPath, config.AUDIO)
+    tracks = tracks[int(len(tracks) * 0.85) :]
     mir = MIR(frameRate=sampleRate)
 
     # Predict the file and write the output
     for track in tracks:
         X = mir.open(track)
-        X = X.reshape(X.shape + (1, ))
-        Y = model.predict(np.array([X[i:i + context] for i in range(len(X) - context)]))
+        X = X.reshape(X.shape + (1,))
+        Y = model.predict(np.array([X[i : i + context] for i in range(len(X) - context)]))
         # import matplotlib.pyplot as plt
         # plt.plot([i/sampleRate for i in range(len(Y))], Y)
         # plt.show()
@@ -75,9 +76,13 @@ def main():
         # write text
         with open(os.path.join(args.folderPath, "MZ-CNN_1", config.getFileBasename(track) + ".txt"), "w") as outputFile:
             outputFile.write(
-                "\n".join([
-                    str(i / sampleRate) + "\t" + str(classLabels[classIdx]) for classIdx, classPeaks in enumerate(sparseResultIdx) for i in classPeaks
-                ])
+                "\n".join(
+                    [
+                        str(i / sampleRate) + "\t" + str(classLabels[classIdx])
+                        for classIdx, classPeaks in enumerate(sparseResultIdx)
+                        for i in classPeaks
+                    ]
+                )
             )
 
         #  write midi
@@ -101,5 +106,5 @@ def main():
             plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
