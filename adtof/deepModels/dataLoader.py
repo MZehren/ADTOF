@@ -32,7 +32,8 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
 
     # Trim before the first midi note (to remove the unannotated count in)
     # and after the last uncovered part
-    firstNoteIdx = round(min([notes[pitch][0] for pitch in labels]) * sampleRate)
+    # If there are no event for the pitch, skip it. Default to index 0 if there are not pitch with event.
+    firstNoteIdx = round(min([notes[pitch][0] for pitch in labels if len(notes[pitch])], default=0) * sampleRate)
     lastSampleIdx = min(len(y) - 1, len(x) - context - 1)
     X = x[firstNoteIdx - midiLatency : lastSampleIdx + context - midiLatency]
     Y = y[firstNoteIdx:lastSampleIdx]

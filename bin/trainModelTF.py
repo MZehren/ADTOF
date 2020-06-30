@@ -35,6 +35,8 @@ def main():
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
+    parser.add_argument("-r", "--restart", action="store_true", help="Override the model if present")
+    parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
     labels = ["36"]  # [36, 40, 41, 46, 49]
     sampleRate = 100
@@ -49,12 +51,12 @@ def main():
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate),
+        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
         (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, balanceClasses=False),
+        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
         (tf.float64, tf.float64),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
@@ -67,11 +69,11 @@ def main():
     # Get the model
     model = RV1TF().createModel(output=len(labels))
     checkpoint_path = "models/rv1.ckpt"
-    log_dir = os.path.join("logs", "fit", "rv1.2")  # datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     checkpoint_dir = os.path.dirname(checkpoint_path)
     file_writer = tf.summary.create_file_writer(log_dir)
     latest = tf.train.latest_checkpoint(checkpoint_dir)
-    if latest:
+    if latest and not args.restart:
         model.load_weights(latest)
 
     # Get the debug activation model
