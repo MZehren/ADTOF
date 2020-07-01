@@ -107,10 +107,7 @@ def getTFGenerator(
     drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
 
     # Getting the intersection of audio and annotations
-    trackSet = set([os.path.splitext(os.path.basename(track))[0] for track in tracks])
-    drumSet = set([os.path.splitext(os.path.basename(drum))[0] for drum in drums])
-    tracks = tracks[[os.path.splitext(os.path.basename(track))[0] in drumSet for track in tracks]]
-    drums = drums[[os.path.splitext(os.path.basename(drum))[0] in trackSet for drum in drums]]
+    tracks, drums = config.getIntersectionOfPaths(tracks, drums)
 
     # Split
     # shuffle is a bad idea here because the network could overfit to the same artist

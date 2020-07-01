@@ -35,6 +35,19 @@ def getFilesInFolder(*path):
         return np.array(result)
 
 
+def getIntersectionOfPaths(A, B):
+    """
+    Return the list of paths A and B where file exist in both directories (without taking the extension into account)
+    """
+    A = np.array(A)
+    B = np.array(B)
+    ASet = set([os.path.splitext(os.path.basename(a))[0] for a in A])
+    BSet = set([os.path.splitext(os.path.basename(b))[0] for b in B])
+    A = A[[os.path.splitext(os.path.basename(a))[0] in BSet for a in A]]
+    B = B[[os.path.splitext(os.path.basename(b))[0] in ASet for b in B]]
+    return A, B
+
+
 def getFileBasename(path):
     return os.path.splitext(os.path.basename(path))[0]
 

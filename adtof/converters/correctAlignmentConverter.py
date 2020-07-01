@@ -82,7 +82,7 @@ class CorrectAlignmentConverter(Converter):
 
     def getDynamicOffset(self, tuplesThresholded, smoothWindow=5):
         """
-        Compute the difference between all the tuples, smoothed on 10s windows
+        Compute the difference between all the tuples, smoothed on 5s windows
         """
         # annotations - estimations =
         diff = np.array([a - b for a, b in tuplesThresholded])
