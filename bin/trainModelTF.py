@@ -37,12 +37,9 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path.")
     parser.add_argument("-r", "--restart", action="store_true", help="Override the model if present")
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
-    parser.add_argument("-t", "--threadLimit", type=int, default=-1, help="Limit the number of thread open by blas, default to no limit at -1")
     args = parser.parse_args()
     labels = ["36"]  # [36, 40, 41, 46, 49]
     sampleRate = 100
-    if args.threadLimit > 0:
-        export OPENBLAS_NUM_THREADS=args.threadLimit
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
     # Plot the first image of the dataset
