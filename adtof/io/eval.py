@@ -17,7 +17,7 @@ def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, clas
                 estimation[pitch] = [e for e in estimation[pitch] if e > annotationStart]  # TODO: can make faster
 
             y_truth = np.array(groundTruth[pitch]) if pitch in groundTruth else np.array([])
-            y_pred = np.array(estimations[pitch]) if pitch in estimation else np.array([])
+            y_pred = np.array(estimation[pitch]) if pitch in estimation else np.array([])
 
             matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, window)]
             tp = len(matches)
@@ -31,7 +31,14 @@ def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, clas
             sumResults[pitch]["FP"] += fp
             sumResults[pitch]["FN"] += fn
 
-    return {"mean F": np.mean([pitch["F"] for pitch in meanResults.values()])}
+    result = {}
+    for F in ["F", "P", "R"]:
+        result["mean " + str(F)] = np.mean([meanResults[pitch][F] for pitch in classes])
+    for pitch in classes:
+        for F in ["F", "P", "R"]:
+            result["mean " + F + " " + str(pitch)] = np.mean(meanResults[pitch][F])
+
+    return result
 
 
 def getF(tp, fp, fn):
