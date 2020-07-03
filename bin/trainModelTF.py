@@ -6,14 +6,15 @@ TODO
 import argparse
 import datetime
 import io
+import itertools
 import logging
 import os
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 import tensorflow as tf
-import itertools
 
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
@@ -36,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
     parser.add_argument("-r", "--restart", action="store_true", help="Override the model if present")
+    parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
     labels = ["36"]  # [36, 40, 41, 46, 49]
@@ -67,14 +69,20 @@ def main():
     # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
+    cwd = os.path.abspath(os.path.dirname(__file__))
+    checkpoint_dir = os.path.join(cwd, "models")
+    checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
     model = RV1TF().createModel(output=len(labels))
-    checkpoint_path = "models/rv1.ckpt"
-    log_dir = os.path.join("logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    checkpoint_dir = os.path.dirname(checkpoint_path)
-    file_writer = tf.summary.create_file_writer(log_dir)
     latest = tf.train.latest_checkpoint(checkpoint_dir)
     if latest and not args.restart:
         model.load_weights(latest)
+
+    # Set the logs
+    all_logs = os.path.join(cwd, "logs")
+    log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    if args.deleteLogs:
+        shutil.rmtree(all_logs)
+    file_writer = tf.summary.create_file_writer(log_dir)
 
     # Get the debug activation model
     layer_outputs = [layer.output for layer in model.layers]  # Extracts the outputs of the top 12 layers

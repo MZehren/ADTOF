@@ -93,6 +93,7 @@ def getTFGenerator(
     samplePerTrack=100,
     balanceClasses=False,
     limitInstances=-1,
+    Shuffle=True,
 ):
     """
     TODO: change the sampleRate to 100 Hz?
@@ -110,7 +111,6 @@ def getTFGenerator(
     tracks, drums = config.getIntersectionOfPaths(tracks, drums)
 
     # Split
-    # shuffle is a bad idea here because the network could overfit to the same artist
     # train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
     if train:
         tracks = tracks[: int(len(tracks) * split)].tolist()
@@ -118,6 +118,10 @@ def getTFGenerator(
     else:
         tracks = tracks[int(len(tracks) * split) :].tolist()
         drums = drums[int(len(drums) * split) :].tolist()
+
+    # shuffle
+    if Shuffle:
+        tracks, drums = sklearn.utils.shuffle(tracks, drums)
 
     # Lazy cache dictionnary
     DATA = {}
