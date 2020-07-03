@@ -130,10 +130,9 @@ def getTFGenerator(
         trackIdx = 0
         maxTrackIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
         while True:
-            trackIdx = (trackIdx + 1) % maxTrackIdx
             if trackIdx not in DATA:
                 X, Y = readTrack(trackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
-                indexes = balanceDistribution(X, Y)
+                indexes = balanceDistribution(X, Y) if balanceClasses else []
                 DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0}
 
             data = DATA[trackIdx]
@@ -149,6 +148,8 @@ def getTFGenerator(
                     data["cursor"] = (cursor + 1) % (len(data["x"]) - context)
                     sampleIdx = cursor
                 yield data["x"][sampleIdx : sampleIdx + context], data["y"][sampleIdx]
+
+            trackIdx = (trackIdx + 1) % maxTrackIdx
 
     return gen
 

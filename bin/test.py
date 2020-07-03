@@ -53,16 +53,11 @@ def main():
 
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
-    dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
-        (tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
-    )
-    dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
-        (tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
-    )
+    bla = dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, limitInstances=args.limit)()
+    for i in range(10000):
+        print(i)
+        next(bla)
+
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
