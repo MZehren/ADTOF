@@ -42,6 +42,7 @@ def main():
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
     labels = ["36"]  # [36, 40, 41, 46, 49]
+    classWeights = [5]
     sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
@@ -54,19 +55,35 @@ def main():
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
+        dataLoader.getTFGenerator(
+            args.folderPath,
+            train=True,
+            labels=labels,
+            classWeights=classWeights,
+            sampleRate=sampleRate,
+            limitInstances=args.limit,
+            samplePerTrack=1000,
+        ),
         (tf.float32, tf.float32),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate, limitInstances=args.limit),
+        dataLoader.getTFGenerator(
+            args.folderPath,
+            train=False,
+            labels=labels,
+            classWeights=classWeights,
+            sampleRate=sampleRate,
+            limitInstances=args.limit,
+            samplePerTrack=1000,
+        ),
         (tf.float32, tf.float32),
         output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
     )
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
-    # dataset = dataset.prefetch(buffer_size=batch_size // 2)
+    dataset = dataset.prefetch(buffer_size=batch_size // 2)
     # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
@@ -110,7 +127,7 @@ def main():
         dataset,
         epochs=100,
         initial_epoch=0,
-        steps_per_epoch=1,
+        steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,
         validation_steps=30

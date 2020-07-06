@@ -90,13 +90,19 @@ def getTFGenerator(
     train=True,
     split=0.85,
     labels=[36, 40, 41, 46, 49],
+    classWeights=[
+        2,
+        4.0,
+        10.0,
+        3,
+        5.0,
+    ],  # {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
     samplePerTrack=100,
     balanceClasses=False,
     limitInstances=-1,
     Shuffle=True,
 ):
     """
-    TODO: change the sampleRate to 100 Hz?
     sampleRate = 
         - If the highest speed we need to discretize is 20Hz, then we should double the speed 40Hz ->  0.025ms of window
         - Realisticly speaking the fastest tempo I witnessed is around 250 bpm at 16th notes -> 250/60*16 = 66Hz the sr should be 132Hz
@@ -104,6 +110,7 @@ def getTFGenerator(
     context = how many frames are given with each samples
     midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
     """
+    assert len(labels) == len(classWeights)
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
     drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
 
@@ -165,7 +172,10 @@ def getTFGenerator(
                             print("Erasing track", track["name"])
                             break
                     sampleIdx = cursor
-                yield track["x"][sampleIdx : sampleIdx + context], track["y"][sampleIdx]
+
+                y = track["y"][sampleIdx]
+                sampleWeight = max(np.sum(y * classWeights), 1)
+                yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
             # Increment the buffer index to fetch the next track later, or the first track if we limit space
             currentBufferIdx = (currentBufferIdx + 1) % maxBufferIdx
