@@ -66,12 +66,12 @@ def main():
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
-    # dataset = dataset.prefetch(buffer_size=batch_size // 2)
-    # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
+    dataset = dataset.prefetch(buffer_size=batch_size // 2)
+    dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
     cwd = os.path.abspath(os.path.dirname(__file__))
-    checkpoint_dir = os.path.join(cwd, "models")
+    checkpoint_dir = os.path.join("..", cwd, "models")
     checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
     model = RV1TF().createModel(output=len(labels))
     latest = tf.train.latest_checkpoint(checkpoint_dir)
@@ -79,7 +79,7 @@ def main():
         model.load_weights(latest)
 
     # Set the logs
-    all_logs = os.path.join(cwd, "logs")
+    all_logs = os.path.join("..", cwd, "logs")
     log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     if args.deleteLogs:
         shutil.rmtree(all_logs)

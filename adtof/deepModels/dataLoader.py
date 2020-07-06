@@ -123,10 +123,11 @@ def getTFGenerator(
     if Shuffle:
         tracks, drums = sklearn.utils.shuffle(tracks, drums)
 
+    buffer = {}  # Lazy cache dictionnary outside of the gen to store after initialisation of the data!
+
     def gen():
         nextTrackIdx = 0
         currentBufferIdx = 0
-        buffer = {}  # Lazy cache dictionnary
         maxBufferIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
         while True:
             # Get the current track in the buffer, or fetch the next track if the buffer is empty
