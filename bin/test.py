@@ -53,8 +53,14 @@ def main():
 
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath)
-    bla = dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate, limitInstances=50)()
-    while True:
+    generator = dataLoader.getTFGenerator(args.folderPath, train=True, labels=labels, sampleRate=sampleRate, limitInstances=50)
+    bla = generator()
+    for i in range(1000):
+        next(bla)
+
+    print("next")
+    bla = generator()
+    for i in range(1000):
         next(bla)
 
 

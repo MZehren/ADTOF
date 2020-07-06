@@ -66,8 +66,8 @@ def main():
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
-    dataset = dataset.prefetch(buffer_size=batch_size // 2)
-    dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
+    # dataset = dataset.prefetch(buffer_size=batch_size // 2)
+    # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
     cwd = os.path.abspath(os.path.dirname(__file__))
@@ -84,7 +84,7 @@ def main():
     if args.deleteLogs:
         try:
             shutil.rmtree(all_logs)
-        except expression as identifier:
+        except:
             print("couldn't remove folder", all_logs)
 
     Converter.checkPathExists(all_logs)
@@ -110,7 +110,7 @@ def main():
         dataset,
         epochs=100,
         initial_epoch=0,
-        steps_per_epoch=100,
+        steps_per_epoch=1,
         callbacks=callbacks,
         validation_data=dataset_test,
         validation_steps=30
