@@ -82,7 +82,11 @@ def main():
     all_logs = os.path.join(cwd, "..", "logs")
     log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     if args.deleteLogs:
-        shutil.rmtree(all_logs)
+        try:
+            shutil.rmtree(all_logs)
+        except expression as identifier:
+            print("couldn't remove folder", all_logs)
+
     Converter.checkPathExists(all_logs)
     file_writer = tf.summary.create_file_writer(log_dir)
 
