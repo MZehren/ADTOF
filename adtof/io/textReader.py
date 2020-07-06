@@ -38,7 +38,11 @@ class TextReader(object):
         events = []
         with open(txtFilePath, "r") as f:
             for line in f:
-                time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
+                try:
+                    time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
+                except:
+                    print("Line couldn't be decoded, passing.", line)
+                    continue
                 time = float(time)
 
                 if convertPitches:

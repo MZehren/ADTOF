@@ -34,6 +34,9 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("inputPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
+    parser.add_argument(
+        "-s", "--trainSplit", type=float, default=0, help="remove the first x ratio of the tracks if it was used as training"
+    )
     args = parser.parse_args()
     # TODO: save the meta parameters in a config file
     sampleRate = 100
@@ -51,7 +54,7 @@ def main():
 
     # Get the data
     tracks = config.getFilesInFolder(args.inputPath)
-    tracks = tracks[int(len(tracks) * 0.85) :]
+    tracks = tracks[int(len(tracks) * args.trainSplit) :]
     mir = MIR(frameRate=sampleRate)
 
     # Predict the file and write the output

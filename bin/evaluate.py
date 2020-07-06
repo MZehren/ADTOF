@@ -31,6 +31,7 @@ def main():
     parser.add_argument("groundTruthPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("estimationsPath", type=str, help="Path to output folder")
     parser.add_argument("-w", "--window", type=float, default=0.05, help="window size for hit rate")
+    parser.add_argument("-c", "--convertInput", action="store_true", help="Convert the pitches 0, 1, 2 to the correct 36, 40, 42")
     args = parser.parse_args()
 
     # Get the data
@@ -38,10 +39,11 @@ def main():
     estimations = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
     groundTruths, estimations = config.getIntersectionOfPaths(groundTruths, estimations)
     tr = TextReader()
-    groundTruths = [tr.getOnsets(grounTruth, separated=True) for grounTruth in groundTruths]
+    groundTruths = [tr.getOnsets(grounTruth, separated=True, convertPitches=args.convertInput) for grounTruth in groundTruths]
     estimations = [tr.getOnsets(estimation, separated=True) for estimation in estimations]
 
     result = eval.runEvaluation(groundTruths, estimations)
+    print(result)
 
 
 if __name__ == "__main__":
