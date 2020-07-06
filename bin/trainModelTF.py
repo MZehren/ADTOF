@@ -64,8 +64,8 @@ def main():
             limitInstances=args.limit,
             samplePerTrack=1000,
         ),
-        (tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
+        (tf.float32, tf.float32, tf.float32),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),)), tf.TensorShape(1)),
     )
     dataset_test = tf.data.Dataset.from_generator(
         dataLoader.getTFGenerator(
@@ -77,8 +77,8 @@ def main():
             limitInstances=args.limit,
             samplePerTrack=1000,
         ),
-        (tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),))),
+        (tf.float32, tf.float32, tf.float32),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),)), tf.TensorShape(1)),
     )
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
@@ -108,12 +108,12 @@ def main():
     file_writer = tf.summary.create_file_writer(log_dir)
 
     # Get the debug activation model
-    layer_outputs = [layer.output for layer in model.layers]  # Extracts the outputs of the top 12 layers
-    activation_model = tf.keras.models.Model(
-        inputs=model.input, outputs=layer_outputs
-    )  # Creates a model that will return these outputs, given the model input
-    viz_example, _ = next(dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate)())
-    viz_example = viz_example.reshape([1] + list(viz_example.shape))  # Adding mini-batch
+    # layer_outputs = [layer.output for layer in model.layers]  # Extracts the outputs of the top 12 layers
+    # activation_model = tf.keras.models.Model(
+    #     inputs=model.input, outputs=layer_outputs
+    # )  # Creates a model that will return these outputs, given the model input
+    # viz_example, _ = next(dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate)())
+    # viz_example = viz_example.reshape([1] + list(viz_example.shape))  # Adding mini-batch
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),

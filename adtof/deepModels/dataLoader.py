@@ -174,7 +174,7 @@ def getTFGenerator(
                     sampleIdx = cursor
 
                 y = track["y"][sampleIdx]
-                sampleWeight = max(np.sum(y * classWeights), 1)
+                sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
                 yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
             # Increment the buffer index to fetch the next track later, or the first track if we limit space
