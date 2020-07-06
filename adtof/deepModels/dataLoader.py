@@ -123,33 +123,51 @@ def getTFGenerator(
     if Shuffle:
         tracks, drums = sklearn.utils.shuffle(tracks, drums)
 
-    # Lazy cache dictionnary
-    DATA = {}
-
     def gen():
-        trackIdx = 0
-        maxTrackIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
+        nextTrackIdx = 0
+        currentBufferIdx = 0
+        buffer = {}  # Lazy cache dictionnary
+        maxBufferIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
         while True:
-            if trackIdx not in DATA:
-                X, Y = readTrack(trackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels)
+            # Get the current track in the buffer, or fetch the next track if the buffer is empty
+            if currentBufferIdx not in buffer:
+                X, Y = readTrack(
+                    nextTrackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels
+                )
                 indexes = balanceDistribution(X, Y) if balanceClasses else []
-                DATA[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0}
+                buffer[currentBufferIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0, "name": tracks[nextTrackIdx]}
+                nextTrackIdx += 1
+                if nextTrackIdx == len(tracks):  # We have read the last track
+                    nextTrackIdx = 0
+                    print("All tracks decoded once")
+            track = buffer[currentBufferIdx]
 
-            data = DATA[trackIdx]
-            if len(data["y"]) == 0:  # In case the tracks doesn't have notes
-                continue
+            # if len(track["y"]) == 0:  # In case the tracks doesn't have notes
+            #     continue
 
+            # Yield the number of samples per track, save the cursor to resume on the same location,
+            # remove the track once all the samples are done to save space of resume at the beginning
             for _ in range(samplePerTrack):
-                cursor = data["cursor"]
+                cursor = track["cursor"]
                 if balanceClasses:
-                    data["cursor"] = (cursor + 1) % len(data["indexes"])
-                    sampleIdx = data["indexes"][cursor]
+                    # track["cursor"] = (cursor + 1) % len(track["indexes"])
+                    # sampleIdx = track["indexes"][cursor]
+                    raise NotImplementedError()
                 else:
-                    data["cursor"] = (cursor + 1) % (len(data["x"]) - context)
+                    track["cursor"] = cursor + 1
+                    if track["cursor"] == (len(track["x"]) - context):
+                        if maxBufferIdx == len(tracks):  # No limit, then we start the track over
+                            track["cursor"] = 0
+                            print("Resume track", track["name"])
+                        else:  # We limit the tracks, so we remove the one done from the buffer
+                            del buffer[currentBufferIdx]
+                            print("Erasing track", track["name"])
+                            break
                     sampleIdx = cursor
-                yield data["x"][sampleIdx : sampleIdx + context], data["y"][sampleIdx]
+                yield track["x"][sampleIdx : sampleIdx + context], track["y"][sampleIdx]
 
-            trackIdx = (trackIdx + 1) % maxTrackIdx
+            # Increment the buffer index to fetch the next track later, or the first track if we limit space
+            currentBufferIdx = (currentBufferIdx + 1) % maxBufferIdx
 
     return gen
 
