@@ -32,8 +32,8 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
 
     # Trim before the first midi note (to remove the unannotated count in)
     # and after the last uncovered part
-    # If there are no event for the pitch, skip it. Default to index 0 if there are not pitch with event.
-    firstNoteIdx = round(min([notes[pitch][0] for pitch in labels if len(notes[pitch])], default=0) * sampleRate)
+    # If there are no event for the pitch, skip it. Default to index 5s if there are not pitch with event.
+    firstNoteIdx = round(min([notes[pitch][0] for pitch in labels if len(notes[pitch])], default=5) * sampleRate)
     lastSampleIdx = min(len(y) - 1, len(x) - context - 1)
     X = x[firstNoteIdx - midiLatency : lastSampleIdx + context - midiLatency]
     Y = y[firstNoteIdx:lastSampleIdx]
@@ -67,7 +67,7 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
 
         result.append(row)
         if len(notes[key]) == 0:
-            logging.info(filename + " " + str(key) + " is not represented in this track")
+            print(filename, str(key), "is not represented in this track")
 
     return np.array(result).T
 
@@ -108,11 +108,10 @@ def getTFGenerator(
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
     drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
 
-    # Getting the intersection of audio and annotations
+    # Getting the intersection of audio and annotations files
     tracks, drums = config.getIntersectionOfPaths(tracks, drums)
 
     # Split
-    # train, test = sklearn.model_selection.train_test_split(candidateName, test_size=test_size, random_state=1)
     if train:
         tracks = tracks[: int(len(tracks) * split)].tolist()
         drums = drums[: int(len(drums) * split)].tolist()
@@ -124,7 +123,7 @@ def getTFGenerator(
     if Shuffle:
         tracks, drums = sklearn.utils.shuffle(tracks, drums)
 
-    buffer = {}  # Lazy cache dictionnary outside of the gen to store after initialisation of the data!
+    buffer = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
 
     def gen():
         nextTrackIdx = 0
@@ -144,9 +143,6 @@ def getTFGenerator(
                     print("All tracks decoded once")
             track = buffer[currentBufferIdx]
 
-            # if len(track["y"]) == 0:  # In case the tracks doesn't have notes
-            #     continue
-
             # Yield the number of samples per track, save the cursor to resume on the same location,
             # remove the track once all the samples are done to save space of resume at the beginning
             for _ in range(samplePerTrack):
@@ -157,7 +153,7 @@ def getTFGenerator(
                     raise NotImplementedError()
                 else:
                     track["cursor"] = cursor + 1
-                    if track["cursor"] == (len(track["x"]) - context):
+                    if track["cursor"] == (len(track["x"]) - context) or track["cursor"] == len(track["y"]):
                         if maxBufferIdx == len(tracks):  # No limit, then we start the track over
                             track["cursor"] = 0
                             print("Resume track", track["name"])
