@@ -21,6 +21,7 @@ from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 from adtof.converters.converter import Converter
+from adtof import config
 
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
@@ -41,8 +42,8 @@ def main():
     parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
-    labels = [36, 40, 41, 46, 49]
-    classWeights = [2, 4.0, 10.0, 3, 5.0]
+    labels = config.LABELS_5
+    classWeights = config.WEIGHTS_5
     sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
@@ -57,14 +58,15 @@ def main():
     generator = dataLoader.getTFGenerator(
         args.folderPath, train=True, labels=labels, classWeights=classWeights, sampleRate=sampleRate, limitInstances=50
     )
-    bla = generator()
-    for i in range(1000):
-        next(bla)
+    while True:
+        bla = generator()
+        for i in range(1000):
+            next(bla)
 
-    print("next")
-    bla = generator()
-    for i in range(1000):
-        next(bla)
+        print("next")
+        bla = generator()
+        for i in range(1000):
+            next(bla)
 
 
 if __name__ == "__main__":

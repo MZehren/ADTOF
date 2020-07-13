@@ -85,7 +85,7 @@ def main():
     batch_size = 100
     dataset = dataset.batch(batch_size).repeat()
     dataset_test = dataset_test.batch(batch_size).repeat()
-    dataset = dataset.prefetch(buffer_size=batch_size // 2)
+    # dataset = dataset.prefetch(buffer_size=batch_size // 2)
     # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
 
     # Get the model
