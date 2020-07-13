@@ -28,43 +28,47 @@ class RV1TF(object):
         """
         # How to handle the bidirectional aggregation ? Sum, or nothing ?
         # TODO: https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#optional_set_the_correct_initial_bias
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation='relu', name="conv11"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(32, (3, 3), activation='relu', name="conv12"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv21"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, (3, 3), activation='relu', name="conv22"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(256, activation='relu', name="dense1"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dense(256, activation='relu', name="dense2"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput")
-        ])
+        model = tf.keras.Sequential(
+            [
+                tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation="relu", name="conv11"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Conv2D(32, (3, 3), activation="relu", name="conv12"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
+                tf.keras.layers.Dropout(0.3),
+                tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv21"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv22"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
+                tf.keras.layers.Dropout(0.3),
+                # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+                # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+                # tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dense(256, activation="relu", name="dense1"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dense(256, activation="relu", name="dense2"),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"),
+            ]
+        )
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
         # and how binary cross entropy work for multi label
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), #"adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
-            loss=tf.keras.backend.binary_crossentropy,  #tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy, 
-            metrics=["Precision", "Recall"]  # PeakPicking(hitDistance=0.05)  
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001 / 2),  # "adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
+            loss=tf.keras.backend.binary_crossentropy,  # tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy,
+            metrics=["Precision", "Recall"],  # PeakPicking(hitDistance=0.05)
         )
         return model
 
-def log_layers(epoch, input, model, activation_model,file_writer):
+
+def log_layers(epoch, input, model, activation_model, file_writer):
     log_layer_activation(epoch, input, model, activation_model, file_writer)
     log_layer_weights(epoch, input, model, activation_model, file_writer)
+
 
 def log_layer_activation(epoch, input, model, activation_model, file_writer):
     # Create a figure to contain the plot.
@@ -81,11 +85,11 @@ def log_layer_activation(epoch, input, model, activation_model, file_writer):
                 plt.xticks([])
                 plt.yticks([])
                 plt.grid(False)
-                plt.imshow(layer_activation[0, :, :, iKernel], cmap='viridis')
+                plt.imshow(layer_activation[0, :, :, iKernel], cmap="viridis")
 
         # Save the plot to a PNG in memory.
         buf = io.BytesIO()
-        plt.savefig(buf, format='png')
+        plt.savefig(buf, format="png")
         # Closing the figure prevents it from being displayed directly inside
         # the notebook.
         plt.close(figure)
@@ -114,11 +118,11 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
                 plt.xticks([])
                 plt.yticks([])
                 plt.grid(False)
-                plt.imshow(layer_weigth[:, :, iChannel, iKernel], cmap='viridis')
+                plt.imshow(layer_weigth[:, :, iChannel, iKernel], cmap="viridis")
 
         # Save the plot to a PNG in memory.
         buf = io.BytesIO()
-        plt.savefig(buf, format='png')
+        plt.savefig(buf, format="png")
         # Closing the figure prevents it from being displayed directly inside
         # the notebook.
         plt.close(figure)
@@ -130,8 +134,6 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
 
         with file_writer.as_default():
             tf.summary.image(layer_name, image, step=epoch)
-
-
 
 
 # rv1 = RV1()
