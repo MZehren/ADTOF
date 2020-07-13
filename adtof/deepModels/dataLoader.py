@@ -129,6 +129,7 @@ def getTFGenerator(
         nextTrackIdx = 0
         currentBufferIdx = 0
         maxBufferIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
+        cursors = {}  # The cursors are stored in the gen to make it able to reinitialize
         while True:
             # Get the current track in the buffer, or fetch the next track if the buffer is empty
             if currentBufferIdx not in buffer:
@@ -136,17 +137,19 @@ def getTFGenerator(
                     nextTrackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels
                 )
                 indexes = balanceDistribution(X, Y) if balanceClasses else []
-                buffer[currentBufferIdx] = {"x": X, "y": Y, "indexes": indexes, "cursor": 0, "name": tracks[nextTrackIdx]}
+                buffer[currentBufferIdx] = {"x": X, "y": Y, "indexes": indexes, "name": tracks[nextTrackIdx]}
                 nextTrackIdx += 1
                 if nextTrackIdx == len(tracks):  # We have read the last track
                     nextTrackIdx = 0
                     print("All tracks decoded once")
-            track = buffer[currentBufferIdx]
+            if currentBufferIdx not in cursors:
+                cursors[currentBufferIdx] = 0
 
+            track = buffer[currentBufferIdx]
             # Yield the number of samples per track, save the cursor to resume on the same location,
             # remove the track once all the samples are done to save space of resume at the beginning
             for _ in range(samplePerTrack):
-                cursor = track["cursor"]
+                cursor = cursors[currentBufferIdx]
                 if balanceClasses:
                     # track["cursor"] = (cursor + 1) % len(track["indexes"])
                     # sampleIdx = track["indexes"][cursor]
@@ -154,14 +157,14 @@ def getTFGenerator(
                 else:
                     if cursor + 1 >= (len(track["x"]) - context) or cursor + 1 >= len(track["y"]):
                         if maxBufferIdx == len(tracks):  # No limit, then we start the track over
-                            track["cursor"] = 0
+                            cursors[currentBufferIdx] = 0
                             print("Resume track", track["name"])
                         else:  # We limit the tracks, so we remove the one done from the buffer
                             del buffer[currentBufferIdx]
                             print("Erasing track", track["name"])
                             break
                     else:
-                        track["cursor"] = cursor + 1
+                        cursors[currentBufferIdx] = cursor + 1
                     sampleIdx = cursor
 
                 y = track["y"][sampleIdx]
