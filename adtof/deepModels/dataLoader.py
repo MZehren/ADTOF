@@ -152,8 +152,7 @@ def getTFGenerator(
                     # sampleIdx = track["indexes"][cursor]
                     raise NotImplementedError()
                 else:
-                    track["cursor"] = cursor + 1
-                    if track["cursor"] == (len(track["x"]) - context) or track["cursor"] == len(track["y"]):
+                    if cursor + 1 >= (len(track["x"]) - context) or cursor + 1 >= len(track["y"]):
                         if maxBufferIdx == len(tracks):  # No limit, then we start the track over
                             track["cursor"] = 0
                             print("Resume track", track["name"])
@@ -161,6 +160,8 @@ def getTFGenerator(
                             del buffer[currentBufferIdx]
                             print("Erasing track", track["name"])
                             break
+                    else:
+                        track["cursor"] = cursor + 1
                     sampleIdx = cursor
 
                 y = track["y"][sampleIdx]
