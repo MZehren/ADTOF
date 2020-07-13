@@ -25,7 +25,7 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
 
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
-    notes = TextReader().getOnsets(drum, separated=True)
+    notes = TextReader().getOnsets(drum)
     y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels)
     x = mir.open(track)
     x = x.reshape(x.shape + (1,))  # Add the channel dimension

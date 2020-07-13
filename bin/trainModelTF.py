@@ -38,8 +38,9 @@ def main():
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
-    parser.add_argument("-r", "--restart", action="store_true", help="Override the model if present")
-    parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
+    parser.add_argument(
+        "-r", "--restart", action="store_true", help="Override the model and logs if present. Default is to resume training"
+    )
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
     labels = config.LABELS_5
@@ -99,7 +100,7 @@ def main():
     # Set the logs
     all_logs = os.path.join(cwd, "..", "logs")
     log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    if args.deleteLogs:
+    if args.restart and os.path.exists(all_logs):
         try:
             shutil.rmtree(all_logs)
         except:
