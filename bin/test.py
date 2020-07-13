@@ -41,8 +41,8 @@ def main():
     parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
-    labels = ["36"]  # [36, 40, 41, 46, 49]
-    classWeights = [5]
+    labels = [36, 40, 41, 46, 49]
+    classWeights = [2, 4.0, 10.0, 3, 5.0]
     sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)

@@ -3,7 +3,7 @@ import mir_eval
 from collections import defaultdict
 
 
-def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, classes=[36, 40, 42]):
+def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, classes=[35, 38, 42]):
     """
     """
     assert len(groundTruths) == len(estimations)

@@ -226,23 +226,8 @@ class PhaseShiftConverter(Converter):
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to None.
         """
-        converted = self.remap(pitches, ANIMATIONS_MIDI)
+        converted = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
         if len(converted) == 0:
-            converted = self.remap(pitches, EXPERT_MIDI)
+            converted = config.getPitchesRemap(pitches, EXPERT_MIDI)
         return {k: MIDI_REDUCED_8[v] for k, v in converted.items()}
 
-    def remap(self, pitches, mapping):
-        """
-        Map pitches to a mapped value from a mapping
-        """
-        result = {}
-        for pitch in pitches:
-            if pitch not in mapping:
-                continue
-            mapped = mapping[pitch]
-            if isinstance(mapped, dict):
-                mapped = mapped[mapped["modifier"] in pitches]
-
-            result[pitch] = mapped
-
-        return result

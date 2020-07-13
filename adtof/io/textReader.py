@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import pkg_resources
 
-from adtof.config import MDBS_MIDI, MIDI_REDUCED_3, RBMA_MIDI
+from adtof import config
 from adtof.io.midiProxy import MidiProxy
 
 
@@ -29,7 +29,7 @@ class TextReader(object):
         except ValueError:
             return s
 
-    def getOnsets(self, txtFilePath, convertPitches=True, separated=False):
+    def getOnsets(self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5]):
         """
         Parse the file and return a list of {"time": int, "pitch": int}
 
@@ -45,50 +45,20 @@ class TextReader(object):
                     continue
                 time = float(time)
 
-                if convertPitches:
-                    pitch = self.castInt(pitch)
-                    if pitch in MDBS_MIDI:
-                        pitch = MDBS_MIDI[pitch]
-                    elif pitch in RBMA_MIDI:
-                        pitch = RBMA_MIDI[pitch]
+                pitch = self.castInt(pitch)
+                pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=False)
+                if pitch != None:
+                    events.append({"time": time, "pitch": pitch})
 
-                    if pitch in MIDI_REDUCED_3:
-                        pitch = MIDI_REDUCED_3[pitch]
-                    else:
-                        continue
-
-                events.append({"time": time, "pitch": pitch})
-
-        if separated:
-            result = defaultdict(list)
-            for e in events:
-                result[e["pitch"]].append(e["time"])
-            return result
-
-        return events
+        # return events
+        result = defaultdict(list)
+        for e in events:
+            result[e["pitch"]].append(e["time"])
+        return result
 
     def writteBeats(self, path, beats):
         """
+
         """
         with open(path, "w") as f:
             f.write("\n".join([str(time) + "\t" + str(beatNumber) for time, beatNumber in beats]))
-
-    # def convert(self, txtFilePath, outputName=None):
-    #     """
-    #     Convert a text file of the shape:
-    #     float string/int\n
-
-    #     returns and save a midi object
-    #     """
-    #     # read the file
-    #     events = self.getOnsets(txtFilePath)
-
-    #     # create the midi
-    #     midi = MidiProxy(None)
-    #     for event in events:
-    #         midi.addNote(e["time"], e["pitch"])
-
-    #     # return
-    #     if outputName:
-    #         midi.save(outputName)
-    #     return midi

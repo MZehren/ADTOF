@@ -25,7 +25,7 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
 
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
-    notes = TextReader().getOnsets(drum, convertPitches=False, separated=True)
+    notes = TextReader().getOnsets(drum, separated=True)
     y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels)
     x = mir.open(track)
     x = x.reshape(x.shape + (1,))  # Add the channel dimension
@@ -89,14 +89,8 @@ def getTFGenerator(
     midiLatency=0,
     train=True,
     split=0.85,
-    labels=[36, 40, 41, 46, 49],
-    classWeights=[
-        2,
-        4.0,
-        10.0,
-        3,
-        5.0,
-    ],  # {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
+    labels=[36],
+    classWeights=[1],
     samplePerTrack=100,
     balanceClasses=False,
     limitInstances=-1,

@@ -16,11 +16,12 @@ import numpy as np
 import sklearn
 import tensorflow as tf
 
+from adtof import config
+from adtof.converters.converter import Converter
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
-from adtof.converters.converter import Converter
 
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
@@ -41,8 +42,8 @@ def main():
     parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
-    labels = ["36"]  # [36, 40, 41, 46, 49]
-    classWeights = [5]
+    labels = config.LABELS_5
+    classWeights = config.WEIGHTS_5
     sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)

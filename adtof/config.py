@@ -4,18 +4,17 @@ Config file keeping folder name
 import logging
 import os
 import numpy as np
-
+from typing import List, Dict
 
 AUDIO = "audio/audio"  # Folder containging .ogg files
 FEATURES = "audio/features"  # Folder containging features extracted for the neural network
 RAW_MIDI = "annotations/raw_midi"  # Original midi in PhaseShift format
-CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi format
-ALIGNED_DRUM = "annotations/aligned_drum"  # aligned onsets of the converted annotations
+CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi format with all class when available (need desambiguation)
+ALIGNED_DRUM = "annotations/aligned_drum"  # aligned onsets of the converted annotations with all class when available (need desambiguation)
 ALIGNED_BEATS = "annotations/aligned_beats"  # aligned beats of the converted annotations
 RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
-# Algo to eval
-THREE_CLASS_EVAL = ["RV-CRNN_3"]
+
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -41,15 +40,72 @@ def getIntersectionOfPaths(A, B):
     """
     A = np.array(A)
     B = np.array(B)
-    ASet = set([os.path.splitext(os.path.basename(a))[0] for a in A])
-    BSet = set([os.path.splitext(os.path.basename(b))[0] for b in B])
-    A = A[[os.path.splitext(os.path.basename(a))[0] in BSet for a in A]]
-    B = B[[os.path.splitext(os.path.basename(b))[0] in ASet for b in B]]
+    ASet = set([getFileBasename(a) for a in A])
+    BSet = set([getFileBasename(b) for b in B])
+    A = A[[getFileBasename(a) in BSet for a in A]]
+    B = B[[getFileBasename(b) in ASet for b in B]]
     return A, B
 
 
 def getFileBasename(path):
-    return os.path.splitext(os.path.basename(path))[0]
+    """
+    Return the name of the file without path or extension
+    """
+    basename = os.path.splitext(os.path.basename(path))[0]
+    if basename[-6:] == ".drums":
+        return basename[:-6]
+    else:
+        return basename
+
+
+def remapPitches(pitches, mappings, removeIfUnknown=True):
+    """
+    Map pitches to a value from a mapping such as EXPERT_MIDI or [EXPERT_MIDI, MIDI_REDUCED_3] to chain them.
+    
+    All the pitches from the same timestamp have to be converted at once because of modifiers pitches in the mappings 
+    (ie: 98 = 45 if 110 in pitches else 46)
+
+    pitches(int or list[int]): pitches to be converted with the mapping. If only one pitch is send instead of an iterable, 
+    only one pitch is returned (or None)
+    mappings(dict or list[dict]): a (list of) mapping from one pitch to another. See config.EXPERT_MIDI or config.MIDI_REDUCED_3 for examples of mappings
+    removeIfUnknown(boolean): Specifies if any pitch not known in the mappings is removed or kept as is.
+    """
+    if not isinstance(mappings, list):
+        mappings = [mappings]
+
+    returnIterable = True
+    if not isinstance(pitches, list):
+        pitches = [pitches]
+        returnIterable = False
+
+    for mapping in mappings:
+        pitchRemap = getPitchesRemap(pitches, mapping)
+        pitches = [pitchRemap[pitch] if pitch in pitchRemap else pitch for pitch in pitches if pitch in pitchRemap or not removeIfUnknown]
+
+    if returnIterable:
+        return pitches
+    else:
+        return pitches[0] if len(pitches) else None
+
+
+def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
+    """
+    Return a dictionnary of mapping from input pitches to target pitches
+
+    All the pitches from the same timestamp have to be converted at once because of modifiers pitches in the mappings 
+    (ie: 98 = 45 if 110 in pitches else 46)
+    """
+    result = {}
+    for pitch in pitches:
+        if pitch not in mapping or mapping[pitch] is None:
+            continue
+        mapped = mapping[pitch]
+        if isinstance(mapped, dict):
+            mapped = mapped[mapped["modifier"] in pitches]
+
+        result[pitch] = mapped
+
+    return result
 
 
 # Maps Phase shift/rock band expert difficulty to std midi
@@ -59,13 +115,13 @@ EXPERT_MIDI = {
     95: 35,
     96: 35,
     97: 38,
-    98: {"modifier": 110, True: 45, False: 46},
+    98: {"modifier": 110, True: 45, False: 42},
     99: {"modifier": 111, True: 43, False: 57},
     100: {"modifier": 112, True: 41, False: 49},
 }
 
-# Maps PS/RB animation to the notes. The animation seems to display a better representation of the real notes
-# on the official charts released. Not available on all charts
+# Maps PS/RB animation pitches to the standard midi pitches. The animation seems to contain a better representation of the real notes
+# Not available on all charts
 ANIMATIONS_MIDI = {
     51: 41,
     50: 41,
@@ -85,79 +141,79 @@ ANIMATIONS_MIDI = {
     32: 60,  # Percussion w/ RH
     31: {"modifier": 25, True: 46, False: 42},
     30: {"modifier": 25, True: 46, False: 42},
-    27: 40,
-    26: 40,
-    24: 36,
-    28: 40,
-    29: 40,
+    27: 38,
+    26: 38,
+    24: 35,
+    28: 38,
+    29: 38,
     43: 51,
     44: 57,
     45: 57,
 }
-# Maps all the midi classes to more general consistant ones
-# ie.: converts all tom-tom to a low tom, converts all hi-hat to open hi-hat
+# Maps all the standard midi pitches to more general consistant ones
+# ie.: converts all tom-tom to the 47 tom, converts all hi-hat to 42 hi-hat
 MIDI_REDUCED_3 = {
-    35: 36,
-    36: 36,
-    37: 40,
-    38: 40,
-    40: 40,
-    41: 0,
-    43: 0,
-    45: 0,
-    47: 0,
-    48: 0,
-    50: 0,
-    42: 46,
-    44: 46,
-    46: 46,
-    49: 0,
-    51: 0,
-    52: 0,
-    53: 0,
-    55: 0,
-    57: 0,
-    59: 0,
-    60: 0,  # Don't remap the "percussion" as it is inconsistant
+    35: 35,  # BD
+    36: 35,
+    37: 38,  # SD
+    38: 38,
+    40: 38,
+    # 41: None,
+    # 43: None,
+    # 45: None,
+    # 47: None,
+    # 48: None,
+    # 50: None,
+    42: 42,  # HH
+    44: 42,
+    46: 42,
+    # 49: None,
+    # 51: None,
+    # 52: None,
+    # 53: None,
+    # 55: None,
+    # 57: None,
+    # 59: None,
+    # 60: None,  # Don't remap the "percussion" as it is inconsistant
 }
 
 MIDI_REDUCED_5 = {
-    35: 36,
-    36: 36,
-    37: 40,
-    38: 40,
-    40: 40,
-    41: 41,
-    43: 41,
-    45: 41,
-    47: 41,
-    48: 41,
-    50: 41,
-    42: 46,
-    44: 46,
-    46: 46,
-    49: 49,
+    35: 35,  # BD
+    36: 35,
+    37: 38,  # SD
+    38: 38,
+    40: 38,
+    41: 47,  # TT
+    43: 47,
+    45: 47,
+    47: 47,
+    48: 47,
+    50: 47,
+    42: 42,  # HH
+    44: 42,
+    46: 42,
+    49: 49,  # CY
     51: 49,
     52: 49,
     53: 49,
     55: 49,
     57: 49,
     59: 49,
-    60: 0,
+    # 60: None,
 }
 
 MIDI_REDUCED_6 = {
-    35: 36,
-    36: 36,
-    37: 40,
-    38: 40,
-    40: 40,
-    41: 41,
-    43: 41,
-    45: 41,
-    47: 41,
-    48: 41,
-    50: 41,
+    35: 35,
+    36: 35,
+    37: 38,
+    38: 38,
+    40: 38,
+    41: 47,
+    43: 47,
+    45: 47,
+    47: 47,
+    48: 47,
+    50: 47,
     42: 46,
     44: 46,
     46: 46,
@@ -168,15 +224,15 @@ MIDI_REDUCED_6 = {
     55: 49,
     57: 49,
     59: 49,
-    60: 0,
+    # 60: None,
 }
 
 MIDI_REDUCED_8 = {
-    35: 36,
-    36: 36,
-    37: 40,
-    38: 40,
-    40: 40,
+    35: 35,
+    36: 35,
+    37: 38,
+    38: 38,
+    40: 38,
     41: 41,
     43: 41,
     45: 45,
@@ -193,11 +249,33 @@ MIDI_REDUCED_8 = {
     55: 49,
     57: 49,
     59: 49,
-    60: 0,
+    # 60: None,
 }
 
 # MDBS text event to midi pitches
-MDBS_MIDI = {"KD": 36, "SD": 40, "HH": 46, "TT": 41, "CY": 49, "OT": 37}
+MDBS_MIDI = {"KD": 35, "SD": 38, "HH": 42, "TT": 47, "CY": 49, "OT": 37}
 
 # RBMA event to midi pitches
-RBMA_MIDI = {0: 36, 1: 40, 2: 46}
+RBMA_MIDI_3 = {0: 35, 1: 38, 2: 42}
+RBMA_MIDI_8 = {
+    0: 35,  # BD
+    1: 38,  # SD
+    2: 47,  # TT  (lft)
+    3: 42,  # HH
+    4: 49,  # CY
+    5: 51,  # RD
+    6: 53,  # ride bell / bells / etc
+    7: 75,  # claves
+}
+
+# Labels and class weights for the 5 output of the neural network
+LABELS_5 = [35, 38, 47, 42, 49]
+
+WEIGHTS_5 = [
+    2.0,
+    4.0,
+    10.0,
+    3.0,
+    5.0,
+]  # {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
+
