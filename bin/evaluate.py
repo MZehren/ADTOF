@@ -35,15 +35,40 @@ def main():
     args = parser.parse_args()
 
     # Get the data
-    groundTruths = config.getFilesInFolder(args.groundTruthPath)
-    estimations = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
-    groundTruths, estimations = config.getIntersectionOfPaths(groundTruths, estimations)
+    groundTruthsPaths = config.getFilesInFolder(args.groundTruthPath)
+    estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
+    groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
     tr = TextReader()
-    groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruths]
-    estimations = [tr.getOnsets(estimation) for estimation in estimations]
+    groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruthsPaths]
+    estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
 
-    result = eval.runEvaluation(groundTruths, estimations)
+    result = eval.runEvaluation(groundTruths, estimations, groundTruthsPaths)
     print(result)
+    plot(result)
+
+
+def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):
+    """
+    {'mean F': 0.4400290519510308, 'mean P': 0.6659775429409889, 'mean R': 0.4096366303496082, 'mean F 35': 0.5989156395480592, 'mean P 35': 0.8660609488134552, 'mean R 35': 0.5240203566565339, 'mean F 38': 0.6032228067405822, 'mean P 38': 0.7579546096714384, 'mean R 38': 0.5846379121932345, 'mean F 42': 0.11794870956445104, 'mean P 42': 0.37391707033807325, 'mean R 42': 0.12025162219905618}
+    """
+    fig, ax = plt.subplots()
+    ind = np.arange(len(groups))  # the x locations for the groups
+    width = 1 / (len(groups) + 1)  # the width of the bars
+
+    for i, bar in enumerate(bars):
+        X = ind + (i * width)
+        Y = [result[" ".join([prefix, bar, group])] for group in groups]
+        ax.bar(
+            X, Y, width=width, edgecolor="black", label=" ".join([prefix, bar]),
+        )
+        for x, y in zip(X, Y):
+            plt.annotate(np.format_float_positional(y, precision=2), xy=(x - width / 2, y + 0.01))
+
+    plt.xticks(ind + width, groups)
+    plt.grid(axis="y", linestyle="--")
+    plt.legend()
+    plt.ylim(0, 1)
+    plt.show()
 
 
 if __name__ == "__main__":

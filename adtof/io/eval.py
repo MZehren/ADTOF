@@ -1,16 +1,17 @@
 import numpy as np
 import mir_eval
 from collections import defaultdict
+from adtof import config
 
 
-def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, classes=[35, 38, 42]):
+def runEvaluation(groundTruths, estimations, paths, window=0.05, removeStart=True, classes=config.LABELS_5):
     """
     """
     assert len(groundTruths) == len(estimations)
 
     meanResults = {pitch: defaultdict(list) for pitch in classes}
     sumResults = {pitch: defaultdict(int) for pitch in classes}
-    for groundTruth, estimation in zip(groundTruths, estimations):
+    for groundTruth, estimation, path in zip(groundTruths, estimations, paths):
         annotationStart = min([v[0] for k, v in groundTruth.items() if len(v)], default=5)
         for pitch in classes:
             if removeStart and pitch in estimation:
@@ -31,9 +32,13 @@ def runEvaluation(groundTruths, estimations, window=0.05, removeStart=True, clas
             sumResults[pitch]["FP"] += fp
             sumResults[pitch]["FN"] += fn
 
+        trackF = np.mean([meanResults[pitch]["F"][-1] for pitch in classes])
+        if trackF < 0.05:
+            print("Alert, track performed badly", str(trackF), path)
+
     result = {}
     for F in ["F", "P", "R"]:
-        result["mean " + str(F)] = np.mean([meanResults[pitch][F] for pitch in classes])
+        result["mean " + str(F) + " " + "all"] = np.mean([meanResults[pitch][F] for pitch in classes])
     for pitch in classes:
         for F in ["F", "P", "R"]:
             result["mean " + F + " " + str(pitch)] = np.mean(meanResults[pitch][F])

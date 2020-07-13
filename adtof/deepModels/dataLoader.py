@@ -126,6 +126,7 @@ def getTFGenerator(
     buffer = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
 
     def gen():
+        print("train" if train else "test", "generator is reset")
         nextTrackIdx = 0
         currentBufferIdx = 0
         maxBufferIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)

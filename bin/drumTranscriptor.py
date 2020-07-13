@@ -41,7 +41,7 @@ def main():
     # TODO: save the meta parameters in a config file
     sampleRate = 100
     context = 25
-    classLabels = [36]
+    classLabels = config.LABELS_5
     plot = False
 
     # Get the model
@@ -72,16 +72,12 @@ def main():
         sparseResultIdx = [PeakPicking().serialPeakPicking(Y[:, column]) for column in range(Y.shape[1])]
 
         # write text
+        textFormatedResult = [
+            (i / sampleRate, classLabels[classIdx]) for classIdx, classPeaks in enumerate(sparseResultIdx) for i in classPeaks
+        ]
+        textFormatedResult.sort(key=lambda x: (x[0], x[1]))
         with open(os.path.join(args.outputPath, config.getFileBasename(track) + ".txt"), "w") as outputFile:
-            outputFile.write(
-                "\n".join(
-                    [
-                        str(i / sampleRate) + "\t" + str(classLabels[classIdx])
-                        for classIdx, classPeaks in enumerate(sparseResultIdx)
-                        for i in classPeaks
-                    ]
-                )
-            )
+            outputFile.write("\n".join([str(el[0]) + "\t" + str(el[1]) for el in textFormatedResult]))
 
         #  write midi
         midi = pretty_midi.PrettyMIDI()
