@@ -30,11 +30,19 @@ class CorrectAlignmentConverter(Converter):
         midi = pretty_midi.PrettyMIDI(missalignedMidiInput)
         # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
         beats_midi = midi.get_beats()
+        downbeats_midi = set(midi.get_downbeats())
+        beatCursor = -1
+        beatIdx = []
+        for beat in beats_midi:
+            if beat in downbeats_midi:
+                beatCursor = 1
+            beatIdx.append(beatCursor)
+            beatCursor = beatCursor + 1 if beatCursor != -1 else -1
 
         # get audio beats
         tr = TextReader()
         # kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
-        beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, convertPitches=False)]
+        beats_audio = [el["time"] for el in tr.getOnsets(alignedBeatInput, mappingDictionaries=[], group=False)]
 
         # correction = self.computeAlignment(kicks_midi, kicks_audio)
         F, P, R = f_measure(np.array(beats_midi), np.array(beats_audio), window=0.05)
@@ -48,8 +56,9 @@ class CorrectAlignmentConverter(Converter):
         drumsPitches = [note.pitch for note in midi.instruments[0].notes]
         drumstimes = [note.start for note in midi.instruments[0].notes]
         correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
+        correctedBeatTimes = self.setDynamicOffset(correction, beats_midi)
         tr.writteBeats(alignedDrumOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
-        # midi.get_dow()
+        tr.writteBeats(alignedBeatOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
 
     def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """
@@ -78,7 +87,9 @@ class CorrectAlignmentConverter(Converter):
         if max(interpolation) > 0.5:
             raise ValueError("Extrapolation of annotations offset seems too extreme")
 
-        return onsets - interpolation
+        converted = onsets - interpolation
+        converted[converted < 0] = 0
+        return converted
 
     def getDynamicOffset(self, tuplesThresholded, smoothWindow=5):
         """

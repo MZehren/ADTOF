@@ -18,7 +18,6 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
     Read the mp3, the midi and the alignment files and generate a balanced list of samples 
     """
     # initiate vars
-    print("new track read:", tracks[i])
     track = tracks[i]
     drum = drums[i]
     mir = MIR(frameRate=sampleRate)
@@ -134,6 +133,7 @@ def getTFGenerator(
         while True:
             # Get the current track in the buffer, or fetch the next track if the buffer is empty
             if currentBufferIdx not in buffer:
+                print("reading", "train" if train else "test", config.getFileBasename(tracks[nextTrackIdx]))
                 X, Y = readTrack(
                     nextTrackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels
                 )
@@ -178,41 +178,13 @@ def getTFGenerator(
     return gen
 
 
-def getClassWeight(folderPath):
-    # midis = config.getFilesInFolder(folderPath, config.MIDI_CONVERTED)
-    # Y = [MidiProxy(midi).getDenseEncoding(sampleRate=50) for midi in midis]
-    # concat = np.concatenate(Y)
-    # uni = np.unique(concat, return_counts=True, axis=0)
-    #          [36, 40, 41, 46, 49]
-    # 00:array([0., 0., 0., 0., 0.]) / 1734488 = 91% of all samples
-    # 02:array([0., 0., 0., 1., 0.]) / 64280
-    # 15:array([1., 0., 0., 1., 0.]) / 21493
-    # 13:array([1., 0., 0., 0., 0.]) / 19349
-    # 07:array([0., 1., 0., 0., 0.]) / 18689
-    # 09:array([0., 1., 0., 1., 0.]) / 14716
-    # 20:array([1., 1., 0., 0., 0.]) / 11436
-    # 01:array([0., 0., 0., 0., 1.]) / 5297
-    # 14:array([1., 0., 0., 0., 1.]) / 4900
-    # 04:array([0., 0., 1., 0., 0.]) / 4667
-    # 03:array([0., 0., 0., 1., 1.]) / 1969
-    # 22:array([1., 1., 0., 1., 0.]) / 4500
-    # 17:array([1., 0., 1., 0., 0.]) / 1418
-    # 21:array([1., 1., 0., 0., 1.]) / 1276
-    # 08:array([0., 1., 0., 0., 1.]) / 1127
-    # 16:array([1., 0., 0., 1., 1.]) / 519
-    # 11:array([0., 1., 1., 0., 0.]) / 448
-    # 05:array([0., 0., 1., 0., 1.]) / 376
-    # 06:array([0., 0., 1., 1., 0.]) / 251
-    # 24:array([1., 1., 1., 0., 0.]) / 225
-    # 23:array([1., 1., 0., 1., 1.]) / 128
-    # 18:array([1., 0., 1., 0., 1.]) / 111
-    # 19:array([1., 0., 1., 1., 0.]) / 80
-    # 10:array([0., 1., 0., 1., 1.]) / 43
-    # 12:array([0., 1., 1., 1., 0.]) / 2
+def getClassWeight(drumFiles, labels):
+    """
+    approach from https://markcartwright.com/files/cartwright2018increasing.pdf
+    """
+    tr = TextReader()
+    notes = [tr.getOnsets(drumFile) for drumFile in drumFiles]
 
-    # # https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#calculate_class_weights
-    # weights = {i: 1 / concat[:, i].sum() * len(concat) / len(concat[0]) for i in range(len(concat[0]))}
-    weights = {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
     return weights
 
 

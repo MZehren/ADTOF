@@ -20,9 +20,10 @@ def main():
     parser = argparse.ArgumentParser(description="Process a Phase Shift chart folder and convert the MIDI file to standard MIDI")
     parser.add_argument("inputFolder", type=str, help="Path to the chart folder.")
     parser.add_argument("outputFolder", type=str, help="Path to the destination folder")
+    parser.add_argument("-p", "--parallel", action="store_true", help="Set if the conversion is ran in parallel")
     args = parser.parse_args()
 
-    Converter.convertAll(args.inputFolder, args.outputFolder)
+    Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
 
     print("Done!")
 

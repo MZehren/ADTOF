@@ -24,12 +24,12 @@ class TextReader(object):
         Try to convert a string in int if possible
         """
         try:
-            casted = int(s)
+            casted = int(float(s))
             return casted
         except ValueError:
             return s
 
-    def getOnsets(self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5]):
+    def getOnsets(self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True):
         """
         Parse the file and return a list of {"time": int, "pitch": int}
 
@@ -50,7 +50,8 @@ class TextReader(object):
                 if pitch != None:
                     events.append({"time": time, "pitch": pitch})
 
-        # return events
+        if group is False:
+            return events
         result = defaultdict(list)
         for e in events:
             result[e["pitch"]].append(e["time"])

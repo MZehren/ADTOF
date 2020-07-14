@@ -279,7 +279,7 @@ class Converter(object):
             if not Converter.checkPathExists(beatsEstimationsPath):
                 # TODO: Add F-measure measure to see the precision of the annotations
                 mbc.convert(audioPath, beatsEstimationsPath)
-            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath):
+            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath) or not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath):
                 ca.convert(
                     beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
                 )
