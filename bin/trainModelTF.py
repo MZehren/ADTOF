@@ -45,7 +45,7 @@ def main():
     args = parser.parse_args()
     labels = config.LABELS_5
     classWeights = config.WEIGHTS_5
-    sampleRate = 100
+    sampleRate = 50
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
     # Plot the first image of the dataset
@@ -133,7 +133,7 @@ def main():
         steps_per_epoch=100,
         callbacks=callbacks,
         validation_data=dataset_test,
-        validation_steps=30
+        validation_steps=100
         # class_weight=classWeight
     )
 
