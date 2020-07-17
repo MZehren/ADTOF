@@ -45,7 +45,7 @@ def main():
     args = parser.parse_args()
     labels = config.LABELS_5
     classWeights = config.WEIGHTS_5
-    sampleRate = 50
+    sampleRate = 100
 
     # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
     # Plot the first image of the dataset
@@ -126,30 +126,30 @@ def main():
         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
     ]
 
-    model.fit(
-        dataset,
-        epochs=100,
-        initial_epoch=0,
-        steps_per_epoch=100,
-        callbacks=callbacks,
-        validation_data=dataset_test,
-        validation_steps=100
-        # class_weight=classWeight
-    )
+    # model.fit(
+    #     dataset,
+    #     epochs=100,
+    #     initial_epoch=0,
+    #     steps_per_epoch=100,
+    #     callbacks=callbacks,
+    #     validation_data=dataset_test,
+    #     validation_steps=100
+    #     # class_weight=classWeight
+    # )
 
-    # for x, y in dataset_test:
-    #     predictions = model.predict(x)
+    for x, y, w in dataset_test:
+        predictions = model.predict(x)
 
-    #     import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt
 
-    #     f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    #     ax1.plot(predictions)
-    #     ax1.set_ylabel("Prediction")
-    #     ax2.plot(y)
-    #     ax2.set_ylabel("Truth")
-    #     ax2.set_xlabel("Time step")
-    #     plt.show()
-    #     print("Done!")
+        f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        ax1.plot(predictions)
+        ax1.set_ylabel("Prediction")
+        ax2.plot(y)
+        ax2.set_ylabel("Truth")
+        ax2.set_xlabel("Time step")
+        plt.show()
+        print("Done!")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
 
 
-def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49]):
+def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1):
     """
     Read the mp3, the midi and the alignment files and generate a balanced list of samples 
     """
@@ -25,7 +25,7 @@ def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, label
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
     notes = TextReader().getOnsets(drum)
-    y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels)
+    y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels, radiation=radiation)
     x = mir.open(track)
     x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
@@ -46,7 +46,7 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
     sampleRate = sampleRate
     timeShift = offset of the midi, so the event is actually annotated later
     keys = pitch of the offset in each column of the matrix
-    radiation = how many rows from the event are also set to 1
+    radiation = how many samples from the event have a non-null target
     
     """
     length = np.max([values[-1] for values in notes.values()])
@@ -57,11 +57,20 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
         for time in notes[key]:
             # indexs at 1 in the dense matrix
             index = int(np.round((time / playback + offset) * sampleRate))
-            if index <= 0:
-                print(str(time), filename)
+            assert index >= 0
+            # target = [(np.cos(np.arange(-radiation, radiation + 1) * (np.pi / (radiation + 1))) + 1) / 2]
+            if radiation == 0:
+                target = [1]
+            elif radiation == 1:
+                target = [0.5, 1, 0.5]
+            elif radiation == 2:
+                target = [0.25, 0.75, 1.0, 0.75, 0.25]
+            elif radiation == 3:
+                target = [0.14644661, 0.5, 0.85355339, 1.0, 0.85355339, 0.5, 0.14644661]
 
-            for i in range(max(0, index - radiation), min(index + radiation + 1, len(row) - 1)):
-                row[i] = 0.5
+            for i in range(-radiation, radiation + 1):
+                if index + i >= 0 and index + i < len(row):
+                    row[index + i] = target[radiation + i]
             row[index] = 1
 
         result.append(row)
@@ -94,6 +103,7 @@ def getTFGenerator(
     balanceClasses=False,
     limitInstances=-1,
     Shuffle=True,
+    radiation=2,
 ):
     """
     sampleRate = 
@@ -135,7 +145,14 @@ def getTFGenerator(
             if currentBufferIdx not in buffer:
                 print("reading", "train" if train else "test", config.getFileBasename(tracks[nextTrackIdx]))
                 X, Y = readTrack(
-                    nextTrackIdx, tracks, drums, sampleRate=sampleRate, context=context, midiLatency=midiLatency, labels=labels
+                    nextTrackIdx,
+                    tracks,
+                    drums,
+                    sampleRate=sampleRate,
+                    context=context,
+                    midiLatency=midiLatency,
+                    labels=labels,
+                    radiation=radiation,
                 )
                 indexes = balanceDistribution(X, Y) if balanceClasses else []
                 buffer[currentBufferIdx] = {"x": X, "y": Y, "indexes": indexes, "name": tracks[nextTrackIdx]}

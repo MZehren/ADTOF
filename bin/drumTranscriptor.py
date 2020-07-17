@@ -39,7 +39,7 @@ def main():
     )
     args = parser.parse_args()
     # TODO: save the meta parameters in a config file
-    sampleRate = 100
+    sampleRate = 50
     context = 25
     classLabels = config.LABELS_5
     plot = False
