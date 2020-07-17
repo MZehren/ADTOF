@@ -12,6 +12,7 @@ RAW_MIDI = "annotations/raw_midi"  # Original midi in PhaseShift format
 CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi format with all class when available (need desambiguation)
 ALIGNED_DRUM = "annotations/aligned_drum"  # aligned onsets of the converted annotations with all class when available (need desambiguation)
 ALIGNED_BEATS = "annotations/aligned_beats"  # aligned beats of the converted annotations
+ALIGNED_MIDI = "annotations/aligned_midi"  # aligned midi of the converted annotations for debug purposes
 RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
 

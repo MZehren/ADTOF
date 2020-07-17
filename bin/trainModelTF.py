@@ -93,6 +93,7 @@ def main():
     checkpoint_dir = os.path.join(cwd, "..", "models")
     checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
     model = RV1TF().createModel(output=len(labels))
+    model.summary()
     latest = tf.train.latest_checkpoint(checkpoint_dir)
     if latest and not args.restart:
         model.load_weights(latest)

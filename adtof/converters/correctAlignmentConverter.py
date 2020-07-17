@@ -14,6 +14,7 @@ from scipy.interpolate import interp1d
 from adtof import config
 from adtof.converters.converter import Converter
 from adtof.io.textReader import TextReader
+from adtof.io.midiProxy import PrettyMidiWrapper
 
 
 class CorrectAlignmentConverter(Converter):
@@ -22,7 +23,9 @@ class CorrectAlignmentConverter(Converter):
     by looking at the difference between MIDI note_on events and librosa.onsets
     """
 
-    def convert(self, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput, thresholdFMeasure=0.5):
+    def convert(
+        self, alignedBeatInput, missalignedMidiInput, alignedDrumOutput, alignedBeatOutput, alignedMidiOutput, thresholdFMeasure=0.5
+    ):
         """
         ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed
         """
@@ -59,6 +62,12 @@ class CorrectAlignmentConverter(Converter):
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi)
         tr.writteBeats(alignedDrumOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
         tr.writteBeats(alignedBeatOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
+
+        newMidi = PrettyMidiWrapper.fromListOfNotes(
+            [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))],
+            beats=[(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))],
+        )
+        newMidi.write(alignedMidiOutput)
 
     def computeAlignment(self, onsetsA, onsetsB, maxThreshold=0.05):
         """

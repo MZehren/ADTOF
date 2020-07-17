@@ -6,8 +6,9 @@ import numpy as np
 import midi
 from mido import MidiFile
 import mido
+import pretty_midi
 
-# TODO Remove those two implementations and use only one class and pretty midi or something
+# TODO Remove those two implementations and use only one class with pretty midi
 
 
 def lazy_property(fn):
@@ -486,6 +487,23 @@ class PythonMidiProxy:
     @staticmethod
     def fromDenseEncoding(sampleRate, timeShift=0):
         raise NotImplementedError()
+
+
+class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
+    @classmethod
+    def fromListOfNotes(cls, notes, beats=[]):
+        midi = cls()
+        instrument = pretty_midi.Instrument(program=1, is_drum=True)
+        midi.instruments.append(instrument)
+        for time, pitch in notes:
+            note = pretty_midi.Note(velocity=100, pitch=pitch, start=time, end=time)
+            instrument.notes.append(note)
+
+        for time, beatIdx in beats:
+            note = pretty_midi.Note(velocity=100, pitch=beatIdx, start=time, end=time)
+            instrument.notes.append(note)
+
+        return midi
 
 
 MidiProxy = PythonMidiProxy

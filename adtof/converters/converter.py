@@ -276,12 +276,17 @@ class Converter(object):
             beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
             alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+            alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
             if not Converter.checkPathExists(beatsEstimationsPath):
                 # TODO: Add F-measure measure to see the precision of the annotations
                 mbc.convert(audioPath, beatsEstimationsPath)
-            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath) or not Converter.checkAllPathsExist(alignedBeatsAnnotationsPath):
+            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
-                    beatsEstimationsPath, convertedMidiPath, alignedDrumAnotationsPath, alignedBeatsAnnotationsPath,
+                    beatsEstimationsPath,
+                    convertedMidiPath,
+                    alignedDrumAnotationsPath,
+                    alignedBeatsAnnotationsPath,
+                    alignedMidiAnotationsPath,
                 )
 
             # # Extract Features
