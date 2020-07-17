@@ -116,7 +116,7 @@ def getTFGenerator(
     assert len(labels) == len(classWeights)
     tracks = config.getFilesInFolder(folderPath, config.AUDIO)
     drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
-
+    beats = config.getFilesInFolder(folderPath, config.ALIGNED_BEATS)
     # Getting the intersection of audio and annotations files
     tracks, drums = config.getIntersectionOfPaths(tracks, drums)
 
@@ -133,6 +133,8 @@ def getTFGenerator(
         tracks, drums = sklearn.utils.shuffle(tracks, drums)
 
     buffer = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
+
+    # getClassWeight(drums, drums, sampleRate, labels)
 
     def gen():
         print("train" if train else "test", "generator is reset")
@@ -195,14 +197,21 @@ def getTFGenerator(
     return gen
 
 
-def getClassWeight(drumFiles, labels):
+def getClassWeight(drumFiles, beatFiles, sampleRate, labels):
     """
     approach from https://markcartwright.com/files/cartwright2018increasing.pdf
     """
     tr = TextReader()
     notes = [tr.getOnsets(drumFile) for drumFile in drumFiles]
-
-    return weights
+    timeSteps = np.sum([tr.getOnsets(beatFile, group=False)[-1]["time"] for beatFile in beatFiles]) * sampleRate
+    result = []
+    for label in labels:
+        n = np.sum([len(tr[label]) for tr in notes])
+        p = n / timeSteps
+        y = 1 / (-p * np.log(p) - (1 - p) * np.log(1 - p))
+        result.append(y)
+    print(result)  # [10.595089113179926, 13.396606356378715, 34.077461537851526, 11.032864686873204, 17.952530908049976]
+    return result
 
 
 def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed=False):
