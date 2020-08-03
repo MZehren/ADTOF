@@ -44,7 +44,8 @@ def main():
 
     result = eval.runEvaluation(groundTruths, estimations, groundTruthsPaths)
     print(result)
-    plot(result)
+    plot(result, prefix="mean")
+    plot(result, prefix="sum")
 
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):
