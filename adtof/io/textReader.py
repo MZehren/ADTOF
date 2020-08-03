@@ -31,9 +31,17 @@ class TextReader(object):
 
     def getOnsets(self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True):
         """
-        Parse the file and return a list of {"time": int, "pitch": int}
+            Parse the text file following Mirex encoding:
+            [time]\t[class]\n 
 
-        separated= return {pitch: [events]} instead of a flat array
+        Args:
+            txtFilePath (string): path to the text file.
+            mappingDictionaries (list, optional): Mapping to convert the class of events into other classes (ie: config.RBMA_MIDI_8 mapping class 0 to 35). 
+            It is a list of dictionaries to chain multiple mappings one after the other.
+            group (bool, optional): If true, returns {class: [position]}. Else, returns [{position: "class"}] . Defaults to True.
+
+        Returns:
+            Dictionary of the shape {class: [positions]}
         """
         events = []
         with open(txtFilePath, "r") as f:

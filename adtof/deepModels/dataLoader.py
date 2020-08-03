@@ -1,14 +1,9 @@
-import logging
-import os
-import random
-
+import librosa
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import sklearn
 
 from adtof import config
-from adtof.io.midiProxy import MidiProxy
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
 
@@ -197,20 +192,28 @@ def getTFGenerator(
     return gen
 
 
-def getClassWeight(drumFiles, beatFiles, sampleRate, labels):
+def getClassWeight(folderPath, sampleRate=100, labels=[36]):
     """
-    approach from https://markcartwright.com/files/cartwright2018increasing.pdf
+    Approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights, adapted to compute class weights
+    Compute the inverse estimated entropy of each label activity distribution
+
     """
     tr = TextReader()
-    notes = [tr.getOnsets(drumFile) for drumFile in drumFiles]
-    timeSteps = np.sum([tr.getOnsets(beatFile, group=False)[-1]["time"] for beatFile in beatFiles]) * sampleRate
+
+    tracks = config.getFilesInFolder(folderPath, config.AUDIO)
+    drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
+    # Getting the intersection of audio and annotations files
+    tracks, drums = config.getIntersectionOfPaths(tracks, drums)
+
+    tracksNotes = [tr.getOnsets(drumFile) for drumFile in drums]  # Get the dict of notes' events
+    timeSteps = np.sum([librosa.get_duration(filename=track) for track in tracks]) * sampleRate
     result = []
     for label in labels:
-        n = np.sum([len(tr[label]) for tr in notes])
+        n = np.sum([len(trackNotes[label]) for trackNotes in tracksNotes])
         p = n / timeSteps
         y = 1 / (-p * np.log(p) - (1 - p) * np.log(1 - p))
         result.append(y)
-    print(result)  # [10.595089113179926, 13.396606356378715, 34.077461537851526, 11.032864686873204, 17.952530908049976]
+    print(result)  # [10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326]
     return result
 
 

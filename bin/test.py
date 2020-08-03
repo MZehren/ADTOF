@@ -46,15 +46,9 @@ def main():
     classWeights = config.WEIGHTS_5
     sampleRate = 100
 
-    # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
-    # Plot the first image of the dataset
-    # for x, y in dataset:
-    #     file_writer = tf.summary.create_file_writer(log_dir)
-    #     with file_writer.as_default():
-    #         tf.summary.image(str(list(np.reshape(y, (batch_size)))), x, step=0, max_outputs=20, description=str(list(np.reshape(y, (batch_size)))))
-
     # Get the data
-    # classWeight = dataLoader.getClassWeight(args.folderPath)
+    classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
+
     generator = dataLoader.getTFGenerator(
         args.folderPath, train=True, labels=labels, classWeights=classWeights, sampleRate=sampleRate, limitInstances=50
     )

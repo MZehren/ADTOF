@@ -38,8 +38,8 @@ class MIR(object):
             hop_size=hopSize,
             fmin=self.fmin,
             fmax=self.fmax,
-            num_channels=1
-            # dtype="int16"
+            num_channels=1,
+            dtype="int16",
         )
 
         # norm
@@ -48,10 +48,7 @@ class MIR(object):
         spec = (spec - min) / (max - min)
 
         # stack diff
-        # diff = np.diff(spec, axis=0)
-        # spec = spec[1:]
         diff = madmom.audio.spectrogram.SpectrogramDifference(spec, diff_frames=1, positive_diffs=True)
-        # diff = np.abs(diff)  #diff.clip(min=0) #np.abs(diff)  # (diff + 1) /2
         result = np.concatenate((spec, diff), axis=1)
         return result
 
