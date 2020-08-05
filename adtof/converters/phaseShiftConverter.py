@@ -17,7 +17,7 @@ import pkg_resources
 from adtof import config
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_8
 from adtof.converters.converter import Converter
-from adtof.io.midiProxy import MidiProxy
+from adtof.io.midiProxy import PythonMidiProxy
 
 
 class PhaseShiftConverter(Converter):
@@ -55,7 +55,7 @@ class PhaseShiftConverter(Converter):
 
         # Read the midi file
         inputMidiPath = os.path.join(inputFolder, PhaseShiftConverter.PS_MIDI_NAME)
-        midi = MidiProxy(inputMidiPath)
+        midi = PythonMidiProxy(inputMidiPath)
 
         # clean the midi
         midi = self.cleanMidi(midi, delay=delay)

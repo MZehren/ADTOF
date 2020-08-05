@@ -287,6 +287,8 @@ class Converter(object):
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,
                     alignedMidiAnotationsPath,
+                    smoothingCorrectionWindow=10,
+                    thresholdCorrectionWindow=0.1,
                 )
 
             # # Extract Features

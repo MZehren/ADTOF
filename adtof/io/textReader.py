@@ -11,7 +11,6 @@ from collections import defaultdict
 import pkg_resources
 
 from adtof import config
-from adtof.io.midiProxy import MidiProxy
 
 
 class TextReader(object):
@@ -38,7 +37,7 @@ class TextReader(object):
             txtFilePath (string): path to the text file.
             mappingDictionaries (list, optional): Mapping to convert the class of events into other classes (ie: config.RBMA_MIDI_8 mapping class 0 to 35). 
             It is a list of dictionaries to chain multiple mappings one after the other.
-            group (bool, optional): If true, returns {class: [position]}. Else, returns [{position: "class"}] . Defaults to True.
+            group (bool, optional): If true, returns {class: [position]}. Else, returns [{position: class}] . Defaults to True.
 
         Returns:
             Dictionary of the shape {class: [positions]}

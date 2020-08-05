@@ -492,6 +492,21 @@ class PythonMidiProxy:
 class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
     @classmethod
     def fromListOfNotes(cls, notes, beats=[]):
+        """Instantiate a pretty_midi.PrettyMIDI class with the list of notes. 
+        TODO: If the beats are provided, set tempo events as well
+
+        Parameters
+        ----------
+        notes : [(position, pitch)]
+            list of tuples with a position and pitch
+        beats : [(position, beatNumber)], optional
+            List of position and beat number in the bar (ie. 1 to 4), by default []
+
+        Returns
+        -------
+        [pretty_midi.PrettyMIDI]
+            the midi object which can be serialised
+        """
         midi = cls()
         instrument = pretty_midi.Instrument(program=1, is_drum=True)
         midi.instruments.append(instrument)
@@ -505,5 +520,21 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
         return midi
 
+    def get_beats_with_index(self):
+        """call get_beats and get_downbeats to return the list of beats and the list of beats index
 
-MidiProxy = PythonMidiProxy
+        Returns
+        -------
+        (list, list)
+            tuple with list of beats position and list of beats index
+        """
+        beats = self.get_beats()
+        downbeats = set(self.get_downbeats())
+        beatCursor = -1
+        beatIdx = []
+        for beat in beats:
+            if beat in downbeats:
+                beatCursor = 1
+            beatIdx.append(beatCursor)
+            beatCursor = beatCursor + 1 if beatCursor != -1 else -1
+        return beats, beatIdx
