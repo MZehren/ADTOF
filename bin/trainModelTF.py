@@ -142,12 +142,15 @@ def main():
 
         import matplotlib.pyplot as plt
 
-        f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+
         ax1.plot(predictions)
         ax1.set_ylabel("Prediction")
         ax2.plot(y)
         ax2.set_ylabel("Truth")
         ax2.set_xlabel("Time step")
+        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (100, 168))), aspect="auto")
+        ax1.legend(labels)
         plt.show()
         print("Done!")
 

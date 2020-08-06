@@ -39,6 +39,10 @@ class CorrectAlignmentConverter(Converter):
     ):
         """
         ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed
+        # TODO: see if it is possible to compute a correlation score betweeen annotations adn estimations which is not F-measure
+        # TODO: possibility to compute a dynamic smoothing window depending on the variability of the offset
+        # TODO: utiliser un jeu de données non aligné pour le test
+        # TODO: Look at the paper which aligned the taps with madmom
         """
         # Get annotations and estimation data used as reference.
         # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
@@ -86,7 +90,7 @@ class CorrectAlignmentConverter(Converter):
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
         # Or we want to make sure that the fft overlaps with the actual onset
         # toleranceWindow = 1 / (sampleRate * 2)
-        toleranceWindow = (fftSize / 44100) * 0.8
+        toleranceWindow = (fftSize / 44100) * 0.8 / 2
         f, p, r = mir_eval.onset.f_measure(np.array(onsetsA), np.array(onsetsB), window=toleranceWindow)
         # TODO see std ?
         return f

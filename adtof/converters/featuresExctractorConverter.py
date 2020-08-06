@@ -11,5 +11,5 @@ class FeaturesExtractorConverter(Converter):
     """
 
     def convert(self, inputAudio, outputfeatures, fps=100):
-        features = MIR().open(inputAudio)
+        features = MIR(frameRate=fps).open(inputAudio)
         np.save(outputfeatures, features)

@@ -242,7 +242,7 @@ def vizDataset(folderPath, samples=100, labels=[36], sampleRate=50, condensed=Fa
             fig.add_subplot(rows, columns, i)
             x, y = next(gen)
 
-            plt.imshow(np.reshape(x, (25, 168)))
+            plt.imshow(np.reshape(x, (x.shape[0], x.shape[2])))
             if y[0]:
                 plt.plot([0], [0], "or")
         plt.show()
