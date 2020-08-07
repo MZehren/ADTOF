@@ -279,9 +279,8 @@ class Converter(object):
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
             if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
-                # TODO: Add F-measure measure to see the precision of the annotations
                 mbc.convert(audioPath, beatsEstimationsPath, beatsActivationPath)
-            if True or not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
+            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
                     beatsEstimationsPath,
                     beatsActivationPath,
@@ -289,15 +288,13 @@ class Converter(object):
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,
                     alignedMidiAnotationsPath,
-                    smoothingCorrectionWindow=10,
-                    thresholdCorrectionWindow=0.1,
                 )
 
             # # Extract Features
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
             # if not Converter.checkPathExists(featuresExtractedPath):
             #     fe.convert(audioPath, featuresExtractedPath)
-            # print(trackName + "Done.")
+            print(trackName + " Done.")
         except Exception as e:
             print(trackName + " not converted: " + str(e))
 

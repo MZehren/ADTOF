@@ -33,18 +33,31 @@ class CorrectAlignmentConverter(Converter):
         alignedDrumTextOutput,
         alignedBeatTextOutput,
         alignedMidiOutput,
+        deviationDerivation="act",
         thresholdFMeasure=0.9,
         sampleRate=100,
         fftSize=2048,
-        thresholdCorrectionWindow=0.05,
+        thresholdCorrectionWindow=0.1,
         smoothingCorrectionWindow=5,
     ):
-        """
-        ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed
-        # TODO: see if it is possible to compute a correlation score betweeen annotations adn estimations which is not F-measure
+        """        
         # TODO: possibility to compute a dynamic smoothing window depending on the variability of the offset
         # TODO: utiliser un jeu de données non aligné pour le test
-        # TODO: Look at the paper which aligned the taps with madmom
+
+        Parameters
+        ----------
+        deviationDerivation : str, optional
+            Select the method used to estimate the deviation of the notes. 
+            "act" to use the method in [TOWARDS AUTOMATICALLY CORRECTING TAPPED BEAT ANNOTATIONS FOR MUSIC RECORDINGS, imsir 2019]
+            "track" to use the difference between the annotated and tracked beats (after Madmom's DBNDownBeatTrackingProcessor) averaged on a small window.
+            by default "act"
+        thresholdFMeasure : float, optional
+            ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed, by default 0.9
+            The score uses the F-Measure with a size equal to the fftSize
+        thresholdCorrectionWindow : float, optional
+            Threshold below which the estimated beat (or activation peak) is a match with the neighbooring annotated beat, by default 0.05
+        smoothingCorrectionWindow : int, optional
+            [description], by default 5
         """
         # Get annotations and estimation data used as reference.
         # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
@@ -53,18 +66,21 @@ class CorrectAlignmentConverter(Converter):
         beats_midi, beatIdx = midi.get_beats_with_index()
         tr = TextReader()
         beats_audio = [el["time"] for el in tr.getOnsets(refBeatInput, mappingDictionaries=[], group=False)]
-        beatAct = np.load(refBeatActivationInput, allow_pickle=True)
 
         # Compute the dynamic offset for the best alignment
-        # correction = self.computeAlignment(kicks_midi, kicks_audio)
-        # correctionAct = self.computeDNNActivationDeviation(beats_midi, beatAct, matchWindow=thresholdCorrectionWindow)
-        correctionTrack = self.computeTrackedBeatsDeviation(
-            beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
-        )
+        if deviationDerivation == "act":
+            beatAct = np.load(refBeatActivationInput, allow_pickle=True)
+            correction = self.computeDNNActivationDeviation(beats_midi, beatAct, matchWindow=thresholdCorrectionWindow)
+        elif deviationDerivation == "track":
+            correction = self.computeTrackedBeatsDeviation(
+                beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
+            )
+        else:
+            raise Exception("deviationDerivation is set to an unknown value")
         # self.plot([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
 
         # Apply the dynamic offset to beat and notes
-        correctedBeatTimes = self.setDynamicOffset(correctionTrack, beats_midi, thresholdCorrectionWindow)
+        correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
 
         # Measure if the annotations are of good quality and do not writte the output if needed.
         quality = self.getAnnotationsQuality(correctedBeatTimes, beats_audio, sampleRate, fftSize)
@@ -77,7 +93,7 @@ class CorrectAlignmentConverter(Converter):
             return quality
         drumsPitches = [note.pitch for note in midi.instruments[0].notes]
         drumstimes = [note.start for note in midi.instruments[0].notes]
-        correctedDrumsTimes = self.setDynamicOffset(correctionTrack, drumstimes, thresholdCorrectionWindow)
+        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes, thresholdCorrectionWindow)
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
         tr.writteBeats(alignedBeatTextOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
         newMidi = PrettyMidiWrapper.fromListOfNotes(
@@ -98,7 +114,8 @@ class CorrectAlignmentConverter(Converter):
 
     def getAnnotationsQuality(self, onsetsA, onsetsB, sampleRate, fftSize):
         """
-        Estimate the quality of the annotations with the f_measure based on the 
+        Estimate the quality of the annotations with the f_measure with a tolerance computed depending on the FFT size for training
+        # TODO: see if it is possible to compute a correlation score betweeen annotations adn estimations which is not F-measure
         """
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
         # Or we want to make sure that the fft overlaps with the actual onset
