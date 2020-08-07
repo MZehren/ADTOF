@@ -18,6 +18,7 @@ class MIR(object):
         self.n_bins = 84
         self.fmin = 20  # 20
         self.fmax = 20000
+        self.logarithmic = True
 
     def open(self, path: str):
         """
@@ -39,13 +40,14 @@ class MIR(object):
             fmin=self.fmin,
             fmax=self.fmax,
             num_channels=1,
-            dtype="int16",
+            log=self.logarithmic
+            # dtype="int16",
         )
 
         # norm
-        max = np.max(spec)
-        min = np.min(spec)
-        spec = (spec - min) / (max - min)
+        # max = np.max(spec)
+        # min = np.min(spec)
+        # spec = (spec - min) / (max - min)
 
         # stack diff
         diff = madmom.audio.spectrogram.SpectrogramDifference(spec, diff_frames=1, positive_diffs=True)

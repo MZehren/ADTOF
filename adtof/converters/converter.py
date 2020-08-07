@@ -274,15 +274,17 @@ class Converter(object):
             # Align the annotations by looking at the average beat estimation difference
             # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
             beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
+            beatsActivationPath = os.path.join(outputFolder, config.BEATS_ACTIVATION, trackName + ".npy")
             alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
-            if not Converter.checkPathExists(beatsEstimationsPath):
+            if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
                 # TODO: Add F-measure measure to see the precision of the annotations
-                mbc.convert(audioPath, beatsEstimationsPath)
-            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
+                mbc.convert(audioPath, beatsEstimationsPath, beatsActivationPath)
+            if True or not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
                     beatsEstimationsPath,
+                    beatsActivationPath,
                     convertedMidiPath,
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,

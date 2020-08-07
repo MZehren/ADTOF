@@ -15,7 +15,7 @@ ALIGNED_BEATS = "annotations/aligned_beats"  # aligned beats of the converted an
 ALIGNED_MIDI = "annotations/aligned_midi"  # aligned midi of the converted annotations for debug purposes
 RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
-
+BEATS_ACTIVATION = "estimations/beats_activation"  # Madmom's beat DNN output
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

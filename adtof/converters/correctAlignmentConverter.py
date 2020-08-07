@@ -5,17 +5,18 @@ from bisect import bisect_left
 import librosa
 import madmom
 import matplotlib.pyplot as plt
+import mir_eval
 import numpy as np
-from numpy.lib.function_base import quantile
 import pandas as pd
 import pretty_midi
-import mir_eval
+import tapcorrect
+from numpy.lib.function_base import quantile
 from scipy.interpolate import interp1d
 
 from adtof import config
 from adtof.converters.converter import Converter
-from adtof.io.textReader import TextReader
 from adtof.io.midiProxy import PrettyMidiWrapper
+from adtof.io.textReader import TextReader
 
 
 class CorrectAlignmentConverter(Converter):
@@ -27,6 +28,7 @@ class CorrectAlignmentConverter(Converter):
     def convert(
         self,
         refBeatInput,
+        refBeatActivationInput,
         missalignedMidiInput,
         alignedDrumTextOutput,
         alignedBeatTextOutput,
@@ -51,16 +53,18 @@ class CorrectAlignmentConverter(Converter):
         beats_midi, beatIdx = midi.get_beats_with_index()
         tr = TextReader()
         beats_audio = [el["time"] for el in tr.getOnsets(refBeatInput, mappingDictionaries=[], group=False)]
-
-        # Get the list of unique match between annotations and estimations
-        matches = self.getEventsMatch(beats_midi, beats_audio, thresholdCorrectionWindow)
+        beatAct = np.load(refBeatActivationInput, allow_pickle=True)
 
         # Compute the dynamic offset for the best alignment
         # correction = self.computeAlignment(kicks_midi, kicks_audio)
-        correction = self.getDynamicOffset(matches, smoothWindow=smoothingCorrectionWindow)
+        # correctionAct = self.computeDNNActivationDeviation(beats_midi, beatAct, matchWindow=thresholdCorrectionWindow)
+        correctionTrack = self.computeTrackedBeatsDeviation(
+            beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
+        )
+        # self.plot([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
 
         # Apply the dynamic offset to beat and notes
-        correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
+        correctedBeatTimes = self.setDynamicOffset(correctionTrack, beats_midi, thresholdCorrectionWindow)
 
         # Measure if the annotations are of good quality and do not writte the output if needed.
         quality = self.getAnnotationsQuality(correctedBeatTimes, beats_audio, sampleRate, fftSize)
@@ -73,7 +77,7 @@ class CorrectAlignmentConverter(Converter):
             return quality
         drumsPitches = [note.pitch for note in midi.instruments[0].notes]
         drumstimes = [note.start for note in midi.instruments[0].notes]
-        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes, thresholdCorrectionWindow)
+        correctedDrumsTimes = self.setDynamicOffset(correctionTrack, drumstimes, thresholdCorrectionWindow)
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
         tr.writteBeats(alignedBeatTextOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
         newMidi = PrettyMidiWrapper.fromListOfNotes(
@@ -81,6 +85,15 @@ class CorrectAlignmentConverter(Converter):
             beats=[(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))],
         )
         newMidi.write(alignedMidiOutput)
+
+        # # TESSSSST
+        # correctedDrumsTimes = self.setDynamicOffset(correctionAct, drumstimes, thresholdCorrectionWindow, interpolation="linear")
+        # newMidi = PrettyMidiWrapper.fromListOfNotes(
+        #     [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))],
+        #     beats=[(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))],
+        # )
+        # newMidi.write(alignedMidiOutput[:-5] + "test.midi")
+
         return quality
 
     def getAnnotationsQuality(self, onsetsA, onsetsB, sampleRate, fftSize):
@@ -95,7 +108,7 @@ class CorrectAlignmentConverter(Converter):
         # TODO see std ?
         return f
 
-    def setDynamicOffset(self, offset, onsets, maxOffsetThreshold):
+    def setDynamicOffset(self, offset, onsets, maxOffsetThreshold, interpolation="cubic"):
         """
         Shift the onsets with the offset linearly interpolated
         """
@@ -115,7 +128,18 @@ class CorrectAlignmentConverter(Converter):
         converted[converted < 0] = 0
         return converted
 
-    def getDynamicOffset(self, tuplesThresholded, smoothWindow=5):
+    def computeDNNActivationDeviation(self, beats_midi, act, fs_act=100, matchWindow=0.05, lambda_transition=0.1):
+        # compute deviation matrix
+        max_deviation = int(matchWindow * fs_act)
+        D_pre, list_iois_pre = tapcorrect.tapcorrection.compute_deviation_matrix(act, beats_midi, fs_act, max_deviation)
+        # compute deviation sequence
+        dev_sequence = tapcorrect.tapcorrection.compute_score_maximizing_dev_sequence(D_pre, lambda_transition)
+        final_beat_times, mu, sigma = tapcorrect.tapcorrection.convert_dev_sequence_to_corrected_tap_times(
+            dev_sequence, beats_midi, max_deviation, fs_act
+        )
+        return [{"time": beats_midi[i], "diff": beats_midi[i] - final_beat_times[i]} for i in range(len(beats_midi))]
+
+    def computeTrackedBeatsDeviation(self, beats_midi, beats_audio, matchWindow=0.05, smoothWindow=5):
         """Compute the difference between all the tuples, smoothed on a 5s windows by default
 
         Args:
@@ -125,47 +149,51 @@ class CorrectAlignmentConverter(Converter):
         Returns:
             [type]: [description]
         """
+        # Get the list of unique match between annotations and estimations
+        matches = self.getEventsMatch(beats_midi, beats_audio, matchWindow)
+
         # annotations - estimations =
-        diff = np.array([a - b for a, b in tuplesThresholded])
+        diff = np.array([a - b for a, b in matches])
         # averagedDiff = [
         #     np.mean(diff[np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)])
         #     for a, b in tuplesThresholded
         # ]
         weightedAverage = []
-        for a, b in tuplesThresholded:
-            mask = np.logical_and(tuplesThresholded[:, 0] > a - smoothWindow, tuplesThresholded[:, 0] < a + smoothWindow)
+        for a, b in matches:
+            mask = np.logical_and(matches[:, 0] > a - smoothWindow, matches[:, 0] < a + smoothWindow)
             localDiff = diff[mask]
-            weights = smoothWindow - np.abs(a - tuplesThresholded[:, 0][mask])
+            weights = smoothWindow - np.abs(a - matches[:, 0][mask])
             weightedAverage.append(np.average(localDiff, weights=weights))
 
         # plt.plot([a for a, b in tuplesThresholded], diff)
         # plt.plot([a for a, b in tuplesThresholded], averagedDiff)
         # plt.plot([a for a, b in tuplesThresholded], weightedAverage)
         # plt.show()
-        return [{"time": tuplesThresholded[i][0], "diff": weightedAverage[i]} for i in range(len(weightedAverage))]
+        return [{"time": matches[i][0], "diff": weightedAverage[i]} for i in range(len(weightedAverage))]
 
-    def computeOffset(self, tuplesThresholded):
-        """
-        Compute on average the offset of the best alignment
-        """
-        raise DeprecationWarning()
-        diff = [a - b for a, b in tuplesThresholded]
-        offset = np.mean(diff)
-        previousError = np.mean(np.abs(diff))
-        remainingError = np.mean(np.abs(diff - offset))  # TODO: MAE vs RMSE?
-        if previousError < remainingError:
-            logging.error("Check the computation: " + str(remainingError - previousError))
-        return offset, remainingError
+    def plot(self, corrections, labels, title):
+        fig, axs = plt.subplots(2)
+        axs[0].set_title("Deviation " + title)
+        axs[1].set_title("Tempo")
 
-    def computeRate(self, tuplesThresholded):
-        """
-        Compute on average the playback speed of the best alignment
-        """
-        raise DeprecationWarning()
-        playback = np.mean(np.diff(tuplesThresholded[:, 1])) / np.mean(np.diff(tuplesThresholded[:, 0]))
-        tuplesThresholded = [(a, b / playback) for a, b in tuplesThresholded]
-        offset, remainingError = self.computeOffset(tuplesThresholded)
-        return playback, offset, remainingError
+        for correction, label in zip(corrections, labels):
+            axs[0].plot([t["time"] for t in correction], [t["diff"] for t in correction], label=label)
+
+            newPositions = self.setDynamicOffset(correction, [e["time"] for e in correction], 0.5)
+            # newPositions = [p["time"] + p["diff"] for p in correction]
+            axs[1].plot(
+                [newPositions[i] for i in range(len(newPositions) - 1)],
+                [60 / (newPositions[i + 1] - newPositions[i]) for i in range(len(newPositions) - 1)],
+            )
+
+        axs[1].plot(
+            [corrections[0][i]["time"] for i in range(len(corrections[0]) - 1)],
+            [60 / (corrections[0][i + 1]["time"] - corrections[0][i]["time"]) for i in range(len(corrections[0]) - 1)],
+            "--",
+        )
+
+        axs[0].legend()
+        plt.show()
 
     def getEventsMatch(self, onsetsA, onsetsB, window):
         """Compute the closest position in B for each element of A
