@@ -7,6 +7,7 @@ import numpy as np
 from typing import List, Dict
 
 AUDIO = "audio/audio"  # Folder containging .ogg files
+PROCESSED_AUDIO = "audio/processed"  # Folder containing .npy files
 FEATURES = "audio/features"  # Folder containging features extracted for the neural network
 RAW_MIDI = "annotations/raw_midi"  # Original midi in PhaseShift format
 CONVERTED_MIDI = "annotations/converted_midi"  # Converted midi in standard midi format with all class when available (need desambiguation)

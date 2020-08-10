@@ -1,6 +1,9 @@
+import os
+
 import madmom
 import matplotlib.pyplot as plt
 import numpy as np
+from adtof import config
 
 
 class MIR(object):
@@ -15,32 +18,74 @@ class MIR(object):
         self.frameRate = frameRate
         self.frameSize = frameSize
         self.sampleRate = 44100
-        self.n_bins = 84
-        self.fmin = 20  # 20
+        self.hopSize = int(self.sampleRate / self.frameRate)
+        self.n_bins = 12  # Per octave
+        self.fmin = 20
         self.fmax = 20000
-        self.logarithmic = True
+        self.logarithmicMagnitude = True
+
+        self.proc = self.openMadmom2()
 
     def open(self, path: str):
         """
         Load an audio track and return a numpy array
         """
-        return self.openMadmom(path)
+        # self.plot([self.openMadmom(path), self.proc(path)])
+        return self.proc(path)
 
-    def openMadmom(self, path: str):
+    def plot(self, values):
+        fig, ax = plt.subplots(len(values))
+        for i, value in enumerate(values):
+            ax[i].matshow(value.T)
+        plt.show()
+
+    def getMadmomProc(self):
+        """Initiate the processor from the list of parameters in the class attributes
+        mplementation based on Richard Vogl's http://www.ifs.tuwien.ac.at/~vogl/dafx2018/
+
+        Returns
+        -------
+            callable (path) -> numpy array 
+            
+        """
+        from madmom.audio.spectrogram import LogarithmicFilteredSpectrogramProcessor, SpectrogramDifferenceProcessor
+        from madmom.audio.filters import LogarithmicFilterbank
+        from madmom.audio.signal import SignalProcessor, FramedSignalProcessor
+        from madmom.audio.stft import ShortTimeFourierTransformProcessor
+        from madmom.processors import SequentialProcessor, ParallelProcessor
+
+        sig = SignalProcessor(num_channels=1, sample_rate=self.sampleRate)
+        frames = FramedSignalProcessor(frame_size=self.frameSize, fps=self.frameRate)
+        stft = ShortTimeFourierTransformProcessor()  # caching FFT window
+        spec = LogarithmicFilteredSpectrogramProcessor(
+            num_channels=1,
+            sample_rate=self.sampleRate,
+            filterbank=LogarithmicFilterbank,
+            frame_size=self.frameSize,
+            fps=self.frameRate,
+            num_bands=self.n_bins,
+            fmin=self.fmin,
+            fmax=self.fmax,
+            norm_filters=True,
+        )
+        diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
+        return SequentialProcessor((sig, frames, stft, spec, diff))
+
+    def openMadmomOld(self, path: str):
         """
         follow Vogl article
         """
         # Log spec
-        hopSize = int(self.sampleRate / self.frameRate)
+
         spec = madmom.audio.FilteredSpectrogram(
             path,
             sample_rate=self.sampleRate,
             frame_size=self.frameSize,
-            hop_size=hopSize,
+            hop_size=self.hopSize,
             fmin=self.fmin,
             fmax=self.fmax,
             num_channels=1,
-            log=self.logarithmic
+            # log=self.logarithmicMagnitude
             # dtype="int16",
         )
 

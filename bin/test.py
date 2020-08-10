@@ -47,7 +47,7 @@ def main():
     sampleRate = 100
 
     # Get the data
-    classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
+    # classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
 
     generator = dataLoader.getTFGenerator(
         args.folderPath, train=True, labels=labels, classWeights=classWeights, sampleRate=sampleRate, limitInstances=50
