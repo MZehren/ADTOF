@@ -1,3 +1,5 @@
+import os
+
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,23 +8,28 @@ import sklearn
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
+from adtof.converters.converter import Converter
 
 
-def readTrack(i, tracks, drums, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1):
+def readTrack(audioPath, annotPath, cachePath, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1):
     """
-    Read the mp3, the midi and the alignment files and generate a balanced list of samples 
+    Read the track and the midi to return X and Y 
     """
-    # initiate vars
-    track = tracks[i]
-    drum = drums[i]
-    mir = MIR(frameRate=sampleRate)
+    allowPickle = False
+    if Converter.checkPathExists(cachePath):
+        print("loading from cache", config.getFileBasename(cachePath))
+        x = np.load(cachePath, allow_pickle=allowPickle)
+    else:
+        print("loading", config.getFileBasename(audioPath))
+        mir = MIR(frameRate=sampleRate)
+        x = mir.open(audioPath)
+        x = x.reshape(x.shape + (1,))  # Add the channel dimension
+        np.save(cachePath, x, allow_pickle=allowPickle)
 
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
-    notes = TextReader().getOnsets(drum)
-    y = getDenseEncoding(drum, notes, sampleRate=sampleRate, keys=labels, radiation=radiation)
-    x = mir.open(track)
-    x = x.reshape(x.shape + (1,))  # Add the channel dimension
+    notes = TextReader().getOnsets(annotPath)
+    y = getDenseEncoding(annotPath, notes, sampleRate=sampleRate, keys=labels, radiation=radiation)
 
     # Trim before the first midi note (to remove the unannotated count in)
     # and after the last uncovered part
@@ -85,109 +92,95 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getTFGenerator(
-    folderPath,
-    sampleRate=100,
-    context=25,
-    midiLatency=0,
-    train=True,
-    split=0.85,
-    labels=[36],
-    classWeights=[1],
+def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, random_state=1, shuffle=True, **kwargs):
+    """
+    TODO
+    """
+    # Getting the intersection of audio and annotations files
+    audiosPath = config.getFilesInFolder(folderPath, config.AUDIO)
+    annotationsPath = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
+    audiosPath, annotationsPath = config.getIntersectionOfPaths(audiosPath, annotationsPath)
+    featuresPath = np.array(
+        [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in audiosPath]
+    )
+
+    # Split the data in train, validation and test, without same band in test and train+test
+    groups = [config.getBand(path) for path in audiosPath]
+    groupKFold = sklearn.model_selection.GroupKFold(n_splits=trainNSplit)
+    groupKFold.get_n_splits(audiosPath, annotationsPath, groups)
+    trainValIndexes, testIndexes = next(groupKFold.split(audiosPath, annotationsPath, groups))
+    trainIndexes, valIndexes = sklearn.model_selection.train_test_split(
+        trainValIndexes, test_size=validationSplit, random_state=random_state, shuffle=shuffle
+    )
+
+    return (
+        getGen(trainIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
+        getGen(valIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
+        getGen(testIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
+    )
+
+
+def getGen(
+    trackIndexes,
+    audiosPath,
+    annotationsPath,
+    featuresPath,
     samplePerTrack=100,
-    balanceClasses=False,
-    limitInstances=-1,
-    Shuffle=True,
-    radiation=2,
+    context=25,
+    balanceClassesDistribution=False,
+    labels=[35, 38],
+    classWeights=[2, 4],
+    sampleRate=100,  # Not used directly
+    midiLatency=0,
+    radiation=1,
 ):
     """
-    sampleRate = 
-        - If the highest speed we need to discretize is 20Hz, then we should double the speed 40Hz ->  0.025ms of window
-        - Realisticly speaking the fastest tempo I witnessed is around 250 bpm at 16th notes -> 250/60*16 = 66Hz the sr should be 132Hz
-
-    context = how many frames are given with each samples
-    midiLatency = how many frames the onsets are offseted to make sure that the transient is not discarded
+    TODO
     """
-    assert len(labels) == len(classWeights)
-    tracks = config.getFilesInFolder(folderPath, config.AUDIO)
-    drums = config.getFilesInFolder(folderPath, config.ALIGNED_DRUM)
-    beats = config.getFilesInFolder(folderPath, config.ALIGNED_BEATS)
-    # Getting the intersection of audio and annotations files
-    tracks, drums = config.getIntersectionOfPaths(tracks, drums)
-
-    # Split
-    if train:
-        tracks = tracks[: int(len(tracks) * split)].tolist()
-        drums = drums[: int(len(drums) * split)].tolist()
-    else:
-        tracks = tracks[int(len(tracks) * split) :].tolist()
-        drums = drums[int(len(drums) * split) :].tolist()
-
-    # shuffle
-    if Shuffle:
-        tracks, drums = sklearn.utils.shuffle(tracks, drums)
-
     buffer = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
 
-    # getClassWeight(drums, drums, sampleRate, labels)
-
     def gen():
-        print("train" if train else "test", "generator is reset")
-        nextTrackIdx = 0
-        currentBufferIdx = 0
-        maxBufferIdx = len(tracks) if limitInstances == -1 else min(len(tracks), limitInstances)
-        cursors = {}  # The cursors are stored in the gen to make it able to reinitialize
-        while True:
-            # Get the current track in the buffer, or fetch the next track if the buffer is empty
-            if currentBufferIdx not in buffer:
-                print("reading", "train" if train else "test", config.getFileBasename(tracks[nextTrackIdx]))
-                X, Y = readTrack(
-                    nextTrackIdx,
-                    tracks,
-                    drums,
-                    sampleRate=sampleRate,
-                    context=context,
-                    midiLatency=midiLatency,
-                    labels=labels,
-                    radiation=radiation,
-                )
-                indexes = balanceDistribution(X, Y) if balanceClasses else []
-                buffer[currentBufferIdx] = {"x": X, "y": Y, "indexes": indexes, "name": tracks[nextTrackIdx]}
-                nextTrackIdx += 1
-                if nextTrackIdx == len(tracks):  # We have read the last track
-                    nextTrackIdx = 0
-                    print("All tracks decoded once")
-            if currentBufferIdx not in cursors:
-                cursors[currentBufferIdx] = 0
+        cursors = {}  # The cursors dictionnary are stored in the gen to make it able to reinitialize
+        while True:  # Infinite yield of samples
+            for trackIdx in trackIndexes:  # go once each track in the split before restarting
+                # Get the current track in the buffer, or load it from disk if the buffer is empty
+                if trackIdx not in buffer:
+                    X, Y = readTrack(
+                        audiosPath[trackIdx],
+                        annotationsPath[trackIdx],
+                        featuresPath[trackIdx],
+                        sampleRate=sampleRate,
+                        context=context,
+                        midiLatency=midiLatency,
+                        labels=labels,
+                        radiation=radiation,
+                    )
+                    indexes = balanceDistribution(X, Y) if balanceClassesDistribution else []
+                    buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": audiosPath[trackIdx]}
 
-            track = buffer[currentBufferIdx]
-            # Yield the number of samples per track, save the cursor to resume on the same location,
-            # remove the track once all the samples are done to save space of resume at the beginning
-            for _ in range(samplePerTrack):
-                cursor = cursors[currentBufferIdx]
-                if balanceClasses:
-                    # track["cursor"] = (cursor + 1) % len(track["indexes"])
-                    # sampleIdx = track["indexes"][cursor]
-                    raise NotImplementedError()
-                else:
-                    if cursor + 1 >= (len(track["x"]) - context) or cursor + 1 >= len(track["y"]):
-                        if maxBufferIdx == len(tracks):  # No limit, then we start the track over
-                            cursors[currentBufferIdx] = 0
-                            print("Resume track", track["name"])
-                        else:  # We limit the tracks, so we remove the one done from the buffer
-                            del buffer[currentBufferIdx]
-                            print("Erasing track", track["name"])
-                            break
+                # Set the cursor to the beginning of the track if it has not been read since the last reinitialisation
+                if trackIdx not in cursors:
+                    cursors[trackIdx] = 0
+
+                track = buffer[trackIdx]
+                # Yield the specified number of samples per track, save the cursor to resume on the same location,
+                # remove the track once all the samples are done to save space of resume at the beginning
+                for _ in range(samplePerTrack):
+                    cursor = cursors[trackIdx]
+                    if balanceClassesDistribution:
+                        # track["cursor"] = (cursor + 1) % len(track["indexes"])
+                        # sampleIdx = track["indexes"][cursor]
+                        raise NotImplementedError()
                     else:
-                        cursors[currentBufferIdx] = cursor + 1
-                    sampleIdx = cursor
+                        if cursor + 1 >= (len(track["x"]) - context) or cursor + 1 >= len(track["y"]):
+                            cursors[trackIdx] = 0
+                        else:
+                            cursors[trackIdx] = cursor + 1
+                        sampleIdx = cursor
 
-                y = track["y"][sampleIdx]
-                sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
-                yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
-
-            # Increment the buffer index to fetch the next track later, or the first track if we limit space
-            currentBufferIdx = (currentBufferIdx + 1) % maxBufferIdx
+                    y = track["y"][sampleIdx]
+                    sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                    yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
     return gen
 

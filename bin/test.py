@@ -10,18 +10,19 @@ import itertools
 import logging
 import os
 import shutil
+import timeit
 
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 import tensorflow as tf
 
+from adtof import config
+from adtof.converters.converter import Converter
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
-from adtof.converters.converter import Converter
-from adtof import config
 
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
@@ -49,18 +50,21 @@ def main():
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
 
-    generator = dataLoader.getTFGenerator(
-        args.folderPath, train=True, labels=labels, classWeights=classWeights, sampleRate=sampleRate, limitInstances=50
+    trainGen, valGen, testGen = dataLoader.getSplit(
+        args.folderPath, labels=labels, classWeights=classWeights, sampleRate=sampleRate, shuffle=True
     )
-    while True:
-        bla = generator()
-        for i in range(1000):
-            next(bla)
+    bla = trainGen()
+    print(timeit.timeit(lambda: next(bla), number=1000))
+    # reseting gen
+    bla = trainGen()
+    print(timeit.timeit(lambda: next(bla), number=1000))
 
-        print("next")
-        bla = generator()
-        for i in range(1000):
-            next(bla)
+    # while True:
+
+    #     print("next")
+    #     bla = generator()
+    #     for i in range(1000):
+    #         next(bla)
 
 
 if __name__ == "__main__":

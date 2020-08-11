@@ -23,14 +23,14 @@ class MIR(object):
         self.fmin = 20
         self.fmax = 20000
         self.logarithmicMagnitude = True
+        self.diff = False
 
-        self.proc = self.openMadmom2()
+        self.proc = self.getMadmomProc()
 
     def open(self, path: str):
         """
         Load an audio track and return a numpy array
         """
-        # self.plot([self.openMadmom(path), self.proc(path)])
         return self.proc(path)
 
     def plot(self, values):
@@ -68,8 +68,11 @@ class MIR(object):
             fmax=self.fmax,
             norm_filters=True,
         )
-        diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
-        return SequentialProcessor((sig, frames, stft, spec, diff))
+        if self.diff:
+            diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
+            return SequentialProcessor((sig, frames, stft, spec, diff))
+        else:
+            return SequentialProcessor((sig, frames, stft, spec))
 
     def openMadmomOld(self, path: str):
         """

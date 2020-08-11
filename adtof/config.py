@@ -60,6 +60,14 @@ def getFileBasename(path):
         return basename
 
 
+def getBand(path):
+    """
+    return the name of the band from the path to the file
+    """
+    basename = getFileBasename(path)
+    return basename.split(" - ")[0]
+
+
 def remapPitches(pitches, mappings, removeIfUnknown=True):
     """
     Map pitches to a value from a mapping such as EXPERT_MIDI or [EXPERT_MIDI, MIDI_REDUCED_3] to chain them.
@@ -275,4 +283,8 @@ LABELS_5 = [35, 38, 47, 42, 49]
 # measure frequency {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
 # Vogl weights Bass drum (1.0), snare drum (4.0), and hi-hat (1.5)
 WEIGHTS_5 = [10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326]  # [5.0, 7.0, 50.0, 3.0, 24.0]
+
+
+def getGridOfParameters(parameters):
+    numberOfParameter = np.product([len(v) for k, v in parameters.items()])
 

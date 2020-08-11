@@ -43,19 +43,20 @@ def main():
     )
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
-    labels = config.LABELS_5
-    classWeights = config.WEIGHTS_5
-    sampleRate = 100
-
-    # dataLoader.vizDataset(args.folderPath, labels=labels, sampleRate=sampleRate)
-    # Plot the first image of the dataset
-    # for x, y in dataset:
-    #     file_writer = tf.summary.create_file_writer(log_dir)
-    #     with file_writer.as_default():
-    #         tf.summary.image(str(list(np.reshape(y, (batch_size)))), x, step=0, max_outputs=20, description=str(list(np.reshape(y, (batch_size)))))
+    paramGrid = {
+        "labels": [config.LABELS_5],
+        "classWeights": [config.WEIGHTS_5],
+        "sampleRate": [100],
+        "diff": [True, False],
+        "samplePerTrack": [100],
+        "batchSize": [100],
+        "context": [25],
+        "noteOffset": [0],
+        "padding": [0],
+        "noteRadiation": [1],
+    }
 
     # Get the data
-    # classWeight = dataLoader.getClassWeight(args.folderPath)
     dataset = tf.data.Dataset.from_generator(
         dataLoader.getTFGenerator(
             args.folderPath,
