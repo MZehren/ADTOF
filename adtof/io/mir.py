@@ -31,12 +31,12 @@ class MIR(object):
         Load an audio track and return a numpy array
         """
         if cachePath is not None and Converter.checkPathExists(cachePath):
-            result = np.load(cachePath, allow_pickle=False)
+            result = np.array(np.load(cachePath, allow_pickle=True))
         else:
             result = self.proc(audioPath)
             if cachePath is not None:
                 try:
-                    np.save(cachePath, result, allow_pickle=False)
+                    np.save(cachePath, result, allow_pickle=True)
                 except Exception as e:
                     print("Couldn't cache processed audio", str(e))
 
@@ -81,7 +81,7 @@ class MIR(object):
             norm_filters=True,
         )
         diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
-        return SequentialProcessor((sig, frames, stft, spec)), diff
+        return SequentialProcessor((sig, frames, stft, spec)), SequentialProcessor((diff,))
 
     def openMadmomOld(self, path: str):
         """
