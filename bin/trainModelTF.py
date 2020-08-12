@@ -43,6 +43,7 @@ def main():
     )
     parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
+
     paramGrid = {
         "labels": [config.LABELS_5],
         "classWeights": [config.WEIGHTS_5],
@@ -51,109 +52,87 @@ def main():
         "samplePerTrack": [100],
         "batchSize": [100],
         "context": [25],
-        "noteOffset": [0],
-        "padding": [0],
-        "noteRadiation": [1],
+        "labelOffset": [0],
+        "labelRadiation": [1],
+        "learningRate": [0.001 / 2],
     }
 
-    # Get the data
-    dataset = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(
-            args.folderPath,
-            train=True,
-            labels=labels,
-            classWeights=classWeights,
-            sampleRate=sampleRate,
-            limitInstances=args.limit,
-            samplePerTrack=100,
-        ),
-        (tf.float32, tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),)), tf.TensorShape(1)),
-    )
-    dataset_test = tf.data.Dataset.from_generator(
-        dataLoader.getTFGenerator(
-            args.folderPath,
-            train=False,
-            labels=labels,
-            classWeights=classWeights,
-            sampleRate=sampleRate,
-            limitInstances=args.limit,
-            samplePerTrack=100,
-        ),
-        (tf.float32, tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(labels),)), tf.TensorShape(1)),
-    )
-    batch_size = 100
-    dataset = dataset.batch(batch_size).repeat()
-    dataset_test = dataset_test.batch(batch_size).repeat()
-    # dataset = dataset.prefetch(buffer_size=batch_size // 2)
-    # dataset_test = dataset_test.prefetch(buffer_size=batch_size // 2)
+    for params in list(sklearn.model_selection.ParameterGrid(paramGrid)):
+        for fold in range(2):
+            # Get the data TODO: the buffer is getting destroyed after each fold
+            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, **paramGrid)
 
-    # Get the model
-    cwd = os.path.abspath(os.path.dirname(__file__))
-    checkpoint_dir = os.path.join(cwd, "..", "models")
-    checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
-    model = RV1TF().createModel(output=len(labels))
-    model.summary()
-    latest = tf.train.latest_checkpoint(checkpoint_dir)
-    if latest and not args.restart:
-        model.load_weights(latest)
+            dataset_train = tf.data.Dataset.from_generator(
+                trainGen,
+                (tf.float32, tf.float32, tf.float32),
+                output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(params["labels"]),)), tf.TensorShape(1)),
+            )
+            dataset_val = tf.data.Dataset.from_generator(
+                valGen,
+                (tf.float32, tf.float32, tf.float32),
+                output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(params["labels"]),)), tf.TensorShape(1)),
+            )
+            dataset_train = dataset_train.batch(params["batchSize"]).repeat()
+            dataset_val = dataset_val.batch(params["batchSize"]).repeat()
+            # dataset_train = dataset_train.prefetch(buffer_size=batch_size // 2)
+            # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
 
-    # Set the logs
-    all_logs = os.path.join(cwd, "..", "logs")
-    log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    if args.restart and os.path.exists(all_logs):
-        try:
-            shutil.rmtree(all_logs)
-        except:
-            print("couldn't remove folder", all_logs)
+            # Get the model
+            cwd = os.path.abspath(os.path.dirname(__file__))
+            checkpoint_dir = os.path.join(cwd, "..", "models")
+            checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
+            model = RV1TF().createModel(context=params["context"], n_bins=168 if params["diff"] else 84, output=len(params["labels"]))
+            model.summary()
+            latest = tf.train.latest_checkpoint(checkpoint_dir)
+            # if latest and not args.restart:
+            #     model.load_weights(latest)
 
-    Converter.checkPathExists(all_logs)
-    file_writer = tf.summary.create_file_writer(log_dir)
+            # Set the logs
+            all_logs = os.path.join(cwd, "..", "logs")
+            log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+            # if args.restart and os.path.exists(all_logs):
+            #     try:
+            #         shutil.rmtree(all_logs)
+            #     except:
+            #         print("couldn't remove folder", all_logs)
+            Converter.checkPathExists(all_logs)
 
-    # Get the debug activation model
-    # layer_outputs = [layer.output for layer in model.layers]  # Extracts the outputs of the top 12 layers
-    # activation_model = tf.keras.models.Model(
-    #     inputs=model.input, outputs=layer_outputs
-    # )  # Creates a model that will return these outputs, given the model input
-    # viz_example, _ = next(dataLoader.getTFGenerator(args.folderPath, train=False, labels=labels, sampleRate=sampleRate)())
-    # viz_example = viz_example.reshape([1] + list(viz_example.shape))  # Adding mini-batch
+            # Fit the model
+            callbacks = [
+                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
+                tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+                tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
+                # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
+                # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
+            ]
 
-    callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
-        tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
-        # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
-        # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
-    ]
+            model.fit(
+                dataset_train,
+                epochs=100,
+                initial_epoch=0,
+                steps_per_epoch=100,
+                callbacks=callbacks,
+                validation_data=dataset_val,
+                validation_steps=100
+                # class_weight=classWeight
+            )
 
-    # model.fit(
-    #     dataset,
-    #     epochs=100,
-    #     initial_epoch=0,
-    #     steps_per_epoch=100,
-    #     callbacks=callbacks,
-    #     validation_data=dataset_test,
-    #     validation_steps=100
-    #     # class_weight=classWeight
-    # )
+            # for x, y, w in dataset_test:
+            #     predictions = model.predict(x)
 
-    for x, y, w in dataset_test:
-        predictions = model.predict(x)
+            #     import matplotlib.pyplot as plt
 
-        import matplotlib.pyplot as plt
+            #     f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
 
-        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
-
-        ax1.plot(predictions)
-        ax1.set_ylabel("Prediction")
-        ax2.plot(y)
-        ax2.set_ylabel("Truth")
-        ax2.set_xlabel("Time step")
-        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (100, 168))), aspect="auto")
-        ax1.legend(labels)
-        plt.show()
-        print("Done!")
+            #     ax1.plot(predictions)
+            #     ax1.set_ylabel("Prediction")
+            #     ax2.plot(y)
+            #     ax2.set_ylabel("Truth")
+            #     ax2.set_xlabel("Time step")
+            #     ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (100, 168))), aspect="auto")
+            #     ax1.legend(labels)
+            #     plt.show()
+            #     print("Done!")
 
 
 if __name__ == "__main__":

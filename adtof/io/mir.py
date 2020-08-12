@@ -4,6 +4,7 @@ import madmom
 import matplotlib.pyplot as plt
 import numpy as np
 from adtof import config
+from adtof.converters.converter import Converter
 
 
 class MIR(object):
@@ -11,27 +12,38 @@ class MIR(object):
     Load the track to be fed inside a NN
     """
 
-    def __init__(self, frameRate=100, frameSize=2048):
+    def __init__(self, frameRate=100, frameSize=2048, diff=False, sampleRate=44100, n_bins=12, fmin=20, fmax=20000, **kwargs):
         """
         Configure the parameters for the feature extraction
         """
         self.frameRate = frameRate
         self.frameSize = frameSize
-        self.sampleRate = 44100
+        self.diff = diff
+        self.sampleRate = sampleRate
         self.hopSize = int(self.sampleRate / self.frameRate)
-        self.n_bins = 12  # Per octave
-        self.fmin = 20
-        self.fmax = 20000
-        self.logarithmicMagnitude = True
-        self.diff = False
+        self.n_bins = n_bins  # Per octave
+        self.fmin = fmin
+        self.fmax = fmax
+        self.proc, self.diffProc = self.getMadmomProc()
 
-        self.proc = self.getMadmomProc()
-
-    def open(self, path: str):
+    def open(self, audioPath: str, cachePath: str = None):
         """
         Load an audio track and return a numpy array
         """
-        return self.proc(path)
+        if cachePath is not None and Converter.checkPathExists(cachePath):
+            result = np.load(cachePath, allow_pickle=False)
+        else:
+            result = self.proc(audioPath)
+            if cachePath is not None:
+                try:
+                    np.save(cachePath, result, allow_pickle=False)
+                except Exception as e:
+                    print("Couldn't cache processed audio", str(e))
+
+        if self.diff:
+            result = self.diffProc(result)
+
+        return result
 
     def plot(self, values):
         fig, ax = plt.subplots(len(values))
@@ -68,11 +80,8 @@ class MIR(object):
             fmax=self.fmax,
             norm_filters=True,
         )
-        if self.diff:
-            diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
-            return SequentialProcessor((sig, frames, stft, spec, diff))
-        else:
-            return SequentialProcessor((sig, frames, stft, spec))
+        diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
+        return SequentialProcessor((sig, frames, stft, spec)), diff
 
     def openMadmomOld(self, path: str):
         """

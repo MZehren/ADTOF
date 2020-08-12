@@ -11,20 +11,15 @@ from adtof.io.textReader import TextReader
 from adtof.converters.converter import Converter
 
 
-def readTrack(audioPath, annotPath, cachePath, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1):
+def readTrack(
+    audioPath, annotPath, cachePath, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1, **kwargs
+):
     """
     Read the track and the midi to return X and Y 
     """
-    allowPickle = False
-    if Converter.checkPathExists(cachePath):
-        print("loading from cache", config.getFileBasename(cachePath))
-        x = np.load(cachePath, allow_pickle=allowPickle)
-    else:
-        print("loading", config.getFileBasename(audioPath))
-        mir = MIR(frameRate=sampleRate)
-        x = mir.open(audioPath)
-        x = x.reshape(x.shape + (1,))  # Add the channel dimension
-        np.save(cachePath, x, allow_pickle=allowPickle)
+    mir = MIR(frameRate=sampleRate, **kwargs)
+    x = mir.open(audioPath)
+    x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
@@ -92,7 +87,7 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, random_state=1, shuffle=True, **kwargs):
+def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, **kwargs):
     """
     TODO
     """
@@ -110,7 +105,7 @@ def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, random_state=1, s
     groupKFold.get_n_splits(audiosPath, annotationsPath, groups)
     trainValIndexes, testIndexes = next(groupKFold.split(audiosPath, annotationsPath, groups))
     trainIndexes, valIndexes = sklearn.model_selection.train_test_split(
-        trainValIndexes, test_size=validationSplit, random_state=random_state, shuffle=shuffle
+        trainValIndexes, test_size=validationSplit, random_state=randomState, shuffle=True
     )
 
     return (
@@ -133,6 +128,7 @@ def getGen(
     sampleRate=100,  # Not used directly
     midiLatency=0,
     radiation=1,
+    **kwargs
 ):
     """
     TODO
@@ -154,6 +150,7 @@ def getGen(
                         midiLatency=midiLatency,
                         labels=labels,
                         radiation=radiation,
+                        **kwargs
                     )
                     indexes = balanceDistribution(X, Y) if balanceClassesDistribution else []
                     buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": audiosPath[trackIdx]}
