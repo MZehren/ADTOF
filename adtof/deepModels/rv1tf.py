@@ -14,7 +14,7 @@ class RV1TF(object):
     #     # self.model = self.createModel()
     #     pass
 
-    def createModel(self, context=25, n_bins=168, output=5):
+    def createModel(self, context=25, n_bins=168, output=5, learningRate=0.001 / 2):
         """Return a ts model based 
         
         Keyword Arguments:
@@ -58,7 +58,7 @@ class RV1TF(object):
         # How softmax cross entropy can be used in multilabel classification,
         # and how binary cross entropy work for multi label
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001 / 2),  # "adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=learningRate),  # "adam",  #tf.keras.optimizers.RMSprop(learning_rate=0.001),
             loss=tf.keras.backend.binary_crossentropy,  # tf.nn.sigmoid_cross_entropy_with_logits,  #tf.keras.backend.binary_crossentropy,
             metrics=["Precision", "Recall"],  # PeakPicking(hitDistance=0.05)
         )

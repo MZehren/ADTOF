@@ -92,7 +92,7 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, random_state=1, shuffle=True, **kwargs):
+def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, **kwargs):
     """
     TODO
     """
@@ -110,7 +110,7 @@ def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, random_state=1, s
     groupKFold.get_n_splits(audiosPath, annotationsPath, groups)
     trainValIndexes, testIndexes = next(groupKFold.split(audiosPath, annotationsPath, groups))
     trainIndexes, valIndexes = sklearn.model_selection.train_test_split(
-        trainValIndexes, test_size=validationSplit, random_state=random_state, shuffle=shuffle
+        trainValIndexes, test_size=validationSplit, random_state=randomState, shuffle=True
     )
 
     return (
