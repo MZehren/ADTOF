@@ -60,7 +60,7 @@ def main():
     for params in list(sklearn.model_selection.ParameterGrid(paramGrid)):
         for fold in range(2):
             # Get the data TODO: the buffer is getting destroyed after each fold
-            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, **paramGrid)
+            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, **params)
 
             dataset_train = tf.data.Dataset.from_generator(
                 trainGen,

@@ -17,7 +17,7 @@ def readTrack(
     Read the track and the midi to return X and Y 
     """
     mir = MIR(frameRate=sampleRate, **kwargs)
-    x = mir.open(audioPath)
+    x = mir.open(audioPath, cachePath=cachePath)
     x = x.reshape(x.shape + (1,))  # Add the channel dimension
 
     # read files
