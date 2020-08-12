@@ -8,7 +8,6 @@ import sklearn
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
-from adtof.converters.converter import Converter
 
 
 def readTrack(

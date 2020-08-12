@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 
-from adtof.io.mir import MIR
-
 
 class Converter(object):
     """
