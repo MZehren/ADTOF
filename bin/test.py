@@ -47,24 +47,35 @@ def main():
     classWeights = config.WEIGHTS_5
     sampleRate = 100
 
+    paramGrid = {
+        "labels": [config.LABELS_5],
+        "classWeights": [config.WEIGHTS_5],
+        "sampleRate": [100],
+        "diff": [False],
+        "samplePerTrack": [100],
+        "batchSize": [100],
+        "context": [25],
+        "labelOffset": [0],
+        "labelRadiation": [1],
+        "learningRate": [0.001 / 2],
+    }
+
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
+    for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
+        trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, **params)
+        bla = trainGen()
+        print(timeit.timeit(lambda: next(bla), number=1000))
+        # reseting gen
+        bla = trainGen()
+        print(timeit.timeit(lambda: next(bla), number=1000))
 
-    trainGen, valGen, testGen = dataLoader.getSplit(
-        args.folderPath, labels=labels, classWeights=classWeights, sampleRate=sampleRate, shuffle=True
-    )
-    bla = trainGen()
-    print(timeit.timeit(lambda: next(bla), number=1000))
-    # reseting gen
-    bla = trainGen()
-    print(timeit.timeit(lambda: next(bla), number=1000))
+        # while True:
 
-    # while True:
-
-    #     print("next")
-    #     bla = generator()
-    #     for i in range(1000):
-    #         next(bla)
+        #     print("next")
+        #     bla = generator()
+        #     for i in range(1000):
+        #         next(bla)
 
 
 if __name__ == "__main__":

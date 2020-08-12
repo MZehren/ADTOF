@@ -54,7 +54,7 @@ def main():
         "context": [25],
         "labelOffset": [0],
         "labelRadiation": [1],
-        "learningRate": [0.001 / 2],
+        "learningRate": [0.0005],
     }
 
     # Set the logs
@@ -90,7 +90,8 @@ def main():
             # Get the model
             checkpoint_dir = os.path.join(cwd, "..", "models")
             checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
-            model = RV1TF().createModel(context=params["context"], n_bins=168 if params["diff"] else 84, output=len(params["labels"]))
+            nBins = 168 if params["diff"] else 84
+            model = RV1TF().createModel(n_bins=nBins, output=len(params["labels"]), **params)
             model.summary()
             latest = tf.train.latest_checkpoint(checkpoint_dir)
             # if latest and not args.restart:
@@ -110,33 +111,33 @@ def main():
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
 
-            model.fit(
-                dataset_train,
-                epochs=100,
-                initial_epoch=0,
-                steps_per_epoch=100,
-                callbacks=callbacks,
-                validation_data=dataset_val,
-                validation_steps=100
-                # class_weight=classWeight
-            )
+            # model.fit(
+            #     dataset_train,
+            #     epochs=100,
+            #     initial_epoch=0,
+            #     steps_per_epoch=100,
+            #     callbacks=callbacks,
+            #     validation_data=dataset_val,
+            #     validation_steps=100
+            #     # class_weight=classWeight
+            # )
 
-            # for x, y, w in dataset_test:
-            #     predictions = model.predict(x)
+            for x, y, w in dataset_val:
+                predictions = model.predict(x)
 
-            #     import matplotlib.pyplot as plt
+                import matplotlib.pyplot as plt
 
-            #     f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+                f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
 
-            #     ax1.plot(predictions)
-            #     ax1.set_ylabel("Prediction")
-            #     ax2.plot(y)
-            #     ax2.set_ylabel("Truth")
-            #     ax2.set_xlabel("Time step")
-            #     ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (100, 168))), aspect="auto")
-            #     ax1.legend(labels)
-            #     plt.show()
-            #     print("Done!")
+                ax1.plot(predictions)
+                ax1.set_ylabel("Prediction")
+                ax2.plot(y)
+                ax2.set_ylabel("Truth")
+                ax2.set_xlabel("Time step")
+                ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
+                ax1.legend(params["labels"])
+                plt.show()
+                print("Done!")
 
 
 if __name__ == "__main__":

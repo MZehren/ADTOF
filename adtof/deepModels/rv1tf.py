@@ -14,7 +14,7 @@ class RV1TF(object):
     #     # self.model = self.createModel()
     #     pass
 
-    def createModel(self, context=25, n_bins=168, output=5, learningRate=0.001 / 2):
+    def createModel(self, context=25, n_bins=168, output=5, learningRate=0.001 / 2, **kwargs):
         """Return a ts model based 
         
         Keyword Arguments:

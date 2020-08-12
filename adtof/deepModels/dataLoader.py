@@ -10,9 +10,7 @@ from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
 
 
-def readTrack(
-    audioPath, annotPath, cachePath, sampleRate=100, context=25, midiLatency=0, labels=[36, 40, 41, 46, 49], radiation=1, **kwargs
-):
+def readTrack(audioPath, annotPath, cachePath, sampleRate=100, context=25, labelOffset=0, labels=[36, 40, 41, 46, 49], **kwargs):
     """
     Read the track and the midi to return X and Y 
     """
@@ -23,26 +21,26 @@ def readTrack(
     # read files
     # notes = MidiProxy(midi).getOnsets(separated=True)
     notes = TextReader().getOnsets(annotPath)
-    y = getDenseEncoding(annotPath, notes, sampleRate=sampleRate, keys=labels, radiation=radiation)
+    y = getDenseEncoding(annotPath, notes, sampleRate=sampleRate, keys=labels, **kwargs)
 
     # Trim before the first midi note (to remove the unannotated count in)
     # and after the last uncovered part
     # If there are no event for the pitch, skip it. Default to index 5s if there are not pitch with event.
     firstNoteIdx = round(min([notes[pitch][0] for pitch in labels if len(notes[pitch])], default=5) * sampleRate)
     lastSampleIdx = min(len(y) - 1, len(x) - context - 1)
-    X = x[firstNoteIdx - midiLatency : lastSampleIdx + context - midiLatency]
+    X = x[firstNoteIdx - labelOffset : lastSampleIdx + context - labelOffset]
     Y = y[firstNoteIdx:lastSampleIdx]
     return X, Y
 
 
-def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys=[36, 40, 41, 46, 49], radiation=1):
+def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs):
     """
     Encode in a dense matrix the midi onsets
 
     sampleRate = sampleRate
     timeShift = offset of the midi, so the event is actually annotated later
     keys = pitch of the offset in each column of the matrix
-    radiation = how many samples from the event have a non-null target
+    labelRadiation = how many samples from the event have a non-null target
     
     """
     length = np.max([values[-1] for values in notes.values()])
@@ -55,18 +53,20 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
             index = int(np.round((time / playback + offset) * sampleRate))
             assert index >= 0
             # target = [(np.cos(np.arange(-radiation, radiation + 1) * (np.pi / (radiation + 1))) + 1) / 2]
-            if radiation == 0:
+            if labelRadiation == 0:
                 target = [1]
-            elif radiation == 1:
+            elif labelRadiation == 1:
                 target = [0.5, 1, 0.5]
-            elif radiation == 2:
+            elif labelRadiation == 2:
                 target = [0.25, 0.75, 1.0, 0.75, 0.25]
-            elif radiation == 3:
+            elif labelRadiation == 3:
                 target = [0.14644661, 0.5, 0.85355339, 1.0, 0.85355339, 0.5, 0.14644661]
+            else:
+                raise NotImplementedError("Radiation of this size not implemented: " + str(labelRadiation))
 
-            for i in range(-radiation, radiation + 1):
+            for i in range(-labelRadiation, labelRadiation + 1):
                 if index + i >= 0 and index + i < len(row):
-                    row[index + i] = target[radiation + i]
+                    row[index + i] = target[labelRadiation + i]
             row[index] = 1
 
         result.append(row)
@@ -126,11 +126,7 @@ def getGen(
     samplePerTrack=100,
     context=25,
     balanceClassesDistribution=False,
-    labels=[35, 38],
     classWeights=[2, 4],
-    sampleRate=100,  # Not used directly
-    midiLatency=0,
-    radiation=1,
     **kwargs
 ):
     """
@@ -144,17 +140,7 @@ def getGen(
             for trackIdx in trackIndexes:  # go once each track in the split before restarting
                 # Get the current track in the buffer, or load it from disk if the buffer is empty
                 if trackIdx not in buffer:
-                    X, Y = readTrack(
-                        audiosPath[trackIdx],
-                        annotationsPath[trackIdx],
-                        featuresPath[trackIdx],
-                        sampleRate=sampleRate,
-                        context=context,
-                        midiLatency=midiLatency,
-                        labels=labels,
-                        radiation=radiation,
-                        **kwargs
-                    )
+                    X, Y = readTrack(audiosPath[trackIdx], annotationsPath[trackIdx], featuresPath[trackIdx], context=context, **kwargs)
                     indexes = balanceDistribution(X, Y) if balanceClassesDistribution else []
                     buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": audiosPath[trackIdx]}
 
