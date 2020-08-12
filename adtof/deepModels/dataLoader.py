@@ -86,7 +86,7 @@ def balanceDistribution(X, Y):
     return np.unique(idxUsed)
 
 
-def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, **kwargs):
+def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, limit=None, **kwargs):
     """
     TODO
     """
@@ -106,6 +106,10 @@ def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, **
     trainIndexes, valIndexes = sklearn.model_selection.train_test_split(
         trainValIndexes, test_size=validationSplit, random_state=randomState, shuffle=True
     )
+    if limit is not None:
+        trainIndexes = trainIndexes[:limit]
+        valIndexes = valIndexes[:limit]
+        testIndexes = testIndexes[:limit]
 
     return (
         getGen(trainIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),

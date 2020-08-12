@@ -41,7 +41,7 @@ def main():
     parser.add_argument(
         "-r", "--restart", action="store_true", help="Override the model and logs if present. Default is to resume training"
     )
-    parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
+    parser.add_argument("-l", "--limit", type=int, default=None, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
 
     paramGrid = {
@@ -57,10 +57,20 @@ def main():
         "learningRate": [0.001 / 2],
     }
 
-    for params in list(sklearn.model_selection.ParameterGrid(paramGrid)):
+    # Set the logs
+    cwd = os.path.abspath(os.path.dirname(__file__))
+    all_logs = os.path.join(cwd, "..", "logs")
+    if args.restart and os.path.exists(all_logs):
+        try:
+            shutil.rmtree(all_logs)
+        except:
+            print("couldn't remove folder", all_logs)
+    Converter.checkPathExists(all_logs)
+
+    for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         for fold in range(2):
             # Get the data TODO: the buffer is getting destroyed after each fold
-            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, **params)
+            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
 
             dataset_train = tf.data.Dataset.from_generator(
                 trainGen,
@@ -78,7 +88,6 @@ def main():
             # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
 
             # Get the model
-            cwd = os.path.abspath(os.path.dirname(__file__))
             checkpoint_dir = os.path.join(cwd, "..", "models")
             checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
             model = RV1TF().createModel(context=params["context"], n_bins=168 if params["diff"] else 84, output=len(params["labels"]))
@@ -87,20 +96,15 @@ def main():
             # if latest and not args.restart:
             #     model.load_weights(latest)
 
-            # Set the logs
-            all_logs = os.path.join(cwd, "..", "logs")
-            log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-            # if args.restart and os.path.exists(all_logs):
-            #     try:
-            #         shutil.rmtree(all_logs)
-            #     except:
-            #         print("couldn't remove folder", all_logs)
-            Converter.checkPathExists(all_logs)
+            # Set the log
+            log_dir = os.path.join(
+                all_logs, "fit", datetime.datetime.now().strftime("%m%d-%H%M") + "-paramIndex:" + str(paramIndex) + "-fold:" + str(fold)
+            )
 
             # Fit the model
             callbacks = [
                 tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
-                tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+                # tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
                 tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
                 # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
