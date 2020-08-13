@@ -23,12 +23,10 @@ from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 
+# TODO why is this useful?
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
-if not os.path.exists("logs"):
-    os.makedirs("logs")
-logging.basicConfig(filename="logs/training.log", level=logging.DEBUG)
 
 
 def main():
@@ -65,6 +63,7 @@ def main():
         except:
             logging.warning("Couldn't remove folder %s", all_logs)
     Converter.checkPathExists(all_logs)
+    logging.basicConfig(filename="logs/training.log", level=logging.DEBUG)
 
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         for fold in range(2):
