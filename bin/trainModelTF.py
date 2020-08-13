@@ -28,6 +28,13 @@ tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Setup logs
+cwd = os.path.abspath(os.path.dirname(__file__))
+all_logs = os.path.join(cwd, "..", "logs/")
+tensorboardLogs = os.path.join(all_logs, "fit/")
+Converter.checkPathExists(all_logs)
+logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
+
 
 def main():
     """
@@ -54,16 +61,13 @@ def main():
         "learningRate": [0.0005],
     }
 
-    # Set the logs
-    cwd = os.path.abspath(os.path.dirname(__file__))
-    all_logs = os.path.join(cwd, "..", "logs")
-    if args.restart and os.path.exists(all_logs):
+    if args.restart and os.path.exists(tensorboardLogs):
         try:
-            shutil.rmtree(all_logs)
+            shutil.rmtree(tensorboardLogs)
+            Converter.checkPathExists(tensorboardLogs)
         except:
-            logging.warning("Couldn't remove folder %s", all_logs)
-    Converter.checkPathExists(all_logs)
-    logging.basicConfig(filename="logs/training.log", level=logging.DEBUG)
+            logging.warning("Couldn't remove folder %s", tensorboardLogs)
+    logging.info("test")
 
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         for fold in range(2):
