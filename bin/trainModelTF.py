@@ -65,9 +65,8 @@ def main():
         try:
             shutil.rmtree(tensorboardLogs)
             Converter.checkPathExists(tensorboardLogs)
-        except:
-            logging.warning("Couldn't remove folder %s", tensorboardLogs)
-    logging.info("test")
+        except Exception as e:
+            logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         for fold in range(2):
