@@ -168,7 +168,7 @@ def getGen(
 
                     y = track["y"][sampleIdx]
                     sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
-                    logging.debug("Yield %s %s-%s", genId, trackIdx, cursor)
+                    # logging.debug("Yield %s %s-%s", genId, trackIdx, cursor)
                     yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
     return gen

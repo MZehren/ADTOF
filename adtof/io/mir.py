@@ -31,12 +31,12 @@ class MIR(object):
         Load an audio track and return a numpy array
         """
         if cachePath is not None and Converter.checkPathExists(cachePath):
-            result = np.array(np.load(cachePath, allow_pickle=True))
+            result = np.array(np.load(cachePath, allow_pickle=False))
         else:
             result = self.proc(audioPath)
             if cachePath is not None:
                 try:
-                    np.save(cachePath, result, allow_pickle=True)
+                    np.save(cachePath, result, allow_pickle=False)
                 except Exception as e:
                     logging.warning("Couldn't cache processed audio \n%s", e)
 
