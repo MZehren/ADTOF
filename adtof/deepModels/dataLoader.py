@@ -72,7 +72,7 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
 
         result.append(row)
         if len(notes[key]) == 0:
-            logging.debug(filename, str(key), "is not represented in this track")
+            logging.debug("Pitch %s is not represented in the track %s", key, filename)
 
     return np.array(result).T
 
@@ -168,7 +168,7 @@ def getGen(
 
                     y = track["y"][sampleIdx]
                     sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
-                    logging.debug("Yield " + genId + " " + str(trackIdx) + "-" + str(cursor))
+                    logging.debug("Yield %s %s-%s", genId, trackIdx, cursor)
                     yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
     return gen

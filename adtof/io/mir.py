@@ -38,7 +38,7 @@ class MIR(object):
                 try:
                     np.save(cachePath, result, allow_pickle=True)
                 except Exception as e:
-                    logging.warning("Couldn't cache processed audio", str(e))
+                    logging.warning("Couldn't cache processed audio \n%s", e)
 
         if self.diff:
             result = self.diffProc(result)

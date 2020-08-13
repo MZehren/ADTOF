@@ -63,7 +63,7 @@ def main():
         try:
             shutil.rmtree(all_logs)
         except:
-            print("couldn't remove folder", all_logs)
+            logging.warning("Couldn't remove folder %s", all_logs)
     Converter.checkPathExists(all_logs)
 
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
