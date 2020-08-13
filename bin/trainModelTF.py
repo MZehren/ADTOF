@@ -23,10 +23,18 @@ from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 
-# TODO why is this useful?
+# While running on the server, I encoutered the error:
+# OpenBLAS blas_thread_init: pthread_create failed for thread 31 of 32: Resource temporarily unavailable
+# OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
+# see https://github.com/xianyi/OpenBLAS/issues/1668#issuecomment-402728065
+# See https://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
+
+# I also encountered the error:
+# LLVM ERROR: out of memory: Using --limit 500 for now
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
+
 
 # Setup logs
 cwd = os.path.abspath(os.path.dirname(__file__))
@@ -53,17 +61,17 @@ def main():
         "classWeights": [config.WEIGHTS_5],
         "sampleRate": [100],
         "diff": [False],
-        "samplePerTrack": [100],
+        "samplePerTrack": [20, 100],
         "batchSize": [100],
         "context": [25],
         "labelOffset": [0],
         "labelRadiation": [1],
-        "learningRate": [0.0005],
+        "learningRate": [0.0001],
     }
 
     if args.restart and os.path.exists(tensorboardLogs):
         try:
-            shutil.rmtree(tensorboardLogs)
+            shutil.rmtree(tensorboardLogs, ignore_errors=True)
             Converter.checkPathExists(tensorboardLogs)
         except Exception as e:
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
@@ -105,7 +113,7 @@ def main():
 
             # Fit the model
             callbacks = [
-                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_images=True),
+                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
                 # tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
                 tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
                 # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
