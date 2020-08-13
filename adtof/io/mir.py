@@ -1,4 +1,4 @@
-import os
+import logging
 
 import madmom
 import matplotlib.pyplot as plt
@@ -38,7 +38,7 @@ class MIR(object):
                 try:
                     np.save(cachePath, result, allow_pickle=True)
                 except Exception as e:
-                    print("Couldn't cache processed audio", str(e))
+                    logging.warning("Couldn't cache processed audio", str(e))
 
         if self.diff:
             result = self.diffProc(result)

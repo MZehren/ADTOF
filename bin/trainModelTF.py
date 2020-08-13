@@ -28,13 +28,12 @@ tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 if not os.path.exists("logs"):
     os.makedirs("logs")
-logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
+logging.basicConfig(filename="logs/training.log", level=logging.DEBUG)
 
 
 def main():
     """
     Entry point of the program
-    Parse the arguments and call the conversion
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
@@ -111,33 +110,32 @@ def main():
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
 
-            # model.fit(
-            #     dataset_train,
-            #     epochs=100,
-            #     initial_epoch=0,
-            #     steps_per_epoch=100,
-            #     callbacks=callbacks,
-            #     validation_data=dataset_val,
-            #     validation_steps=100
-            #     # class_weight=classWeight
-            # )
+            model.fit(
+                dataset_train,
+                epochs=100,
+                initial_epoch=0,
+                steps_per_epoch=100,
+                callbacks=callbacks,
+                validation_data=dataset_val,
+                validation_steps=100
+                # class_weight=classWeight
+            )
 
-            for x, y, w in dataset_val:
-                predictions = model.predict(x)
+            # for x, y, w in dataset_val:
+            #     predictions = model.predict(x)
 
-                import matplotlib.pyplot as plt
+            #     import matplotlib.pyplot as plt
 
-                f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+            #     f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
 
-                ax1.plot(predictions)
-                ax1.set_ylabel("Prediction")
-                ax2.plot(y)
-                ax2.set_ylabel("Truth")
-                ax2.set_xlabel("Time step")
-                ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
-                ax1.legend(params["labels"])
-                plt.show()
-                print("Done!")
+            #     ax1.plot(predictions)
+            #     ax1.set_ylabel("Prediction")
+            #     ax2.plot(y)
+            #     ax2.set_ylabel("Truth")
+            #     ax2.set_xlabel("Time step")
+            #     ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
+            #     ax1.legend(params["labels"])
+            #     plt.show()
 
 
 if __name__ == "__main__":

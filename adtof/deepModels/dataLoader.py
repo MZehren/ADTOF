@@ -1,3 +1,4 @@
+import logging
 import os
 
 import librosa
@@ -71,7 +72,7 @@ def getDenseEncoding(filename, notes, sampleRate=100, offset=0, playback=1, keys
 
         result.append(row)
         if len(notes[key]) == 0:
-            print(filename, str(key), "is not represented in this track")
+            logging.debug(filename, str(key), "is not represented in this track")
 
     return np.array(result).T
 
@@ -112,9 +113,9 @@ def getSplit(folderPath, trainNSplit=10, validationSplit=0.20, randomState=1, li
         testIndexes = testIndexes[:limit]
 
     return (
-        getGen(trainIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
-        getGen(valIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
-        getGen(testIndexes, audiosPath, annotationsPath, featuresPath, **kwargs),
+        getGen(trainIndexes, audiosPath, annotationsPath, featuresPath, genId="train", **kwargs),
+        getGen(valIndexes, audiosPath, annotationsPath, featuresPath, genId="val", **kwargs),
+        getGen(testIndexes, audiosPath, annotationsPath, featuresPath, genId="test", **kwargs),
     )
 
 
@@ -123,6 +124,7 @@ def getGen(
     audiosPath,
     annotationsPath,
     featuresPath,
+    genId="test",
     samplePerTrack=100,
     context=25,
     balanceClassesDistribution=False,
@@ -166,6 +168,7 @@ def getGen(
 
                     y = track["y"][sampleIdx]
                     sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                    logging.debug("Yield " + genId + " " + str(trackIdx) + "-" + str(cursor))
                     yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
 
     return gen
