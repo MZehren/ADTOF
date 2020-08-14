@@ -73,22 +73,22 @@ def main():
         #         "normalize": False,
         #     },
         # ),
-        (
-            "nodiff, NoNorm",
-            {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5,
-                "sampleRate": 100,
-                "diff": False,
-                "samplePerTrack": 20,
-                "batchSize": 100,
-                "context": 25,
-                "labelOffset": 0,
-                "labelRadiation": 1,
-                "learningRate": 0.0002,
-                "normalize": False,
-            },
-        ),
+        # (
+        #     "nodiff, NoNorm",
+        #     {
+        #         "labels": config.LABELS_5,
+        #         "classWeights": config.WEIGHTS_5,
+        #         "sampleRate": 100,
+        #         "diff": False,
+        #         "samplePerTrack": 20,
+        #         "batchSize": 100,
+        #         "context": 25,
+        #         "labelOffset": 0,
+        #         "labelRadiation": 1,
+        #         "learningRate": 0.0002,
+        #         "normalize": False,
+        #     },
+        # ),
         (
             "diff, norm",
             {
@@ -149,7 +149,7 @@ def main():
 
             # Fit the model
             callbacks = [
-                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
+                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
                 tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
                 tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
