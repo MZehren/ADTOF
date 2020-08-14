@@ -56,18 +56,40 @@ def main():
     parser.add_argument("-l", "--limit", type=int, default=None, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
 
-    paramGrid = {
-        "labels": [config.LABELS_5],
-        "classWeights": [config.WEIGHTS_5],
-        "sampleRate": [100],
-        "diff": [True],
-        "samplePerTrack": [20, 100],
-        "batchSize": [100],
-        "context": [25],
-        "labelOffset": [0],
-        "labelRadiation": [1],
-        "learningRate": [0.0001],
-    }
+    paramGrid = [
+        (
+            "diff, NoNorm",
+            {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 20,
+                "batchSize": 100,
+                "context": 25,
+                "labelOffset": 0,
+                "labelRadiation": 1,
+                "learningRate": 0.0002,
+                "normalize": False,
+            },
+        ),
+        (
+            "nodiff, NoNorm",
+            {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "sampleRate": 100,
+                "diff": False,
+                "samplePerTrack": 20,
+                "batchSize": 100,
+                "context": 25,
+                "labelOffset": 0,
+                "labelRadiation": 1,
+                "learningRate": 0.0002,
+                "normalize": False,
+            },
+        ),
+    ]
 
     if args.restart and os.path.exists(tensorboardLogs):
         try:
@@ -76,7 +98,7 @@ def main():
         except Exception as e:
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
-    for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
+    for modelName, params in paramGrid:
         for fold in range(2):
             # Get the data TODO: the buffer is getting destroyed after each fold
             trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
@@ -98,31 +120,29 @@ def main():
 
             # Get the model
             checkpoint_dir = os.path.join(cwd, "..", "models")
-            checkpoint_path = os.path.join(checkpoint_dir, "rv1.ckpt")
+            checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
             nBins = 168 if params["diff"] else 84
             model = RV1TF().createModel(n_bins=nBins, output=len(params["labels"]), **params)
             model.summary()
-            latest = tf.train.latest_checkpoint(checkpoint_dir)
+            # latest = tf.train.latest_checkpoint(checkpoint_dir)
             # if latest and not args.restart:
             #     model.load_weights(latest)
 
             # Set the log
-            log_dir = os.path.join(
-                all_logs, "fit", datetime.datetime.now().strftime("%m%d-%H%M") + "-paramIndex:" + str(paramIndex) + "-fold:" + str(fold)
-            )
+            log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%m%d-%H%M") + modelName)
 
             # Fit the model
             callbacks = [
                 tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
-                # tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
-                tf.keras.callbacks.ReduceLROnPlateau(factor=0.2)
-                # tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=2, verbose=1),
+                tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+                tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
+                tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1, restore_best_weights=True),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
 
             model.fit(
                 dataset_train,
-                epochs=100,
+                epochs=200,
                 initial_epoch=0,
                 steps_per_epoch=100,
                 callbacks=callbacks,

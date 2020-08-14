@@ -47,7 +47,7 @@ def main():
     classWeights = config.WEIGHTS_5
     sampleRate = 100
 
-    paramGrid = {
+    paramGrid = ["dif, NoNorm":{
         "labels": [config.LABELS_5],
         "classWeights": [config.WEIGHTS_5],
         "sampleRate": [100],
@@ -59,7 +59,7 @@ def main():
         "labelRadiation": [1],
         "learningRate": [0.001 / 2],
         "normalize": [False, True],
-    }
+    }]
 
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
