@@ -57,22 +57,22 @@ def main():
     args = parser.parse_args()
 
     paramGrid = [
-        (
-            "diff, NoNorm",
-            {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 20,
-                "batchSize": 100,
-                "context": 25,
-                "labelOffset": 0,
-                "labelRadiation": 1,
-                "learningRate": 0.0002,
-                "normalize": False,
-            },
-        ),
+        # (
+        #     "diff, NoNorm",
+        #     {
+        #         "labels": config.LABELS_5,
+        #         "classWeights": config.WEIGHTS_5,
+        #         "sampleRate": 100,
+        #         "diff": True,
+        #         "samplePerTrack": 20,
+        #         "batchSize": 100,
+        #         "context": 25,
+        #         "labelOffset": 0,
+        #         "labelRadiation": 1,
+        #         "learningRate": 0.0002,
+        #         "normalize": False,
+        #     },
+        # ),
         (
             "nodiff, NoNorm",
             {
@@ -89,6 +89,22 @@ def main():
                 "normalize": False,
             },
         ),
+        (
+            "diff, norm",
+            {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 20,
+                "batchSize": 100,
+                "context": 25,
+                "labelOffset": 0,
+                "labelRadiation": 1,
+                "learningRate": 0.0002,
+                "normalize": True,
+            },
+        ),
     ]
 
     if args.restart and os.path.exists(tensorboardLogs):
@@ -99,7 +115,7 @@ def main():
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
     for modelName, params in paramGrid:
-        for fold in range(2):
+        for fold in range(1):
             # Get the data TODO: the buffer is getting destroyed after each fold
             trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
 
@@ -136,7 +152,7 @@ def main():
                 tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
                 tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
                 tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
-                tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1, restore_best_weights=True),
+                tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
 
