@@ -31,6 +31,8 @@ from adtof.io import mir
 
 # I also encountered the error:
 # LLVM ERROR: out of memory: Using --limit 500 for now
+# Check if this happens on one fit with limit >> 500
+# Check if this happens on two very small fits
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
@@ -57,22 +59,22 @@ def main():
     args = parser.parse_args()
 
     paramGrid = [
-        # (
-        #     "diff, NoNorm",
-        #     {
-        #         "labels": config.LABELS_5,
-        #         "classWeights": config.WEIGHTS_5,
-        #         "sampleRate": 100,
-        #         "diff": True,
-        #         "samplePerTrack": 20,
-        #         "batchSize": 100,
-        #         "context": 25,
-        #         "labelOffset": 0,
-        #         "labelRadiation": 1,
-        #         "learningRate": 0.0002,
-        #         "normalize": False,
-        #     },
-        # ),
+        (
+            "diff, NoNorm",
+            {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 20,
+                "batchSize": 100,
+                "context": 25,
+                "labelOffset": 0,
+                "labelRadiation": 1,
+                "learningRate": 0.0002,
+                "normalize": False,
+            },
+        ),
         # (
         #     "nodiff, NoNorm",
         #     {
@@ -89,22 +91,22 @@ def main():
         #         "normalize": False,
         #     },
         # ),
-        (
-            "diff, norm",
-            {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 20,
-                "batchSize": 100,
-                "context": 25,
-                "labelOffset": 0,
-                "labelRadiation": 1,
-                "learningRate": 0.0002,
-                "normalize": True,
-            },
-        ),
+        # (
+        #     "diff, norm",
+        #     {
+        #         "labels": config.LABELS_5,
+        #         "classWeights": config.WEIGHTS_5,
+        #         "sampleRate": 100,
+        #         "diff": True,
+        #         "samplePerTrack": 20,
+        #         "batchSize": 100,
+        #         "context": 25,
+        #         "labelOffset": 0,
+        #         "labelRadiation": 1,
+        #         "learningRate": 0.0002,
+        #         "normalize": True,
+        #     },
+        # ),
     ]
 
     if args.restart and os.path.exists(tensorboardLogs):
