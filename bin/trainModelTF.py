@@ -60,7 +60,7 @@ def main():
         "labels": [config.LABELS_5],
         "classWeights": [config.WEIGHTS_5],
         "sampleRate": [100],
-        "diff": [False],
+        "diff": [True],
         "samplePerTrack": [20, 100],
         "batchSize": [100],
         "context": [25],

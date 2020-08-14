@@ -51,13 +51,14 @@ def main():
         "labels": [config.LABELS_5],
         "classWeights": [config.WEIGHTS_5],
         "sampleRate": [100],
-        "diff": [False],
+        "diff": [True],
         "samplePerTrack": [100],
         "batchSize": [100],
         "context": [25],
         "labelOffset": [0],
         "labelRadiation": [1],
         "learningRate": [0.001 / 2],
+        "normalize": [False],
     }
 
     # Get the data
@@ -65,10 +66,11 @@ def main():
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, **params)
         bla = trainGen()
-        print(timeit.timeit(lambda: next(bla), number=1000))
-        # reseting gen
-        bla = trainGen()
-        print(timeit.timeit(lambda: next(bla), number=1000))
+        print(params)
+        print(timeit.timeit(lambda: next(bla), number=1))
+        # # reseting gen
+        # bla = trainGen()
+        # print(timeit.timeit(lambda: next(bla), number=1000))
 
         # while True:
 

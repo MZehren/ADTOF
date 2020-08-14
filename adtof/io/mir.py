@@ -1,8 +1,10 @@
 import logging
+import pickle
 
 import madmom
 import matplotlib.pyplot as plt
 import numpy as np
+
 from adtof import config
 from adtof.converters.converter import Converter
 
@@ -12,7 +14,9 @@ class MIR(object):
     Load the track to be fed inside a NN
     """
 
-    def __init__(self, frameRate=100, frameSize=2048, diff=False, sampleRate=44100, n_bins=12, fmin=20, fmax=20000, **kwargs):
+    def __init__(
+        self, frameRate=100, frameSize=2048, diff=False, sampleRate=44100, n_bins=12, fmin=20, fmax=20000, normalize=False, **kwargs
+    ):
         """
         Configure the parameters for the feature extraction
         """
@@ -24,6 +28,7 @@ class MIR(object):
         self.n_bins = n_bins  # Per octave
         self.fmin = fmin
         self.fmax = fmax
+        self.normalize = normalize
         self.proc, self.diffProc = self.getMadmomProc()
 
     def open(self, audioPath: str, cachePath: str = None):
@@ -34,26 +39,37 @@ class MIR(object):
         if cachePath is not None and Converter.checkPathExists(cachePath):
             try:
                 result = np.array(np.load(cachePath, allow_pickle=False))
+                print(result.shape)
             except Exception as e:
                 logging.warn("Cache file %s failed to load\n%s", cachePath, e)
 
         if result is None:
             result = self.proc(audioPath)
+            print(result.shape)
             if cachePath is not None:
                 try:
                     np.save(cachePath, result, allow_pickle=False)
                 except Exception as e:
                     logging.warning("Couldn't cache processed audio \n%s", e)
 
+        if self.normalize:
+            max = np.max(result)
+            min = np.min(result)
+            result = (result - min) / (max - min)
+
         if self.diff:
             result = self.diffProc(result)
 
+        self.plot([result[:2500]])
         return result
 
     def plot(self, values):
         fig, ax = plt.subplots(len(values))
         for i, value in enumerate(values):
-            ax[i].matshow(value.T)
+            if len(values) > 1:
+                ax[i].matshow(value.T)
+            else:
+                ax.matshow(value.T)
         plt.show()
 
     def getMadmomProc(self):
@@ -85,7 +101,10 @@ class MIR(object):
             fmax=self.fmax,
             norm_filters=True,
         )
-        diff = SpectrogramDifferenceProcessor(diff_ratio=0.5, positive_diffs=True, stack_diffs=np.hstack)
+        # madmom needs a np.array with a stft field to compute the diff_frame. This field is lost when it is cached with np.save()
+        # Thus I compute the thingy before hand
+        diff_frames = madmom.audio.spectrogram._diff_frames(0.5, hop_size=self.hopSize, frame_size=self.frameSize, window=np.hanning)
+        diff = SpectrogramDifferenceProcessor(diff_frames=diff_frames, positive_diffs=True, stack_diffs=np.hstack)
         return SequentialProcessor((sig, frames, stft, spec)), SequentialProcessor((diff,))
 
     def openMadmomOld(self, path: str):
