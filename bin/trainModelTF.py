@@ -147,7 +147,11 @@ def main():
             #     model.load_weights(latest)
 
             # Set the log
-            log_dir = os.path.join(all_logs, "fit", datetime.datetime.now().strftime("%m%d-%H%M") + modelName)
+            log_dir = os.path.join(
+                all_logs,
+                "fit",
+                datetime.datetime.now().strftime("%m%d-%H%M") + "_" + modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold),
+            )
 
             # Fit the model
             callbacks = [
