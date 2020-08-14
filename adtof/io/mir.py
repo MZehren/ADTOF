@@ -38,17 +38,19 @@ class MIR(object):
         result = None
         if cachePath is not None and Converter.checkPathExists(cachePath):
             try:
-                result = np.array(np.load(cachePath, allow_pickle=False))
-                print(result.shape)
+                with open(cachePath, "rb") as cacheFile:
+                    result = pickle.load(cacheFile)
+                # result = np.load(cachePath, allow_pickle=False)
             except Exception as e:
                 logging.warn("Cache file %s failed to load\n%s", cachePath, e)
 
         if result is None:
             result = self.proc(audioPath)
-            print(result.shape)
             if cachePath is not None:
                 try:
-                    np.save(cachePath, result, allow_pickle=False)
+                    with open(cachePath, "wb") as cacheFile:
+                        pickle.dump(result, cacheFile)
+                    # np.save(cachePath, result, allow_pickle=False)
                 except Exception as e:
                     logging.warning("Couldn't cache processed audio \n%s", e)
 
@@ -60,7 +62,7 @@ class MIR(object):
         if self.diff:
             result = self.diffProc(result)
 
-        self.plot([result[:2500]])
+        # self.plot([result[:2500]])
         return result
 
     def plot(self, values):
