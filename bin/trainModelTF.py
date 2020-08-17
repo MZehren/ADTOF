@@ -18,12 +18,6 @@ from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io import mir
 
-# While running on the server, I encoutered the error:
-# OpenBLAS blas_thread_init: pthread_create failed for thread 31 of 32: Resource temporarily unavailable
-# OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
-# see https://github.com/xianyi/OpenBLAS/issues/1668#issuecomment-402728065
-# See https://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
-
 # I also encountered the error:
 # LLVM ERROR: out of memory: Using --limit 500 for now
 # Check if this happens on one fit with limit >> 500: OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
@@ -112,7 +106,7 @@ def main():
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
     for modelName, params in paramGrid:
-        for fold in range(5):
+        for fold in range(1):
             # Get the data TODO: the buffer is getting destroyed after each fold
             trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
 
@@ -156,6 +150,17 @@ def main():
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
+
+            model.fit(
+                dataset_train,
+                epochs=1,
+                initial_epoch=0,
+                steps_per_epoch=100,
+                callbacks=callbacks,
+                validation_data=dataset_val,
+                validation_steps=100
+                # class_weight=classWeight
+            )
 
             model.fit(
                 dataset_train,
