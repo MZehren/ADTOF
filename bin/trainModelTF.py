@@ -22,8 +22,8 @@ from adtof.io import mir
 # LLVM ERROR: out of memory: Using --limit 500 for now
 # Check if this happens on one fit with limit >> 500: OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
 # Check if this happens on two very small fits: LLVM ERROR: out of memory
-tf.config.threading.set_intra_op_parallelism_threads(32)
-tf.config.threading.set_inter_op_parallelism_threads(32)
+tf.config.threading.set_intra_op_parallelism_threads(0)
+tf.config.threading.set_inter_op_parallelism_threads(0)
 # tf.config.experimental_run_functions_eagerly(True)
 
 
@@ -122,7 +122,7 @@ def main():
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
     for modelName, params in paramGrid:
-        for fold in range(1):
+        for fold in range(2):
             # Get the data TODO: the buffer is getting destroyed after each fold
             trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
 
@@ -155,7 +155,7 @@ def main():
             log_dir = os.path.join(
                 all_logs,
                 "fit",
-                datetime.datetime.now().strftime("%m%d-%H%M") + "_" + modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold),
+                modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%m%d-%H%M"),
             )
 
             # Fit the model
@@ -166,17 +166,6 @@ def main():
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
             ]
-
-            model.fit(
-                dataset_train,
-                epochs=1,
-                initial_epoch=0,
-                steps_per_epoch=100,
-                callbacks=callbacks,
-                validation_data=dataset_val,
-                validation_steps=100
-                # class_weight=classWeight
-            )
 
             model.fit(
                 dataset_train,
