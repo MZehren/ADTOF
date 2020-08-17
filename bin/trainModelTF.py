@@ -5,15 +5,10 @@ TODO
 """
 import argparse
 import datetime
-import io
-import itertools
 import logging
 import os
 import shutil
 
-import matplotlib.pyplot as plt
-import numpy as np
-import sklearn
 import tensorflow as tf
 
 from adtof import config
@@ -31,7 +26,7 @@ from adtof.io import mir
 
 # I also encountered the error:
 # LLVM ERROR: out of memory: Using --limit 500 for now
-# Check if this happens on one fit with limit >> 500
+# Check if this happens on one fit with limit >> 500: OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
 # Check if this happens on two very small fits
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
@@ -117,7 +112,7 @@ def main():
             logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
 
     for modelName, params in paramGrid:
-        for fold in range(1):
+        for fold in range(5):
             # Get the data TODO: the buffer is getting destroyed after each fold
             trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
 
@@ -155,8 +150,8 @@ def main():
 
             # Fit the model
             callbacks = [
-                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
-                tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+                # tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
+                # tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
                 tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
                 # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
@@ -164,7 +159,7 @@ def main():
 
             model.fit(
                 dataset_train,
-                epochs=200,
+                epochs=1,
                 initial_epoch=0,
                 steps_per_epoch=100,
                 callbacks=callbacks,
