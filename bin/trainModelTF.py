@@ -27,7 +27,7 @@ from adtof.io import mir
 # I also encountered the error:
 # LLVM ERROR: out of memory: Using --limit 500 for now
 # Check if this happens on one fit with limit >> 500: OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
-# Check if this happens on two very small fits
+# Check if this happens on two very small fits: LLVM ERROR: out of memory
 tf.config.threading.set_intra_op_parallelism_threads(32)
 tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)

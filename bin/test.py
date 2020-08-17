@@ -39,45 +39,32 @@ def main():
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
-    parser.add_argument("-r", "--restart", action="store_true", help="Override the model if present")
-    parser.add_argument("-d", "--deleteLogs", action="store_true", help="Delete the logs")
-    parser.add_argument("-l", "--limit", type=int, default=-1, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
-    labels = config.LABELS_5
-    classWeights = config.WEIGHTS_5
-    sampleRate = 100
 
-    paramGrid = ["dif, NoNorm":{
+    paramGrid = {
         "labels": [config.LABELS_5],
         "classWeights": [config.WEIGHTS_5],
         "sampleRate": [100],
-        "diff": [False, True],
-        "samplePerTrack": [100],
+        "diff": [False],
+        "samplePerTrack": [1],
         "batchSize": [100],
         "context": [25],
         "labelOffset": [0],
         "labelRadiation": [1],
         "learningRate": [0.001 / 2],
-        "normalize": [False, True],
-    }]
+        "normalize": [False],
+    }
 
     # Get the data
     # classWeight = dataLoader.getClassWeight(args.folderPath, sampleRate=sampleRate, labels=labels)
     for paramIndex, params in enumerate(list(sklearn.model_selection.ParameterGrid(paramGrid))):
         trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, **params)
         bla = trainGen()
-        print(params)
-        print(timeit.timeit(lambda: next(bla), number=25000))
-        # # reseting gen
-        # bla = trainGen()
-        # print(timeit.timeit(lambda: next(bla), number=1000))
-
-        # while True:
-
-        #     print("next")
-        #     bla = generator()
-        #     for i in range(1000):
-        #         next(bla)
+        print(timeit.timeit(lambda: next(bla), number=2000))
+        bli = valGen()
+        print(timeit.timeit(lambda: next(bli), number=2000))
+        blu = testGen()
+        print(timeit.timeit(lambda: next(blu), number=2000))
 
 
 if __name__ == "__main__":
