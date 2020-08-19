@@ -42,6 +42,7 @@ class MIR(object):
         Once all the audio files are cached, the threads are not spawned
 
         """
+        logging.debug("reading %s", audioPath)
         result = None
         if cachePath is not None and Converter.checkPathExists(cachePath):
             try:

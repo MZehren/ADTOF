@@ -141,7 +141,6 @@ def train_test_model(hparams, args, fold, modelName):
     nBins = 168 if hparams["diff"] else 84
     modelHandler = RV1TF()
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
-    model.summary()
     # latest = tf.train.latest_checkpoint(checkpoint_dir)
     # if latest and not args.restart:
     #     model.load_weights(latest)
