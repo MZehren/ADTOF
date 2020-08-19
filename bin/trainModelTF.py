@@ -24,8 +24,8 @@ from adtof.io import eval
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
 # See: https://github.com/tensorflow/tensorflow/issues/41532
-tf.config.threading.set_intra_op_parallelism_threads(64)
-tf.config.threading.set_inter_op_parallelism_threads(64)
+tf.config.threading.set_intra_op_parallelism_threads(32)
+tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 
 # When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.2
@@ -43,6 +43,9 @@ tf.config.threading.set_inter_op_parallelism_threads(64)
 # test_function
 # 2020-08-17 17:57:46.592177: W tensorflow/core/kernels/data/generator_dataset_op.cc:103] Error occurred when finalizing GeneratorDataset iterator: Failed precondition: Python interpreter state is not initialized. The process may be terminated.
 #         [[{{node PyFunc}}]]
+
+# When tf.config.threading.set_intra_op_parallelism_threads(64) and tf 2.3
+# tensorflow terminate called after throwing an instance of 'std::bad_alloc'
 
 
 # Setup logs
@@ -146,7 +149,7 @@ def train_test_model(hparams, args, fold, modelName):
     # Set the log
     log_dir = os.path.join(
         tensorboardLogs,
-        modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d/%m-%H:%M"),
+        modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),
     )
 
     # Fit the model
