@@ -109,6 +109,7 @@ def removeFolder(path):
     if os.path.exists(tensorboardLogs):
         try:
             shutil.rmtree(path, ignore_errors=True)
+            logging.info("Removing path %s", path)
         except Exception as e:
             logging.warning("Couldn't remove folder %s \n%s", path, e)
     Converter.checkPathExists(path)  # Create the base folder
@@ -153,7 +154,7 @@ def train_test_model(hparams, args, fold, modelName):
 
     # Fit the model
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False, profile_batch=0),
         tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
         tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
         tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
