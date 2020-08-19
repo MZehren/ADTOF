@@ -30,7 +30,6 @@ class DataLoader(object):
         self.featurePaths = np.array(
             [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in self.audioPaths]
         )
-        self.buffer = {}
 
     def readTrack(self, i, sampleRate=100, context=25, labelOffset=0, labels=[36, 40, 41, 46, 49], yDense=True, removeStart=True, **kwargs):
         """
@@ -151,6 +150,7 @@ class DataLoader(object):
         """
         TODO
         """
+        buffer = {}
         if trackIndexes is None:
             trackIndexes = list(range(len(self.audioPaths)))
 
@@ -160,15 +160,15 @@ class DataLoader(object):
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
                     # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
                     # Get the current track in the buffer, or load it from disk if the buffer is empty
-                    if trackIdx not in self.buffer:
+                    if trackIdx not in buffer:
                         X, Y = self.readTrack(trackIdx, context=context, **kwargs)
                         indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
-                        self.buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": self.audioPaths[trackIdx]}
+                        buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": self.audioPaths[trackIdx]}
 
                     # Set the cursor to the beginning of the track if it has not been read since the last reinitialisation
                     if trackIdx not in cursors:
                         cursors[trackIdx] = 0
-                    track = self.buffer[trackIdx]
+                    track = buffer[trackIdx]
 
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:

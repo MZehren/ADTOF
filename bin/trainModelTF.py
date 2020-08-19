@@ -10,7 +10,9 @@ import os
 import shutil
 
 import numpy as np
+import sklearn
 import tensorflow as tf
+from tensorboard.plugins.hparams import api as hp
 
 from adtof import config
 from adtof.converters.converter import Converter
@@ -47,12 +49,13 @@ tf.config.threading.set_inter_op_parallelism_threads(64)
 cwd = os.path.abspath(os.path.dirname(__file__))
 all_logs = os.path.join(cwd, "..", "logs/")
 tensorboardLogs = os.path.join(all_logs, "fit/")
+hparamsLogs = os.path.join(all_logs, "hparam/")
 Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
 
 paramGrid = [
     (
-        "test",
+        "CNN-Diff",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5,
@@ -65,56 +68,34 @@ paramGrid = [
             "labelRadiation": 1,
             "learningRate": 0.0002,
             "normalize": False,
+            "model": "CNN",
+            "fmin": 20,
+            "fmax": 20000,
+            "pad": False,
+            "beat_targ": False,
         },
     ),
-    # (
-    #     "diff, NoNorm",
-    #     {
-    #         "labels": config.LABELS_5,
-    #         "classWeights": config.WEIGHTS_5,
-    #         "sampleRate": 100,
-    #         "diff": True,
-    #         "samplePerTrack": 20,
-    #         "batchSize": 100,
-    #         "context": 25,
-    #         "labelOffset": 0,
-    #         "labelRadiation": 1,
-    #         "learningRate": 0.0002,
-    #         "normalize": False,
-    #     },
-    # ),
-    # (
-    #     "nodiff, NoNorm",
-    #     {
-    #         "labels": config.LABELS_5,
-    #         "classWeights": config.WEIGHTS_5,
-    #         "sampleRate": 100,
-    #         "diff": False,
-    #         "samplePerTrack": 20,
-    #         "batchSize": 100,
-    #         "context": 25,
-    #         "labelOffset": 0,
-    #         "labelRadiation": 1,
-    #         "learningRate": 0.0002,
-    #         "normalize": False,
-    #     },
-    # ),
-    # (
-    #     "diff, norm",
-    #     {
-    #         "labels": config.LABELS_5,
-    #         "classWeights": config.WEIGHTS_5,
-    #         "sampleRate": 100,
-    #         "diff": True,
-    #         "samplePerTrack": 20,
-    #         "batchSize": 100,
-    #         "context": 25,
-    #         "labelOffset": 0,
-    #         "labelRadiation": 1,
-    #         "learningRate": 0.0002,
-    #         "normalize": True,
-    #     },
-    # ),
+    (
+        "CNN-noDiff",
+        {
+            "labels": config.LABELS_5,
+            "classWeights": config.WEIGHTS_5,
+            "sampleRate": 100,
+            "diff": False,
+            "samplePerTrack": 20,
+            "batchSize": 100,
+            "context": 25,
+            "labelOffset": 0,
+            "labelRadiation": 1,
+            "learningRate": 0.0002,
+            "normalize": False,
+            "model": "CNN",
+            "fmin": 20,
+            "fmax": 20000,
+            "pad": False,
+            "beat_targ": False,
+        },
+    ),
 ]
 
 
@@ -164,9 +145,8 @@ def train_test_model(hparams, args, fold, modelName):
 
     # Set the log
     log_dir = os.path.join(
-        all_logs,
-        "fit",
-        modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%m%d-%H%M"),
+        tensorboardLogs,
+        modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d/%m-%H:%M"),
     )
 
     # Fit the model
@@ -177,16 +157,16 @@ def train_test_model(hparams, args, fold, modelName):
         tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
     ]
-    # model.fit(
-    #     dataset_train,
-    #     epochs=1,
-    #     initial_epoch=0,
-    #     steps_per_epoch=100,
-    #     callbacks=callbacks,
-    #     validation_data=dataset_val,
-    #     validation_steps=100
-    #     # class_weight=classWeight
-    # )
+    model.fit(
+        dataset_train,
+        epochs=200,
+        initial_epoch=0,
+        steps_per_epoch=100,
+        callbacks=callbacks,
+        validation_data=dataset_val,
+        validation_steps=2
+        # class_weight=classWeight
+    )
 
     # Predict on validation data
     YHat, Y = np.array([[modelHandler.predictWithPP(model, x, hparams["sampleRate"], hparams["labels"]), y] for x, y in valFullGen()]).T
@@ -227,11 +207,15 @@ def main():
 
     if args.restart and os.path.exists(tensorboardLogs):
         removeFolder(tensorboardLogs)
+        removeFolder(hparamsLogs)
 
     for modelName, params in paramGrid:
         for fold in range(2):
-            score = train_test_model(params, args, fold, modelName)
-            print(score)
+            with tf.summary.create_file_writer(hparamsLogs + modelName).as_default():
+                hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelName)
+                score = train_test_model(params, args, fold, modelName)
+                for key, value in score.items():
+                    tf.summary.scalar(key, value, step=fold)
 
 
 if __name__ == "__main__":
