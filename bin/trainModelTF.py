@@ -160,16 +160,16 @@ def train_test_model(hparams, args, fold, modelName):
         tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
     ]
-    # model.fit(
-    #     dataset_train,
-    #     epochs=200,
-    #     initial_epoch=0,
-    #     steps_per_epoch=100,
-    #     callbacks=callbacks,
-    #     validation_data=dataset_val,
-    #     validation_steps=100
-    #     # class_weight=classWeight
-    # )
+    model.fit(
+        dataset_train,
+        epochs=200,
+        initial_epoch=0,
+        steps_per_epoch=100,
+        callbacks=callbacks,
+        validation_data=dataset_val,
+        validation_steps=100
+        # class_weight=classWeight
+    )
 
     # Predict on validation data
     YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
