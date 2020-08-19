@@ -24,8 +24,8 @@ from adtof.io import eval
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
 # See: https://github.com/tensorflow/tensorflow/issues/41532
-tf.config.threading.set_intra_op_parallelism_threads(32)
-tf.config.threading.set_inter_op_parallelism_threads(32)
+tf.config.threading.set_intra_op_parallelism_threads(64)
+tf.config.threading.set_inter_op_parallelism_threads(64)
 # tf.config.experimental_run_functions_eagerly(True)
 
 # When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.2
