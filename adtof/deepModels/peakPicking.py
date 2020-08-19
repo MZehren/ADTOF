@@ -4,13 +4,12 @@ import mir_eval
 
 
 class PeakPicking(tf.keras.metrics.Metric):
-
     def __init__(self, name="peak_picking", sampleRate=50, hitDistance=0.5, **kwargs):
         super(tf.keras.metrics.Metric, self).__init__(name=name, **kwargs)
         self.sampleRate = sampleRate
         self.hitDistance = hitDistance
-        self.batch_y_true = None  #self.add_weight(name='true', aggregation=tf.compat.v2.VariableAggregation.NONE)
-        self.batch_y_pred = None  #self.add_weight(name='pred', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_y_true = None  # self.add_weight(name='true', aggregation=tf.compat.v2.VariableAggregation.NONE)
+        self.batch_y_pred = None  # self.add_weight(name='pred', aggregation=tf.compat.v2.VariableAggregation.NONE)
         self.batch_index = 0
 
     def update_state(self, y_true, y_pred, sample_weight=None):
@@ -39,7 +38,7 @@ class PeakPicking(tf.keras.metrics.Metric):
 
     def serialPeakPicking(self, values: np.array, relativeDelta=0, absoluteDelta=0.5, m=2, a=2, w=2):
         """
-        a peak must be the maximum value within a window of size 2m (i.e.: fa(n) = max(fa(n − m), · · · , fa(n+m))), 
+        A peak must be the maximum value within a window of size 2m (i.e.: fa(n) = max(fa(n − m), · · · , fa(n+m))), 
         and exceeding the mean value plus a threshold δ within a window of size 2a (i.e.: fa(n) ≥ mean(fa(n − a), · · · , fa(n+a)) +δ). 
         Additionally, a peak must have at least a distance of 2w to the last detected peak nlp (i.e.: n − nlp > w,).
         The parameters for peak picking are the same as used in [1]: m = a = w = 2. 
@@ -48,19 +47,17 @@ class PeakPicking(tf.keras.metrics.Metric):
         peaksPosition = []
         lookdistance = 1
         mySortedList = sorted([(i, value) for i, value in enumerate(values)], key=lambda x: x[1], reverse=True)
-        for i, value in mySortedList:  #For all the values by decreasing order TODO: implement a different distance to the peak ?
+        for i, value in mySortedList:  # For all the values by decreasing order TODO: implement a different distance to the peak ?
             if value >= relativeDelta and value >= absoluteDelta:
-                isMaximum = value == np.max(values[max(i - m, 0):i + m + 1])
-                isAboveMean = value >= np.mean(values[max(i - a, 0):i + a + 1]) + relativeDelta
+                isMaximum = value == np.max(values[max(i - m, 0) : i + m + 1])
+                isAboveMean = value >= np.mean(values[max(i - a, 0) : i + a + 1]) + relativeDelta
                 if isMaximum and isAboveMean:
                     peaksValue.append(value)
                     peaksPosition.append(i)
             else:
                 break
         peaksPosition.sort()
-        return peaksPosition #, peaksValue
-        
-
+        return peaksPosition  # , peaksValue
 
     def _dense_peak_picking(self, values, threshold: float = 0.5, windowSize: int = 2):
         """
@@ -85,7 +82,9 @@ class PeakPicking(tf.keras.metrics.Metric):
             # segments = tf.constant([(j + i) // windowSize for j in range(len(values))])
             # TODO: is there a better way to get the peaks of a overlaping segments?
             segmentsMax = tf.math.segment_max(values, segments)
-            argSegmentsMax = [[segmentsMax[r // windowSize][c] == values[r][c] for c, _ in enumerate(values[r])] for r, _ in enumerate(values)]
+            argSegmentsMax = [
+                [segmentsMax[r // windowSize][c] == values[r][c] for c, _ in enumerate(values[r])] for r, _ in enumerate(values)
+            ]
             maximised = tf.math.logical_and(argSegmentsMax, maximised)
 
         thresholded = tf.math.greater(values, threshold)
@@ -103,7 +102,9 @@ class PeakPicking(tf.keras.metrics.Metric):
         """
         F = 0
         for drumClass in range(len(peaksIndexesPred)):
-            f, p, r = mir_eval.onset.f_measure(np.array(peaksIndexesPred[drumClass]), np.array(peaksIndexesTrue[drumClass]), window=distance)
+            f, p, r = mir_eval.onset.f_measure(
+                np.array(peaksIndexesPred[drumClass]), np.array(peaksIndexesTrue[drumClass]), window=distance
+            )
             F += f
 
         return F / len(peaksIndexesPred)

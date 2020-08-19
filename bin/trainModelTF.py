@@ -9,25 +9,38 @@ import logging
 import os
 import shutil
 
+import numpy as np
 import tensorflow as tf
 
 from adtof import config
 from adtof.converters.converter import Converter
-from adtof.deepModels import dataLoader
+from adtof.deepModels.dataLoader import DataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
-from adtof.io import mir
+from adtof.io import eval
 
-# I also encountered the error:
-# LLVM ERROR: out of memory: Using --limit 500 for now
-# Check if this happens on one fit with limit >> 500: OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
-# Check if this happens on two very small fits: LLVM ERROR: out of memory
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
 # See: https://github.com/tensorflow/tensorflow/issues/41532
-tf.config.threading.set_intra_op_parallelism_threads(1)
-tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(64)
+tf.config.threading.set_inter_op_parallelism_threads(64)
 # tf.config.experimental_run_functions_eagerly(True)
+
+# When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.2
+# LLVM ERROR: out of memory
+
+# When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.3
+# tensorflow terminate called after throwing an instance of 'std::bad_alloc'
+
+# When tf.config.threading.set_intra_op_parallelism_threads(1)
+# tensorflow.python.framework.errors_impl.ResourceExhaustedError:  OOM when allocating tensor with shape[100,21,164,32] and type float on /job:localhost/replica:0/task:0/device:CPU:0 by allocator cpu
+#         [[node sequential_1/conv12/Relu (defined at bin/trainModelTF.py:180) ]]
+# Hint: If you want to see a list of allocated tensors when OOM happens, add report_tensor_allocations_upon_oom to RunOptions for current allocation info.
+#  [Op:__inference_test_function_8151]
+# Function call stack:
+# test_function
+# 2020-08-17 17:57:46.592177: W tensorflow/core/kernels/data/generator_dataset_op.cc:103] Error occurred when finalizing GeneratorDataset iterator: Failed precondition: Python interpreter state is not initialized. The process may be terminated.
+#         [[{{node PyFunc}}]]
 
 
 # Setup logs
@@ -36,6 +49,168 @@ all_logs = os.path.join(cwd, "..", "logs/")
 tensorboardLogs = os.path.join(all_logs, "fit/")
 Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
+
+paramGrid = [
+    (
+        "test",
+        {
+            "labels": config.LABELS_5,
+            "classWeights": config.WEIGHTS_5,
+            "sampleRate": 100,
+            "diff": True,
+            "samplePerTrack": 20,
+            "batchSize": 100,
+            "context": 25,
+            "labelOffset": 0,
+            "labelRadiation": 1,
+            "learningRate": 0.0002,
+            "normalize": False,
+        },
+    ),
+    # (
+    #     "diff, NoNorm",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 0,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0002,
+    #         "normalize": False,
+    #     },
+    # ),
+    # (
+    #     "nodiff, NoNorm",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5,
+    #         "sampleRate": 100,
+    #         "diff": False,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 0,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0002,
+    #         "normalize": False,
+    #     },
+    # ),
+    # (
+    #     "diff, norm",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 0,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0002,
+    #         "normalize": True,
+    #     },
+    # ),
+]
+
+
+def removeFolder(path):
+    """
+    Delete the content of the folder at path
+    """
+    if os.path.exists(tensorboardLogs):
+        try:
+            shutil.rmtree(path, ignore_errors=True)
+        except Exception as e:
+            logging.warning("Couldn't remove folder %s \n%s", path, e)
+    Converter.checkPathExists(path)  # Create the base folder
+
+
+def train_test_model(hparams, args, fold, modelName):
+    """
+    TODO 
+    """
+    # Get the data TODO: the buffer is getting destroyed after each fold
+    trainGen, valGen, valFullGen = DataLoader(args.folderPath).getThreeSplitGen(randomState=fold, limit=args.limit, **hparams)
+    dataset_train = tf.data.Dataset.from_generator(
+        trainGen,
+        (tf.float32, tf.float32, tf.float32),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(hparams["labels"]),)), tf.TensorShape(1)),
+    )
+    dataset_val = tf.data.Dataset.from_generator(
+        valGen,
+        (tf.float32, tf.float32, tf.float32),
+        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(hparams["labels"]),)), tf.TensorShape(1)),
+    )
+    dataset_train = dataset_train.batch(hparams["batchSize"]).repeat()
+    dataset_val = dataset_val.batch(hparams["batchSize"]).repeat()
+    # dataset_train = dataset_train.prefetch(buffer_size=batch_size // 2)
+    # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
+
+    # Get the model
+    checkpoint_dir = os.path.join(cwd, "..", "models")
+    checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
+    nBins = 168 if hparams["diff"] else 84
+    modelHandler = RV1TF()
+    model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
+    model.summary()
+    # latest = tf.train.latest_checkpoint(checkpoint_dir)
+    # if latest and not args.restart:
+    #     model.load_weights(latest)
+
+    # Set the log
+    log_dir = os.path.join(
+        all_logs,
+        "fit",
+        modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%m%d-%H%M"),
+    )
+
+    # Fit the model
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
+        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+        tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
+        tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
+        # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
+    ]
+    # model.fit(
+    #     dataset_train,
+    #     epochs=1,
+    #     initial_epoch=0,
+    #     steps_per_epoch=100,
+    #     callbacks=callbacks,
+    #     validation_data=dataset_val,
+    #     validation_steps=100
+    #     # class_weight=classWeight
+    # )
+
+    # Predict on validation data
+    YHat, Y = np.array([[modelHandler.predictWithPP(model, x, hparams["sampleRate"], hparams["labels"]), y] for x, y in valFullGen()]).T
+    score = eval.runEvaluation(Y, YHat)
+    return score
+
+
+def vizPredictions(dataset, model, params, nBins):
+    """
+    Plot the input, output and target of the model
+    """
+    for x, y, w in dataset:
+        predictions = model.predict(x)
+        import matplotlib.pyplot as plt
+
+        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+        ax1.plot(predictions)
+        ax1.set_ylabel("Prediction")
+        ax2.plot(y)
+        ax2.set_ylabel("Truth")
+        ax2.set_xlabel("Time step")
+        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
+        ax1.legend(params["labels"])
+        plt.show()
 
 
 def main():
@@ -50,152 +225,13 @@ def main():
     parser.add_argument("-l", "--limit", type=int, default=None, help="Limit the number of tracks used in training and eval")
     args = parser.parse_args()
 
-    paramGrid = [
-        (
-            "test",
-            {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 20,
-                "batchSize": 100,
-                "context": 25,
-                "labelOffset": 0,
-                "labelRadiation": 1,
-                "learningRate": 0.0002,
-                "normalize": False,
-            },
-        ),
-        # (
-        #     "diff, NoNorm",
-        #     {
-        #         "labels": config.LABELS_5,
-        #         "classWeights": config.WEIGHTS_5,
-        #         "sampleRate": 100,
-        #         "diff": True,
-        #         "samplePerTrack": 20,
-        #         "batchSize": 100,
-        #         "context": 25,
-        #         "labelOffset": 0,
-        #         "labelRadiation": 1,
-        #         "learningRate": 0.0002,
-        #         "normalize": False,
-        #     },
-        # ),
-        # (
-        #     "nodiff, NoNorm",
-        #     {
-        #         "labels": config.LABELS_5,
-        #         "classWeights": config.WEIGHTS_5,
-        #         "sampleRate": 100,
-        #         "diff": False,
-        #         "samplePerTrack": 20,
-        #         "batchSize": 100,
-        #         "context": 25,
-        #         "labelOffset": 0,
-        #         "labelRadiation": 1,
-        #         "learningRate": 0.0002,
-        #         "normalize": False,
-        #     },
-        # ),
-        # (
-        #     "diff, norm",
-        #     {
-        #         "labels": config.LABELS_5,
-        #         "classWeights": config.WEIGHTS_5,
-        #         "sampleRate": 100,
-        #         "diff": True,
-        #         "samplePerTrack": 20,
-        #         "batchSize": 100,
-        #         "context": 25,
-        #         "labelOffset": 0,
-        #         "labelRadiation": 1,
-        #         "learningRate": 0.0002,
-        #         "normalize": True,
-        #     },
-        # ),
-    ]
-
     if args.restart and os.path.exists(tensorboardLogs):
-        try:
-            shutil.rmtree(tensorboardLogs, ignore_errors=True)
-            Converter.checkPathExists(tensorboardLogs)
-        except Exception as e:
-            logging.warning("Couldn't remove folder %s \n%s", tensorboardLogs, e)
+        removeFolder(tensorboardLogs)
 
     for modelName, params in paramGrid:
         for fold in range(2):
-            # Get the data TODO: the buffer is getting destroyed after each fold
-            trainGen, valGen, testGen = dataLoader.getSplit(args.folderPath, randomState=fold, limit=args.limit, **params)
-
-            dataset_train = tf.data.Dataset.from_generator(
-                trainGen,
-                (tf.float32, tf.float32, tf.float32),
-                output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(params["labels"]),)), tf.TensorShape(1)),
-            )
-            dataset_val = tf.data.Dataset.from_generator(
-                valGen,
-                (tf.float32, tf.float32, tf.float32),
-                output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(params["labels"]),)), tf.TensorShape(1)),
-            )
-            dataset_train = dataset_train.batch(params["batchSize"]).repeat()
-            dataset_val = dataset_val.batch(params["batchSize"]).repeat()
-            # dataset_train = dataset_train.prefetch(buffer_size=batch_size // 2)
-            # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
-
-            # Get the model
-            checkpoint_dir = os.path.join(cwd, "..", "models")
-            checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
-            nBins = 168 if params["diff"] else 84
-            model = RV1TF().createModel(n_bins=nBins, output=len(params["labels"]), **params)
-            model.summary()
-            # latest = tf.train.latest_checkpoint(checkpoint_dir)
-            # if latest and not args.restart:
-            #     model.load_weights(latest)
-
-            # Set the log
-            log_dir = os.path.join(
-                all_logs,
-                "fit",
-                modelName + "_Limit:" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%m%d-%H%M"),
-            )
-
-            # Fit the model
-            callbacks = [
-                tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=True),
-                tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
-                tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
-                tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
-                # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
-            ]
-
-            model.fit(
-                dataset_train,
-                epochs=1,
-                initial_epoch=0,
-                steps_per_epoch=100,
-                callbacks=callbacks,
-                validation_data=dataset_val,
-                validation_steps=100
-                # class_weight=classWeight
-            )
-
-            # for x, y, w in dataset_val:
-            #     predictions = model.predict(x)
-
-            #     import matplotlib.pyplot as plt
-
-            #     f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
-
-            #     ax1.plot(predictions)
-            #     ax1.set_ylabel("Prediction")
-            #     ax2.plot(y)
-            #     ax2.set_ylabel("Truth")
-            #     ax2.set_xlabel("Time step")
-            #     ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
-            #     ax1.legend(params["labels"])
-            #     plt.show()
+            score = train_test_model(params, args, fold, modelName)
+            print(score)
 
 
 if __name__ == "__main__":

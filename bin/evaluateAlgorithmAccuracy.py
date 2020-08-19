@@ -42,7 +42,7 @@ def main():
     groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruthsPaths]
     estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
 
-    result = eval.runEvaluation(groundTruths, estimations, groundTruthsPaths)
+    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths)
     print(result)
     plot(result, prefix="mean")
     plot(result, prefix="sum")

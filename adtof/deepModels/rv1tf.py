@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 
 from adtof.deepModels.peakPicking import PeakPicking
@@ -10,9 +11,8 @@ class RV1TF(object):
     http://ifs.tuwien.ac.at/~vogl/
     """
 
-    # def __init__(self):
-    #     # self.model = self.createModel()
-    #     pass
+    def __init__(self):
+        self.pp = PeakPicking()
 
     def createModel(self, context=25, n_bins=168, output=5, learningRate=0.001 / 2, **kwargs):
         """Return a ts model based 
@@ -63,6 +63,12 @@ class RV1TF(object):
             metrics=["Precision", "Recall"],  # PeakPicking(hitDistance=0.05)
         )
         return model
+
+    def predictWithPP(self, model, x, sampleRate, labels):
+        prediction = model.predict(x)
+        sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
+        sparseResultTime = [np.array(column) / sampleRate for column in sparseResultIdx]
+        return {labels[i]: sparseResultTime[i] for i in range(len(labels))}
 
 
 def log_layers(epoch, input, model, activation_model, file_writer):
