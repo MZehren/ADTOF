@@ -1,3 +1,4 @@
+import madmom
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -64,9 +65,13 @@ class RV1TF(object):
         )
         return model
 
-    def predictWithPP(self, model, x, sampleRate, labels):
-        prediction = model.predict(x)
-        sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
+    def predictWithPP(self, _model, input, sampleRate=100, labels=[45], peakThreshold=0.1, **kwargs):
+        prediction = _model.predict(input)
+        # sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
+        sparseResultIdx = [
+            madmom.features.onsets.peak_picking(prediction[:, column], peakThreshold, smooth=2, pre_avg=1, post_avg=1)
+            for column in range(prediction.shape[1])
+        ]
         sparseResultTime = [np.array(column) / sampleRate for column in sparseResultIdx]
         return {labels[i]: sparseResultTime[i] for i in range(len(labels))}
 
