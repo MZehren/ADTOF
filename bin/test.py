@@ -44,9 +44,9 @@ def main():
     dl = DataLoader(args.folderPath)
     mir = MIR(frameRate=100)
 
-    for i, path in enumerate(dl.audioPaths):
-        x = mir.open(path)
-        print(path, i)
+    for audioPath, cachePath in zip(dl.audioPaths, dl.featurePaths):
+        x = mir.open(audioPath, cachePath=cachePath)
+        print(audioPath)
 
 
 if __name__ == "__main__":
