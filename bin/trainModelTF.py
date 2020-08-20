@@ -53,6 +53,7 @@ cwd = os.path.abspath(os.path.dirname(__file__))
 all_logs = os.path.join(cwd, "..", "logs/")
 tensorboardLogs = os.path.join(all_logs, "fit/")
 hparamsLogs = os.path.join(all_logs, "hparam/")
+checkpoint_dir = os.path.join(cwd, "..", "models")
 Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
 
@@ -79,13 +80,13 @@ paramGrid = [
         },
     ),
     (
-        "CNN-noDiff",
+        "CNN-Diff-lowSamples",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5,
             "sampleRate": 100,
-            "diff": False,
-            "samplePerTrack": 20,
+            "diff": True,
+            "samplePerTrack": 1,
             "batchSize": 100,
             "context": 25,
             "labelOffset": 0,
@@ -136,40 +137,40 @@ def train_test_model(hparams, args, fold, modelName):
     # dataset_train = dataset_train.prefetch(buffer_size=batch_size // 2)
     # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
 
-    # Get the model
-    checkpoint_dir = os.path.join(cwd, "..", "models")
-    checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
-    nBins = 168 if hparams["diff"] else 84
-    modelHandler = RV1TF()
-    model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
-    # latest = tf.train.latest_checkpoint(checkpoint_dir)
-    # if latest and not args.restart:
-    #     model.load_weights(latest)
-
     # Set the log
     log_dir = os.path.join(
         tensorboardLogs,
         modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),
     )
+    # Get the model
+    checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
+    nBins = 168 if hparams["diff"] else 84
+    modelHandler = RV1TF()
+    model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
-    # Fit the model
-    callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False, profile_batch=0),
-        tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
-        tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
-        tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
-        # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
-    ]
-    model.fit(
-        dataset_train,
-        epochs=200,
-        initial_epoch=0,
-        steps_per_epoch=100,
-        callbacks=callbacks,
-        validation_data=dataset_val,
-        validation_steps=100
-        # class_weight=classWeight
-    )
+    # latest = tf.train.latest_checkpoint(checkpoint_path)
+    if os.path.exists(checkpoint_path) and not args.restart:
+        logging.info("loading model %s", checkpoint_path)
+        model.load_weights(checkpoint_path)
+    else:
+        # Fit the model
+        callbacks = [
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False, profile_batch=0),
+            tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
+            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
+            # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
+        ]
+        model.fit(
+            dataset_train,
+            epochs=200,
+            initial_epoch=0,
+            steps_per_epoch=100,
+            callbacks=callbacks,
+            validation_data=dataset_val,
+            validation_steps=100
+            # class_weight=classWeight
+        )
 
     # Predict on validation data
     YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
@@ -211,6 +212,7 @@ def main():
     if args.restart and os.path.exists(tensorboardLogs):
         removeFolder(tensorboardLogs)
         removeFolder(hparamsLogs)
+        removeFolder(checkpoint_dir)
 
     for modelName, params in paramGrid:
         for fold in range(2):
