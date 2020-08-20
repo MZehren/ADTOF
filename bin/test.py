@@ -46,9 +46,9 @@ def main():
     # gen = dl.getGen(repeat=False, samplePerTrack=None)
     def gen():
         mir = MIR()
-        for path in dl.audioPaths:
-            buffer[path] = mir.open(path)
-            yield buffer[path]
+        for audioPath, cachePath in zip(dl.audioPaths, dl.cachePath):
+            buffer[audioPath] = mir.open(audioPath, cachePath=cachePath)
+            yield buffer[audioPath]
 
     i = 0
     for value in gen():
