@@ -35,7 +35,7 @@ tf.config.threading.set_inter_op_parallelism_threads(32)
 def gen(paths):
     mir = MIR()
     for path in paths:
-        return mir.open(path)
+        yield mir.open(path)
 
 
 def main():
