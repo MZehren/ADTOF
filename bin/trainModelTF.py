@@ -148,14 +148,14 @@ def train_test_model(hparams, args, fold, modelName):
     modelHandler = RV1TF()
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
-    # latest = tf.train.latest_checkpoint(checkpoint_path)
-    if os.path.exists(checkpoint_path) and not args.restart:
-        logging.info("loading model %s", checkpoint_path)
+    # latest = tf.train.latest_checkpoint(checkpoint_dir)
+    if os.path.exists(checkpoint_path + ".index") and not args.restart:
+        logging.info("loading model weights %s", checkpoint_path)
         model.load_weights(checkpoint_path)
     else:
         # Fit the model
         callbacks = [
-            tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False, profile_batch=0),
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
             tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
             tf.keras.callbacks.ReduceLROnPlateau(factor=0.2),
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
