@@ -24,8 +24,8 @@ from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
 from adtof.io.mir import MIR
 
-# tf.config.threading.set_intra_op_parallelism_threads(32)
-# tf.config.threading.set_inter_op_parallelism_threads(32)
+tf.config.threading.set_intra_op_parallelism_threads(32)
+tf.config.threading.set_inter_op_parallelism_threads(32)
 # # tf.config.experimental_run_functions_eagerly(True)
 # if not os.path.exists("logs"):
 #     os.makedirs("logs")
