@@ -43,7 +43,7 @@ def main():
 
     dl = DataLoader(args.folderPath)
 
-    gen = dl.getGen(repeat=False)
+    gen = dl.getGen(repeat=False, samplePerTrack=None)
     for value in gen():
         print(len(value))
 
