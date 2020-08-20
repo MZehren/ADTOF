@@ -42,11 +42,10 @@ def main():
     args = parser.parse_args()
 
     dl = DataLoader(args.folderPath)
-    mir = MIR(frameRate=100)
 
-    for audioPath, cachePath in zip(dl.audioPaths, dl.featurePaths):
-        x = mir.open(audioPath, cachePath=cachePath)
-        print(audioPath)
+    gen = dl.getGen(repeat=False)
+    for value in gen():
+        print(len(value))
 
 
 if __name__ == "__main__":
