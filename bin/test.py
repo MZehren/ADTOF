@@ -32,12 +32,6 @@ tf.config.threading.set_inter_op_parallelism_threads(32)
 # logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
 
 
-def gen(paths):
-    mir = MIR()
-    for path in paths:
-        yield mir.open(path)
-
-
 def main():
     """
     Entry point of the program
@@ -48,10 +42,16 @@ def main():
     args = parser.parse_args()
 
     dl = DataLoader(args.folderPath)
-
+    buffer = {}
     # gen = dl.getGen(repeat=False, samplePerTrack=None)
+    def gen():
+        mir = MIR()
+        for path in dl.audioPaths:
+            buffer[path] = mir.open(path)
+            yield buffer[path]
+
     i = 0
-    for value in gen(dl.audioPaths):
+    for value in gen():
         print(i)
         i += 1
 
