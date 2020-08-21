@@ -143,9 +143,9 @@ def train_test_model(hparams, args, fold, modelName):
         modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),
     )
     # Get the model
-    checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
+    checkpoint_path = os.path.join(checkpoint_dir, modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + ".ckpt")
     nBins = 168 if hparams["diff"] else 84
-    modelHandler = RV1TF()
+    modelHandler = RV1TF(**hparams)
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
     # latest = tf.train.latest_checkpoint(checkpoint_dir)

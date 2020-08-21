@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import madmom
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,8 +14,11 @@ class RV1TF(object):
     http://ifs.tuwien.ac.at/~vogl/
     """
 
-    def __init__(self):
+    def __init__(self, peakThreshold=0.15, sampleRate=100, **kwargs):
         self.pp = PeakPicking()
+        self.ppp = madmom.features.notes.NotePeakPickingProcessor(
+            threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
+        )
 
     def createModel(self, context=25, n_bins=168, output=5, learningRate=0.001 / 2, **kwargs):
         """Return a ts model based 
@@ -65,15 +70,21 @@ class RV1TF(object):
         )
         return model
 
-    def predictWithPP(self, _model, input, sampleRate=100, labels=[45], peakThreshold=0.1, **kwargs):
+    def predictWithPP(self, _model, input, labels=[45], **kwargs):
         prediction = _model.predict(input)
         # sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
-        sparseResultIdx = [
-            madmom.features.onsets.peak_picking(prediction[:, column], peakThreshold, smooth=2, pre_avg=1, post_avg=1)
-            for column in range(prediction.shape[1])
-        ]
-        sparseResultTime = [np.array(column) / sampleRate for column in sparseResultIdx]
-        return {labels[i]: sparseResultTime[i] for i in range(len(labels))}
+        # sparseResultIdx = [
+        #     madmom.features.onsets.peak_picking(prediction[:, column], peakThreshold, smooth=2, pre_avg=1, post_avg=1)
+        #     for column in range(prediction.shape[1])
+        # ]
+        # sparseResultTime = [np.array(column) / sampleRate for column in sparseResultIdx]
+        # result = {labels[i]: sparseResultTime[i] for i in range(len(labels))}
+        sparseResultIdx = self.ppp.process(prediction)
+        result = defaultdict(list)
+        for time, pitch in sparseResultIdx:
+            result[labels[int(pitch - 21)]].append(time)
+
+        return result
 
 
 def log_layers(epoch, input, model, activation_model, file_writer):
