@@ -138,12 +138,9 @@ def train_test_model(hparams, args, fold, modelName):
     # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
 
     # Set the log
-    log_dir = os.path.join(
-        tensorboardLogs,
-        modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),
-    )
+    log_dir = os.path.join(tensorboardLogs, modelName + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),)
     # Get the model
-    checkpoint_path = os.path.join(checkpoint_dir, modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold) + ".ckpt")
+    checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
     nBins = 168 if hparams["diff"] else 84
     modelHandler = RV1TF(**hparams)
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
@@ -216,6 +213,7 @@ def main():
 
     for modelName, params in paramGrid:
         for fold in range(2):
+            modelName = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
             with tf.summary.create_file_writer(hparamsLogs + modelName).as_default():
                 hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelName)
                 score = train_test_model(params, args, fold, modelName)
