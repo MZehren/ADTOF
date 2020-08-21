@@ -24,8 +24,8 @@ from adtof.io import eval
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
 # See: https://github.com/tensorflow/tensorflow/issues/41532
-tf.config.threading.set_intra_op_parallelism_threads(32)
-tf.config.threading.set_inter_op_parallelism_threads(32)
+# tf.config.threading.set_intra_op_parallelism_threads(32)
+# tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 
 # When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.2
@@ -80,17 +80,17 @@ paramGrid = [
         },
     ),
     (
-        "CNN-Diff-lowSamples",
+        "CNN-Diff-rad1",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5,
             "sampleRate": 100,
             "diff": True,
-            "samplePerTrack": 1,
+            "samplePerTrack": 20,
             "batchSize": 100,
             "context": 25,
             "labelOffset": 0,
-            "labelRadiation": 1,
+            "labelRadiation": 2,
             "learningRate": 0.0002,
             "normalize": False,
             "model": "CNN",
@@ -134,8 +134,8 @@ def train_test_model(hparams, args, fold, modelName):
     )
     dataset_train = dataset_train.batch(hparams["batchSize"]).repeat()
     dataset_val = dataset_val.batch(hparams["batchSize"]).repeat()
-    # dataset_train = dataset_train.prefetch(buffer_size=batch_size // 2)
-    # dataset_val = dataset_val.prefetch(buffer_size=batch_size // 2)
+    dataset_train = dataset_train.prefetch(buffer_size=2)
+    dataset_val = dataset_val.prefetch(buffer_size=2)
 
     # Set the log
     log_dir = os.path.join(tensorboardLogs, modelName + "_" + datetime.datetime.now().strftime("%d-%m-%H:%M"),)
@@ -145,12 +145,11 @@ def train_test_model(hparams, args, fold, modelName):
     modelHandler = RV1TF(**hparams)
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
-    # latest = tf.train.latest_checkpoint(checkpoint_dir)
+    # if model is already trained, load the weights else fit
     if os.path.exists(checkpoint_path + ".index") and not args.restart:
         logging.info("loading model weights %s", checkpoint_path)
         model.load_weights(checkpoint_path)
     else:
-        # Fit the model
         callbacks = [
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
             tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
@@ -169,10 +168,12 @@ def train_test_model(hparams, args, fold, modelName):
             # class_weight=classWeight
         )
 
+    # If the model is already evaluated, skip the evaluation
     # Predict on validation data
-    YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
-    score = eval.runEvaluation(Y, YHat)
-    return score
+    if os.path.exists(hparamsLogs + modelName) or args.restart:
+        YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
+        score = eval.runEvaluation(Y, YHat)
+        return score
 
 
 def vizPredictions(dataset, model, params, nBins):
@@ -213,10 +214,10 @@ def main():
 
     for modelName, params in paramGrid:
         for fold in range(2):
-            modelName = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
-            with tf.summary.create_file_writer(hparamsLogs + modelName).as_default():
-                hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelName)
-                score = train_test_model(params, args, fold, modelName)
+            modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
+            with tf.summary.create_file_writer(hparamsLogs + modelNameComp).as_default():
+                hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelNameComp)
+                score = train_test_model(params, args, fold, modelNameComp)
                 for key, value in score.items():
                     tf.summary.scalar(key, value, step=fold)
 

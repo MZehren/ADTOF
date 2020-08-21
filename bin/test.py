@@ -42,18 +42,16 @@ def main():
     args = parser.parse_args()
 
     dl = DataLoader(args.folderPath)
-    buffer = {}
-    # gen = dl.getGen(repeat=False, samplePerTrack=None)
-    def gen():
-        mir = MIR()
-        for audioPath, cachePath in zip(dl.audioPaths, dl.featurePaths):
-            buffer[audioPath] = mir.open(audioPath, cachePath=cachePath)
-            yield buffer[audioPath]
+    gen = dl.getGen(repeat=False, samplePerTrack=1)
 
-    i = 0
-    for value in gen():
-        print(i)
-        i += 1
+    bla = gen()
+    print(timeit.timeit(lambda: next(bla), number=500))
+    bla = gen()
+    print(timeit.timeit(lambda: next(bla), number=500))
+    bla = gen()
+    print(timeit.timeit(lambda: next(bla), number=500))
+    bla = gen()
+    print(timeit.timeit(lambda: next(bla), number=500))
 
 
 if __name__ == "__main__":

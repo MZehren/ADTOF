@@ -143,7 +143,7 @@ class DataLoader(object):
         samplePerTrack=100,
         context=25,
         balanceClassesDistribution=False,
-        classWeights=[2, 4],
+        classWeights=np.array([1, 1, 1, 1, 1]),
         repeat=True,
         **kwargs,
     ):
@@ -186,7 +186,10 @@ class DataLoader(object):
                                 sampleIdx = cursor
 
                             y = track["y"][sampleIdx]
-                            sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                            # sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                            sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
+                            sampleWeight = np.array([max(sampleWeight, 1)])
+
                             yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
                     else:  # Yield the full track split in overlapping chunks with context
                         yield np.array([track["x"][i : i + context] for i in range(len(track["x"]) - context)]), track["y"]
