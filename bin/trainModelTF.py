@@ -24,8 +24,8 @@ from adtof.io import eval
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
 # See: https://github.com/tensorflow/tensorflow/issues/41532
-# tf.config.threading.set_intra_op_parallelism_threads(32)
-# tf.config.threading.set_inter_op_parallelism_threads(32)
+tf.config.threading.set_intra_op_parallelism_threads(32)
+tf.config.threading.set_inter_op_parallelism_threads(32)
 # tf.config.experimental_run_functions_eagerly(True)
 
 # When tf.config.threading.set_intra_op_parallelism_threads(32) and tf 2.2
@@ -147,9 +147,10 @@ def train_test_model(hparams, args, fold, modelName):
 
     # if model is already trained, load the weights else fit
     if os.path.exists(checkpoint_path + ".index") and not args.restart:
-        logging.info("loading model weights %s", checkpoint_path)
+        logging.info("Loading model weights %s", modelName)
         model.load_weights(checkpoint_path)
     else:
+        logging.info("Training model %s", modelName)
         callbacks = [
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
             tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
@@ -171,9 +172,12 @@ def train_test_model(hparams, args, fold, modelName):
     # If the model is already evaluated, skip the evaluation
     # Predict on validation data
     if os.path.exists(hparamsLogs + modelName) or args.restart:
+        logging.info("Evaluating model %s", modelName)
         YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
         score = eval.runEvaluation(Y, YHat)
         return score
+    else:
+        logging.info("Skipping evaluation of model %s", modelName)
 
 
 def vizPredictions(dataset, model, params, nBins):
