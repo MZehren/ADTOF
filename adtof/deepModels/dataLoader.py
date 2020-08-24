@@ -100,19 +100,41 @@ class DataLoader(object):
                 logging.debug("Pitch %s is not represented in the track %s", key, filename)
         return np.array(result).T
 
-    def getSplit(self, trainNSplit=10, validationSplit=0.20, randomState=1, limit=None, **kwargs):
-        """
-        TODO
+    def getSplit(self, nFolds=10, validationFold=0, limit=None, **kwargs):
+        """Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
+        There are no group overlap between folds
+
+        Parameters
+        ----------
+        trainNSplit : int, optional
+            Number of splits for the data, has to be >=3, by default 10. Keep it the same during training as changing it would shuffle the splits.
+        validationFold : int, optional
+            fold of the validation, has to be < trainNSplit -1 since one fold is saved for testing, by default 0
+        limit : int, optional
+            if present, limit the size of each split, by default None
+
+        Returns
+        -------
+        (trainIndexes, validationIndexes, testIndexes)
+
         """
 
         # Split the data in train, validation and test, without same band in test and train+test
         groups = [config.getBand(path) for path in self.audioPaths]
-        groupKFold = sklearn.model_selection.GroupKFold(n_splits=trainNSplit)
-        groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
-        trainValIndexes, testIndexes = next(groupKFold.split(self.audioPaths, self.annotationPaths, groups))
-        trainIndexes, valIndexes = sklearn.model_selection.train_test_split(
-            trainValIndexes, test_size=validationSplit, random_state=randomState, shuffle=True
-        )
+        groupKFold = sklearn.model_selection.GroupKFold(n_splits=nFolds)
+        realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
+
+        # The data is split in train, val, test. Hence at least three groups are needed
+        assert realNFolds >= 3
+        # validationFold holds the fold used for validation, it can't be above the number of folds available after removing the test fold
+        assert validationFold < realNFolds - 1
+        folds = [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
+        testIndexes = folds.pop(0)
+        valIndexes = folds.pop(validationFold)
+        trainIndexes = np.concatenate(folds)
+
+        # Limit the number of files as it can be memory intensive
+        # The limit is done after the split to ensure no test data leakage with different values of limit.
         if limit is not None:
             trainIndexes = trainIndexes[:limit]
             valIndexes = valIndexes[:limit]

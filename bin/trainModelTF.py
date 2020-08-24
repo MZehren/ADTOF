@@ -121,7 +121,7 @@ def train_test_model(hparams, args, fold, modelName):
     TODO 
     """
     # Get the data TODO: the buffer is getting destroyed after each fold
-    trainGen, valGen, valFullGen = DataLoader(args.folderPath).getThreeSplitGen(randomState=fold, limit=args.limit, **hparams)
+    trainGen, valGen, valFullGen = DataLoader(args.folderPath).getThreeSplitGen(validationFold=fold, limit=args.limit, **hparams)
     dataset_train = tf.data.Dataset.from_generator(
         trainGen,
         (tf.float32, tf.float32, tf.float32),

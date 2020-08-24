@@ -42,16 +42,7 @@ def main():
     args = parser.parse_args()
 
     dl = DataLoader(args.folderPath)
-    gen = dl.getGen(repeat=False, samplePerTrack=1)
-
-    bla = gen()
-    print(timeit.timeit(lambda: next(bla), number=500))
-    bla = gen()
-    print(timeit.timeit(lambda: next(bla), number=500))
-    bla = gen()
-    print(timeit.timeit(lambda: next(bla), number=500))
-    bla = gen()
-    print(timeit.timeit(lambda: next(bla), number=500))
+    gen = dl.getSplit(validationFold=1)
 
 
 if __name__ == "__main__":
