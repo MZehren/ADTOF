@@ -171,13 +171,13 @@ def train_test_model(hparams, args, fold, modelName):
 
     # If the model is already evaluated, skip the evaluation
     # Predict on validation data
-    if os.path.exists(hparamsLogs + modelName) or args.restart:
+    if os.path.exists(hparamsLogs + modelName) and not args.restart:
+        logging.info("Skipping evaluation of model %s", modelName)
+    else:
         logging.info("Evaluating model %s", modelName)
         YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
         score = eval.runEvaluation(Y, YHat)
         return score
-    else:
-        logging.info("Skipping evaluation of model %s", modelName)
 
 
 def vizPredictions(dataset, model, params, nBins):

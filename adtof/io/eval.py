@@ -39,7 +39,7 @@ def runEvaluation(groundTruths, estimations, paths=[], window=0.05, removeStart=
 
         trackF = np.mean([meanResults[pitch]["F"][-1] for pitch in classes])
         if trackF < 0.05:
-            logging.info("Alert, track performed badly. Score: %s, Track:%s", str(trackF), paths[i] if i in paths else "unknown")
+            logging.debug("Alert, track performed badly. Score: %s, Track:%s", str(trackF), paths[i] if i in paths else i)
 
     result = {}
 
