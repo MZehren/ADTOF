@@ -79,27 +79,27 @@ paramGrid = [
             "beat_targ": False,
         },
     ),
-    (
-        "CNN-Diff-rad1",
-        {
-            "labels": config.LABELS_5,
-            "classWeights": config.WEIGHTS_5,
-            "sampleRate": 100,
-            "diff": True,
-            "samplePerTrack": 20,
-            "batchSize": 100,
-            "context": 25,
-            "labelOffset": 0,
-            "labelRadiation": 2,
-            "learningRate": 0.0002,
-            "normalize": False,
-            "model": "CNN",
-            "fmin": 20,
-            "fmax": 20000,
-            "pad": False,
-            "beat_targ": False,
-        },
-    ),
+    # (
+    #     "CNN-Diff-rad1",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 0,
+    #         "labelRadiation": 2,
+    #         "learningRate": 0.0002,
+    #         "normalize": False,
+    #         "model": "CNN",
+    #         "fmin": 20,
+    #         "fmax": 20000,
+    #         "pad": False,
+    #         "beat_targ": False,
+    #     },
+    # ),
 ]
 
 
@@ -147,7 +147,7 @@ def train_test_model(hparams, args, fold, modelName):
 
     # if model is already trained, load the weights else fit
     if os.path.exists(checkpoint_path + ".index") and not args.restart:
-        logging.info("Loading model weights %s", modelName)
+        logging.info("Loading model weights %s", checkpoint_path)
         model.load_weights(checkpoint_path)
     else:
         logging.info("Training model %s", modelName)
@@ -218,7 +218,7 @@ def main():
         removeFolder(checkpoint_dir)
 
     for modelName, params in paramGrid:
-        for fold in range(2):
+        for fold in range(1):
             modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
             score = train_test_model(params, args, fold, modelNameComp)
 
