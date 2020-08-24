@@ -173,7 +173,7 @@ def train_test_model(hparams, args, fold, modelName):
     # Predict on validation data
     if os.path.exists(hparamsLogs + modelName) and not args.restart:
         logging.info("Skipping evaluation of model %s", modelName)
-        return {}
+        return None
     else:
         logging.info("Evaluating model %s", modelName)
         YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
@@ -220,11 +220,13 @@ def main():
     for modelName, params in paramGrid:
         for fold in range(2):
             modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
-            with tf.summary.create_file_writer(hparamsLogs + modelNameComp).as_default():
-                hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelNameComp)
-                score = train_test_model(params, args, fold, modelNameComp)
-                for key, value in score.items():
-                    tf.summary.scalar(key, value, step=fold)
+            score = train_test_model(params, args, fold, modelNameComp)
+
+            if score:
+                with tf.summary.create_file_writer(hparamsLogs + modelNameComp).as_default():
+                    hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelNameComp)
+                    for key, value in score.items():
+                        tf.summary.scalar(key, value, step=fold)
 
 
 if __name__ == "__main__":
