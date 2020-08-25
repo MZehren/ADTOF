@@ -10,6 +10,7 @@ import os
 import shutil
 
 import numpy as np
+import six
 import sklearn
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
@@ -245,7 +246,10 @@ def main():
 
             if score is not None:
                 with tf.summary.create_file_writer(hparamsLogs + modelNameComp).as_default():
-                    hp.hparams({k: v if not isinstance(v, list) else str(v) for k, v in params.items()}, trial_id=modelNameComp)
+                    hp.hparams(
+                        {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in params.items()},
+                        trial_id=modelNameComp,
+                    )
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
 
