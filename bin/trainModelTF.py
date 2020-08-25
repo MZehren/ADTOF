@@ -58,11 +58,32 @@ Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
 
 paramGrid = [
+    # (
+    #     "CNN-Diff",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 0,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0002,
+    #         "normalize": False,
+    #         "model": "CNN",
+    #         "fmin": 20,
+    #         "fmax": 20000,
+    #         "pad": False,
+    #         "beat_targ": False,
+    #     },
+    # ),
     (
-        "CNN-Diff",
+        "CNN-rad1-weight5",
         {
             "labels": config.LABELS_5,
-            "classWeights": config.WEIGHTS_5,
+            "classWeights": config.WEIGHTS_5 / 2,
             "sampleRate": 100,
             "diff": True,
             "samplePerTrack": 20,
@@ -79,27 +100,27 @@ paramGrid = [
             "beat_targ": False,
         },
     ),
-    # (
-    #     "CNN-Diff-rad1",
-    #     {
-    #         "labels": config.LABELS_5,
-    #         "classWeights": config.WEIGHTS_5,
-    #         "sampleRate": 100,
-    #         "diff": True,
-    #         "samplePerTrack": 20,
-    #         "batchSize": 100,
-    #         "context": 25,
-    #         "labelOffset": 0,
-    #         "labelRadiation": 2,
-    #         "learningRate": 0.0002,
-    #         "normalize": False,
-    #         "model": "CNN",
-    #         "fmin": 20,
-    #         "fmax": 20000,
-    #         "pad": False,
-    #         "beat_targ": False,
-    #     },
-    # ),
+    (
+        "CNN-rad2-weight5",
+        {
+            "labels": config.LABELS_5,
+            "classWeights": config.WEIGHTS_5 / 2,
+            "sampleRate": 100,
+            "diff": True,
+            "samplePerTrack": 20,
+            "batchSize": 100,
+            "context": 25,
+            "labelOffset": 0,
+            "labelRadiation": 2,
+            "learningRate": 0.0002,
+            "normalize": False,
+            "model": "CNN",
+            "fmin": 20,
+            "fmax": 20000,
+            "pad": False,
+            "beat_targ": False,
+        },
+    ),
 ]
 
 
@@ -218,13 +239,13 @@ def main():
         removeFolder(checkpoint_dir)
 
     for modelName, params in paramGrid:
-        for fold in range(1):
+        for fold in range(2):
             modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
             score = train_test_model(params, args, fold, modelNameComp)
 
-            if score:
+            if score is not None:
                 with tf.summary.create_file_writer(hparamsLogs + modelNameComp).as_default():
-                    hp.hparams({k: v for k, v in params.items() if not isinstance(v, list)}, trial_id=modelNameComp)
+                    hp.hparams({k: v if not isinstance(v, list) else str(v) for k, v in params.items()}, trial_id=modelNameComp)
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
 

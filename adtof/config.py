@@ -279,10 +279,10 @@ RBMA_MIDI_8 = {
 }
 
 # Labels and class weights for the 5 output of the neural network
-LABELS_5 = [35, 38, 47, 42, 49]
+LABELS_5 = np.array([35, 38, 47, 42, 49])
 # measure frequency {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
 # Vogl weights Bass drum (1.0), snare drum (4.0), and hi-hat (1.5)
-WEIGHTS_5 = [10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326]  # [5.0, 7.0, 50.0, 3.0, 24.0]
+WEIGHTS_5 = np.array([10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326])
 
 
 def getGridOfParameters(parameters):
