@@ -171,15 +171,15 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
 # """
 # load
 # """
-import pickle
+# import pickle
 
 # file="/home/mickael/Documents/programming/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
 
-with open(file, "rb") as f:
-    u = pickle._Unpickler(f)
-    u.encoding = "latin1"
-    p = u.load()
-    print(p)
+# with open(file, "rb") as f:
+#     u = pickle._Unpickler(f)
+#     u.encoding = "latin1"
+#     p = u.load()
+#     print(p)
 
 # 00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b2f38ac8>
 # 01:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5d30>
