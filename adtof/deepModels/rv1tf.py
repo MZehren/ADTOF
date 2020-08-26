@@ -4,9 +4,12 @@ import madmom
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from numpy.core.defchararray import mod
 from tensorflow.keras import layers
+from tensorflow.python.eager.monitoring import Sampler
 
 from adtof.deepModels.peakPicking import PeakPicking
+from adtof.io import eval
 
 
 class RV1TF(object):
@@ -15,11 +18,11 @@ class RV1TF(object):
     http://ifs.tuwien.ac.at/~vogl/
     """
 
-    def __init__(self, peakThreshold=0.15, sampleRate=100, **kwargs):
-        self.pp = PeakPicking()
-        self.ppp = madmom.features.notes.NotePeakPickingProcessor(
-            threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
-        )
+    # def __init__(self, peakThreshold=0.15, sampleRate=100, **kwargs):
+    #     self.pp = PeakPicking()
+    #     self.ppp = madmom.features.notes.NotePeakPickingProcessor(
+    #         threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
+    #     )
 
     def createModel(self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, **kwargs):
         """Return a tf model based 
@@ -64,6 +67,8 @@ class RV1TF(object):
                 tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
                 tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
             ]
+        else:
+            raise ValueError("%s not known", model)
 
         layers += [tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput")]
         tfModel = tf.keras.Sequential(layers)
@@ -78,18 +83,31 @@ class RV1TF(object):
         )
         return tfModel
 
-    def predictWithPP(self, _model, input, labels=[45], labelOffset=0, sampleRate=100, **kwargs):
-        prediction = _model.predict(input)
-        # sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
-        # sparseResultIdx = [
-        #     madmom.features.onsets.peak_picking(prediction[:, column], peakThreshold, smooth=2, pre_avg=1, post_avg=1)
-        #     for column in range(prediction.shape[1])
-        # ]
-        # sparseResultTime = [np.array(column) / sampleRate for column in sparseResultIdx]
-        # result = {labels[i]: sparseResultTime[i] for i in range(len(labels))}
-        sparseResultIdx = self.ppp.process(prediction)
-        result = defaultdict(list)
+    def predict(self, _model, dataset, peakPickingTarget="sum F all", peakPickingStep=0.05, sampleRate=100, labelOffset=0, **kwargs):
+        """
+        Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
+        """
+        predictions, Y = np.array([[_model.predict(x), y] for x, y in dataset()]).T
         timeOffset = labelOffset / sampleRate
+        results = []
+        for peakThreshold in np.arange(peakPickingStep, 0.5, peakPickingStep):
+            ppp = madmom.features.notes.NotePeakPickingProcessor(
+                threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
+            )
+            YHat = [self.processPP(ppp, prediction, timeOffset, **kwargs) for prediction in predictions]
+            score = eval.runEvaluation(Y, YHat)
+            score["peakThreshold"] = peakThreshold
+            results.append(score)
+            print("done")
+
+        return max(results, key=lambda x: x[peakPickingTarget])
+
+    def processPP(self, ppp, prediction, timeOffset, labels=[36], **kwargs):
+        """
+        Call Madmom's peak picking processor on one track's prediction and transform the output in the correct format 
+        """
+        sparseResultIdx = ppp.process(prediction)
+        result = defaultdict(list)
         for time, pitch in sparseResultIdx:
             result[labels[int(pitch - 21)]].append(time + timeOffset)
 

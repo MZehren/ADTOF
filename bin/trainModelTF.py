@@ -20,7 +20,7 @@ from adtof.converters.converter import Converter
 from adtof.deepModels.dataLoader import DataLoader
 from adtof.deepModels.peakPicking import PeakPicking
 from adtof.deepModels.rv1tf import RV1TF
-from adtof.io import eval
+
 
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
@@ -66,7 +66,7 @@ paramGrid = [
             "classWeights": config.WEIGHTS_5 / 2,
             "sampleRate": 100,
             "diff": True,
-            "samplePerTrack": 20,
+            "samplePerTrack": 100,
             "batchSize": 100,
             "context": 25,
             "labelOffset": 5,
@@ -142,13 +142,14 @@ def train_test_model(hparams, args, fold, modelName):
     # Get the model
     checkpoint_path = os.path.join(checkpoint_dir, modelName + ".ckpt")
     nBins = 168 if hparams["diff"] else 84
-    modelHandler = RV1TF(**hparams)
+    modelHandler = RV1TF()
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
     # if model is already trained, load the weights else fit
     if os.path.exists(checkpoint_path + ".index") and not args.restart:
         logging.info("Loading model weights %s", checkpoint_path)
         model.load_weights(checkpoint_path)
+        # vizPredictions(dataset_train, model, hparams)
     else:
         logging.info("Training model %s", modelName)
         callbacks = [
@@ -176,12 +177,10 @@ def train_test_model(hparams, args, fold, modelName):
         return None
     else:
         logging.info("Evaluating model %s", modelName)
-        YHat, Y = np.array([[modelHandler.predictWithPP(model, x, **hparams), y] for x, y in valFullGen()]).T
-        score = eval.runEvaluation(Y, YHat)
-        return score
+        return modelHandler.predict(model, valFullGen, **hparams)
 
 
-def vizPredictions(dataset, model, params, nBins):
+def vizPredictions(dataset, model, params):
     """
     Plot the input, output and target of the model
     """
@@ -190,12 +189,12 @@ def vizPredictions(dataset, model, params, nBins):
         import matplotlib.pyplot as plt
 
         f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
-        ax1.plot(predictions)
+        ax1.plot(predictions, alpha=0.8)
         ax1.set_ylabel("Prediction")
-        ax2.plot(y)
+        ax2.plot(y, alpha=0.8)
         ax2.set_ylabel("Truth")
         ax2.set_xlabel("Time step")
-        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], nBins))), aspect="auto")
+        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], -1))), aspect="auto")
         ax1.legend(params["labels"])
         plt.show()
 
