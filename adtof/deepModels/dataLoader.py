@@ -31,7 +31,7 @@ class DataLoader(object):
             [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in self.audioPaths]
         )
 
-    def readTrack(self, i, sampleRate=100, context=25, labelOffset=0, labels=[36, 40, 41, 46, 49], yDense=True, removeStart=True, **kwargs):
+    def readTrack(self, i, sampleRate=100, context=25, labelOffset=0, labels=[35, 38, 47, 42, 49], yDense=True, removeStart=True, **kwargs):
         """
         Read the track and the midi to return X and Y 
         """
@@ -41,43 +41,58 @@ class DataLoader(object):
 
         # read files
         notes = TextReader().getOnsets(self.annotationPaths[i])
-        # Trim before the first midi note (to remove the unannotated count in) and after the last uncovered part
-        # Default to index 5s if there are not pitch with event.
+
+        # Trim before the first note to remove count in
+        # Move the trim by the offset amount to keep the first notation
+        offsetTime = labelOffset / sampleRate
         firstNoteTime = np.min([v[0] for v in notes.values() if len(v)])
-        lastNoteTime = np.max([v[-1] for v in notes.values() if len(v)])
+        firstNoteTime = max(0, firstNoteTime - offsetTime)
         firstNoteIdx = int(firstNoteTime * sampleRate)
+
+        # Trim after the last note to remove all part of the track not annotated
+        # Make sure the index doesn't exceed any boundaries
+        # TODO is it necessary, or do we want to keep all the audio?
+        lastNoteTime = np.max([v[-1] for v in notes.values() if len(v)])
         lastNoteIdx = min(int(lastNoteTime * sampleRate) + 1, len(x) - 1 - context)
 
-        X = x[firstNoteIdx - labelOffset : lastNoteIdx + context - labelOffset]
+        X = x[firstNoteIdx : lastNoteIdx + context]
         if yDense:  # Return dense GT
-            y = self.getDenseEncoding(self.annotationPaths[i], notes, sampleRate=sampleRate, keys=labels, **kwargs)
-            Y = y[firstNoteIdx:lastNoteIdx]
+            y = self.getDenseEncoding(
+                self.annotationPaths[i], notes, length=lastNoteIdx, sampleRate=sampleRate, keys=labels, offset=-offsetTime, **kwargs
+            )
+            Y = y[firstNoteIdx:]
+            assert len(Y) == len(X) - context
             return (X, Y)
         else:  # Return sparse GT
-            notes = {k: v - firstNoteTime for k, v in notes.items()}
+            notes = {k: v - firstNoteTime - offsetTime for k, v in notes.items()}
             return (X, notes)
 
     def getDenseEncoding(
-        self, filename, notes, sampleRate=100, offset=0, playback=1, keys=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs
+        self, filename, notes, length=None, sampleRate=100, offset=0, keys=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs
     ):
         """
         Encode in a dense matrix the midi onsets
 
         sampleRate = sampleRate
-        timeShift = offset of the midi, so the event is actually annotated later
+        offset = offset of the midi in s, so the event is actually annotated later
         keys = pitch of the offset in each column of the matrix
         labelRadiation = how many samples from the event have a non-null target
         TODO: Move that to io.midi
         """
-        length = np.max([values[-1] for values in notes.values()])
+        # if length not specified, make it big enough to store all the notes
+        if length == None:
+            lastNoteTime = np.max([values[-1] for values in notes.values()])
+            length = int(np.round((lastNoteTime) * sampleRate)) + 1
+
         result = []
         for key in keys:
             # Size of the dense matrix
-            row = np.zeros(int(np.round((length / playback + offset) * sampleRate)) + 1)
+            row = np.zeros(length)
             for time in notes[key]:
                 # indexs at 1 in the dense matrix
-                index = int(np.round((time / playback + offset) * sampleRate))
-                assert index >= 0
+                index = int(np.round((time + offset) * sampleRate))
+                if index < 0 or index > len(row):
+                    continue
                 # target = [(np.cos(np.arange(-radiation, radiation + 1) * (np.pi / (radiation + 1))) + 1) / 2]
                 if labelRadiation == 0:
                     target = [1]
@@ -254,7 +269,7 @@ class DataLoader(object):
         return result
 
     def vizDataset(self, samples=100, labels=[36], sampleRate=50, condensed=False):
-        gen = getGen(train=False, labels=labels, sampleRate=sampleRate, midiLatency=10)()
+        gen = self.getGen(train=False, labels=labels, sampleRate=sampleRate, midiLatency=10)()
 
         X = []
         Y = []

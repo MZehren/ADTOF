@@ -78,7 +78,7 @@ class RV1TF(object):
         )
         return tfModel
 
-    def predictWithPP(self, _model, input, labels=[45], **kwargs):
+    def predictWithPP(self, _model, input, labels=[45], labelOffset=0, sampleRate=100, **kwargs):
         prediction = _model.predict(input)
         # sparseResultIdx = [self.pp.serialPeakPicking(prediction[:, column]) for column in range(prediction.shape[1])]
         # sparseResultIdx = [
@@ -89,8 +89,9 @@ class RV1TF(object):
         # result = {labels[i]: sparseResultTime[i] for i in range(len(labels))}
         sparseResultIdx = self.ppp.process(prediction)
         result = defaultdict(list)
+        timeOffset = labelOffset / sampleRate
         for time, pitch in sparseResultIdx:
-            result[labels[int(pitch - 21)]].append(time)
+            result[labels[int(pitch - 21)]].append(time + timeOffset)
 
         return result
 
