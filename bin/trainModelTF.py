@@ -217,7 +217,7 @@ def main():
         removeFolder(checkpoint_dir)
 
     for modelName, params in paramGrid:
-        for fold in range(2):
+        for fold in range(1):
             modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
             score = train_test_model(params, args, fold, modelNameComp)
 

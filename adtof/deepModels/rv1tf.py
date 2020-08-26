@@ -88,7 +88,7 @@ class RV1TF(object):
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
         predictions, Y = np.array([[_model.predict(x), y] for x, y in dataset()]).T
-        timeOffset = labelOffset / sampleRate
+        timeOffset = 0  # labelOffset / sampleRate
         results = []
         for peakThreshold in np.arange(peakPickingStep, 0.5, peakPickingStep):
             ppp = madmom.features.notes.NotePeakPickingProcessor(
@@ -98,7 +98,6 @@ class RV1TF(object):
             score = eval.runEvaluation(Y, YHat)
             score["peakThreshold"] = peakThreshold
             results.append(score)
-            print("done")
 
         return max(results, key=lambda x: x[peakPickingTarget])
 
