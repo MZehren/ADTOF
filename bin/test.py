@@ -31,6 +31,16 @@ tf.config.threading.set_inter_op_parallelism_threads(32)
 #     os.makedirs("logs")
 # logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
 
+import pickle
+
+# file="/home/mickael/Documents/programming/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
+file = "/Users/mzehren/Programming/ADTOF/vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
+with open(file, "rb") as f:
+    u = pickle._Unpickler(f)
+    u.encoding = "latin1"
+    p = u.load()
+    print(p)
+
 
 def main():
     """
