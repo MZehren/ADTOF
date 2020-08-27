@@ -94,7 +94,7 @@ paramGrid = [
             "labelRadiation": 1,
             "learningRate": 0.0001,
             "normalize": False,
-            "model": "CNN",
+            "model": "CRNN",
             "fmin": 20,
             "fmax": 20000,
             "pad": False,
