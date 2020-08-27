@@ -89,7 +89,7 @@ paramGrid = [
             "diff": True,
             "samplePerTrack": 400,
             "batchSize": 8,
-            "context": 13,
+            "context": 25,
             "labelOffset": 1,
             "labelRadiation": 1,
             "learningRate": 0.0001,

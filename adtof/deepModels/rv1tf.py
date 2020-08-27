@@ -41,43 +41,46 @@ class RV1TF(object):
         """
 
         # TODO: https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#optional_set_the_correct_initial_bias
-        layers = [
-            tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation="relu", name="conv11"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(32, (3, 3), activation="relu", name="conv12"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv21"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv22"),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Flatten(),  # TODO why is it stride(5) in Vogl's implementation?
-        ]
+        # TODO: after each conv of size 3, the dimensionality is reduced by 2: 13->11->9
+        # then max pooling divide by the size: 9->3; new conv: 3->1->-1
+        # How Vogl was able to specify context of 14 or 9??
+        tfModel = tf.keras.Sequential()
+        tfModel.add(
+            tf.keras.layers.Conv2D(32, (3, 3), batch_input_shape={}, input_shape=(context, n_bins, 1), activation="relu", name="conv11")
+        )
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", name="conv12"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(3, 3)))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv21"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv22"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(3, 3)))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+        tfModel.add(tf.keras.layers.Flatten())  # TODO why is it stride(5) in Vogl's implementation?
+
         if model == "CNN":
-            layers += [
-                tf.keras.layers.Dense(256, activation="relu", name="dense1"),
-                tf.keras.layers.BatchNormalization(),
-                tf.keras.layers.Dense(256, activation="relu", name="dense2"),
-                tf.keras.layers.BatchNormalization(),
-            ]
+            tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense1"))
+            tfModel.add(tf.keras.layers.BatchNormalization())
+            tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense2"))
+            tfModel.add(tf.keras.layers.BatchNormalization())
+
         elif model == "CRNN":
             # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
             # Between each miniBatch the recurent units lose their state by default,
             # Prevent that if we feed the same track across multiple mini-batches
+            # TODO: Input of rnn layer is [batch, timestep, features]. set batch_input_shape
             stateful = batchSize < samplePerTrack
-            layers += [
-                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
-                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
-                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
-            ]
+            tfModel.add(tf.keras.layers.GRU(60, stateful=stateful))
+            tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful)))
+            tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful)))
+
         else:
             raise ValueError("%s not known", model)
 
-        layers += [tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput")]
-        tfModel = tf.keras.Sequential(layers)
+        tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
@@ -215,7 +218,7 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
 # 07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca048>
 # 08:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3ec3da0>
 # 09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd57228d208>
-# 10:<madmom.ml.nn.layers.StrideLayer object at 0x7fd57228d278> c
+# 10:<madmom.ml.nn.layers.StrideLayer object at 0x7fd57228d278>
 # 11:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d2b0>
 # 12:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d390>
 # 13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
