@@ -59,18 +59,39 @@ Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
 
 paramGrid = [
+    # (
+    #     "cnn-offset2",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5 / 2,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 100,
+    #         "batchSize": 100,
+    #         "context": 25,
+    #         "labelOffset": 5,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0001,
+    #         "normalize": False,
+    #         "model": "CNN",
+    #         "fmin": 20,
+    #         "fmax": 20000,
+    #         "pad": False,
+    #         "beat_targ": False,
+    #     },
+    # ),
     (
-        "cnn-offset5",
+        "crnn",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5 / 2,
             "sampleRate": 100,
             "diff": True,
-            "samplePerTrack": 100,
-            "batchSize": 100,
-            "context": 25,
-            "labelOffset": 5,
-            "labelRadiation": 2,
+            "samplePerTrack": 400,
+            "batchSize": 8,
+            "context": 13,
+            "labelOffset": 1,
+            "labelRadiation": 1,
             "learningRate": 0.0001,
             "normalize": False,
             "model": "CNN",
@@ -79,27 +100,7 @@ paramGrid = [
             "pad": False,
             "beat_targ": False,
         },
-    )
-    # "crnn",
-    # {
-    #     "labels": config.LABELS_5,
-    #     "classWeights": config.WEIGHTS_5 / 2,
-    #     "sampleRate": 100,
-    #     "diff": True,
-    #     "samplePerTrack": 60000,
-    #     "batchSize": 8,
-    #     "context": 13,
-    #     "labelOffset": 0,
-    #     "labelRadiation": 2,
-    #     "learningRate": 0.0001,
-    #     "normalize": False,
-    #     "model": "CNN",
-    #     "fmin": 20,
-    #     "fmax": 20000,
-    #     "pad": False,
-    #     "beat_targ": False,
-    # },
-    # ),
+    ),
 ]
 
 
@@ -121,7 +122,8 @@ def train_test_model(hparams, args, fold, modelName):
     TODO 
     """
     # Get the data TODO: the buffer is getting destroyed after each fold
-    trainGen, valGen, valFullGen = DataLoader(args.folderPath).getThreeSplitGen(validationFold=fold, limit=args.limit, **hparams)
+    dl = DataLoader(args.folderPath)
+    trainGen, valGen, valFullGen = dl.getThreeSplitGen(validationFold=fold, limit=args.limit, **hparams)
     dataset_train = tf.data.Dataset.from_generator(
         trainGen,
         (tf.float32, tf.float32, tf.float32),
@@ -159,14 +161,20 @@ def train_test_model(hparams, args, fold, modelName):
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
+        train, val, test = dl.getSplit(**hparams)
+        # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
+        # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
+        # Max of 500 steps just to make sure that it progresses
+        steps_per_epoch = max(len(train) * hparams["samplePerTrack"] / hparams["batchSize"], 500)
+        validation_steps = max(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], 500)
         model.fit(
             dataset_train,
-            epochs=200,
+            epochs=1000,  # Very high number of epoch to stop only with ealy stopping
             initial_epoch=0,
-            steps_per_epoch=100,
+            steps_per_epoch=steps_per_epoch,
             callbacks=callbacks,
             validation_data=dataset_val,
-            validation_steps=100
+            validation_steps=validation_steps
             # class_weight=classWeight
         )
 
@@ -217,7 +225,7 @@ def main():
         removeFolder(checkpoint_dir)
 
     for modelName, params in paramGrid:
-        for fold in range(1):
+        for fold in range(2):
             modelNameComp = modelName + "_Limit" + str(args.limit) + "_Fold" + str(fold)
             score = train_test_model(params, args, fold, modelNameComp)
 

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from os import stat
 
 import madmom
 import matplotlib.pyplot as plt
@@ -24,7 +25,9 @@ class RV1TF(object):
     #         threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
     #     )
 
-    def createModel(self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, **kwargs):
+    def createModel(
+        self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, samplePerTrack=100, **kwargs
+    ):
         """Return a tf model based 
         
         Keyword Arguments:
@@ -61,11 +64,14 @@ class RV1TF(object):
                 tf.keras.layers.BatchNormalization(),
             ]
         elif model == "CRNN":
-            # TODO How to handle the bidirectional aggregation ? Sum, or nothing ?
+            # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
+            # Between each miniBatch the recurent units lose their state by default,
+            # Prevent that if we feed the same track across multiple mini-batches
+            stateful = batchSize < samplePerTrack
             layers += [
-                tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-                tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
-                tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60)),
+                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
+                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
+                tf.keras.layers.Bidirectional(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful))),
             ]
         else:
             raise ValueError("%s not known", model)
