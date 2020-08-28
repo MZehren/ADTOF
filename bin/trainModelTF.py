@@ -165,8 +165,13 @@ def train_test_model(hparams, args, fold, modelName):
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
         # Max of 500 steps just to make sure that it progresses
-        steps_per_epoch = max(len(train) * hparams["samplePerTrack"] / hparams["batchSize"], 500)
-        validation_steps = max(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], 500)
+        maxStepPerEpoch = 500
+        steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
+        if steps_per_epoch > maxStepPerEpoch:
+            logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
+            steps_per_epoch = maxStepPerEpoch
+        validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch)
+
         model.fit(
             dataset_train,
             epochs=1000,  # Very high number of epoch to stop only with ealy stopping
