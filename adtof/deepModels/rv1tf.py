@@ -25,6 +25,106 @@ class RV1TF(object):
     #         threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
     #     )
 
+    def _getCNN(self, context, n_bins, output):
+        """
+        Parameters from Vogl
+
+        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b2f38ac8>        valid padding, stride 1
+        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5d30>
+        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5722e5cf8>        valid padding, stride 1
+        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5f28>
+        04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd5b3eca978>              size (1,3), stride(1,3)
+        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca6d8>        valid padding, stride 1
+        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3eca438>
+        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca048>        valid padding, stride 1
+        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3ec3da0>
+        09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd57228d208>              size (1,3), stride(1,3)
+                                                                                    Shape is [batch, context, features, kernel] = [None, 17, 16, 64]
+        10:<madmom.ml.nn.layers.StrideLayer object at 0x7fd57228d278> Re-arrange    (stride) the data in blocks of given size (17).
+                                                                                    Shape is [batch, ?, features] = [None, 1, 17*16*64]
+        11:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d2b0>
+        12:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d390>
+        13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
+        14:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d6a0>
+        15:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d860>
+        """
+        tfModel = tf.keras.Sequential()
+        tfModel.add(
+            tf.keras.layers.Conv2D(
+                32, (3, 3), input_shape=(context, n_bins, 1), activation="relu", strides=(1, 1), padding="valid", name="conv11"
+            )
+        )
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv12"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv21"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv22"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+        tfModel.add(tf.keras.layers.Flatten())
+        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense1"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense2"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
+        # tfModel.build()
+        # tfModel.summary()
+        return tfModel
+
+    def _getCRNN(self, context, n_bins, output):
+        """
+        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>
+        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>
+        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>
+        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>
+        04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f6ff9a0>
+        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>
+        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>
+        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>
+        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>
+        09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f707040>
+        10:<madmom.ml.nn.layers.StrideLayer object at 0x14f7070d0> Re-arrange (stride) the data in blocks of given size (5).
+        11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>
+        12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>
+        13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>
+        14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>
+        """
+        tfModel = tf.keras.Sequential()
+        tfModel.add(
+            tf.keras.layers.Conv2D(
+                32, (3, 3), input_shape=(context, n_bins, 1), activation="relu", strides=(1, 1), padding="valid", name="conv11"
+            )
+        )
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv12"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv21"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv22"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
+        tfModel.add(tf.keras.layers.Dropout(0.3))
+
+        # we set the model as a sequential model, the recurrency is done inside the batch and not outside
+        # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
+        stateful = False
+        timeSerieDim = context - 4 * 2
+        featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 64
+        tfModel.add(tf.keras.layers.Reshape((timeSerieDim, featureDim)))
+        tfModel.add(
+            tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=True))
+        )  # return the whole sequence for the next layers
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=True)))
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=False)))
+        tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
+        return tfModel
+
     def createModel(
         self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, samplePerTrack=100, **kwargs
     ):
@@ -41,46 +141,17 @@ class RV1TF(object):
         """
 
         # TODO: https://www.tensorflow.org/tutorials/structured_data/imbalanced_data#optional_set_the_correct_initial_bias
-        # TODO: after each conv of size 3, the dimensionality is reduced by 2: 13->11->9
-        # then max pooling divide by the size: 9->3; new conv: 3->1->-1
-        # How Vogl was able to specify context of 14 or 9??
-        tfModel = tf.keras.Sequential()
-        tfModel.add(
-            tf.keras.layers.Conv2D(32, (3, 3), batch_input_shape={}, input_shape=(context, n_bins, 1), activation="relu", name="conv11")
-        )
-        tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", name="conv12"))
-        tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(3, 3)))
-        tfModel.add(tf.keras.layers.Dropout(0.3))
-        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv21"))
-        tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", name="conv22"))
-        tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(3, 3)))
-        tfModel.add(tf.keras.layers.Dropout(0.3))
-        tfModel.add(tf.keras.layers.Flatten())  # TODO why is it stride(5) in Vogl's implementation?
-
+        # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
+        # Between each miniBatch the recurent units lose their state by default,
+        # Prevent that if we feed the same track across multiple mini-batches
         if model == "CNN":
-            tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense1"))
-            tfModel.add(tf.keras.layers.BatchNormalization())
-            tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense2"))
-            tfModel.add(tf.keras.layers.BatchNormalization())
+            tfModel = self._getCNN(context, n_bins, output)
 
         elif model == "CRNN":
-            # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
-            # Between each miniBatch the recurent units lose their state by default,
-            # Prevent that if we feed the same track across multiple mini-batches
-            # TODO: Input of rnn layer is [batch, timestep, features]. set batch_input_shape
-            stateful = batchSize < samplePerTrack
-            tfModel.add(tf.keras.layers.GRU(60, stateful=stateful))
-            tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful)))
-            tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful)))
+            tfModel = self._getCRNN(context, n_bins, output)
 
         else:
             raise ValueError("%s not known", model)
-
-        tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
@@ -208,36 +279,6 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
 #     p = u.load()
 #     print(p)
 
-# 00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b2f38ac8>
-# 01:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5d30>
-# 02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5722e5cf8>
-# 03:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5722e5f28>
-# 04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd5b3eca978>
-# 05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca6d8>
-# 06:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3eca438>
-# 07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x7fd5b3eca048>
-# 08:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd5b3ec3da0>
-# 09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x7fd57228d208>
-# 10:<madmom.ml.nn.layers.StrideLayer object at 0x7fd57228d278>
-# 11:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d2b0>
-# 12:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d390>
-# 13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
-# 14:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d6a0>
-# 15:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d860>
 
 # file = "/Users/mzehren/Programming/ADTOF/vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
-# 00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>
-# 01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>
-# 02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>
-# 03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>
-# 04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f6ff9a0>
-# 05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>
-# 06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>
-# 07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>
-# 08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>
-# 09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f707040>
-# 10:<madmom.ml.nn.layers.StrideLayer object at 0x14f7070d0> Re-arrange (stride) the data in blocks of given size (5).
-# 11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>
-# 12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>
-# 13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>
-# 14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>
+
