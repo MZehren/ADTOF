@@ -66,7 +66,7 @@ paramGrid = [
             "classWeights": config.WEIGHTS_5 / 2,
             "sampleRate": 100,
             "diff": True,
-            "samplePerTrack": 100,
+            "samplePerTrack": 20,
             "batchSize": 100,
             "context": 25,
             "labelOffset": 1,
