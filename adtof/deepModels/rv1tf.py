@@ -1,3 +1,5 @@
+import logging
+import time
 from collections import defaultdict
 from os import stat
 
@@ -167,7 +169,14 @@ class RV1TF(object):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
-        predictions, Y = np.array([[_model.predict(x), y] for x, y in dataset()]).T
+        predictions = []
+        Y = []
+        for i, (x, y) in enumerate(dataset()):
+            startTime = time.time()
+            predictions.append(_model.predict(x))
+            Y.append(y)
+            logging.debug("track %s predicted in %s", i, time.time() - startTime)
+
         timeOffset = 0  # labelOffset / sampleRate
         results = []
         for peakThreshold in np.arange(peakPickingStep, 0.5, peakPickingStep):
@@ -281,4 +290,3 @@ def log_layer_weights(epoch, input, model, activation_model, file_writer):
 
 
 # file = "/Users/mzehren/Programming/ADTOF/vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
-
