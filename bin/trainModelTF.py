@@ -161,12 +161,12 @@ def train_test_model(hparams, args, fold, modelName):
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
-        train, val, test = dl.getSplit(**hparams)
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
-        # Max of 500 steps just to make sure that it progresses
-        maxStepPerEpoch = 500
+        # limit #steps just to make sure that it progresses
+        train, val, test = dl.getSplit(limit=args.limit, **hparams)
         steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
+        maxStepPerEpoch = 100
         if steps_per_epoch > maxStepPerEpoch:
             logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
             steps_per_epoch = maxStepPerEpoch

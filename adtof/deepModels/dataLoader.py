@@ -91,7 +91,7 @@ class DataLoader(object):
             for time in notes[key]:
                 # indexs at 1 in the dense matrix
                 index = int(np.round((time + offset) * sampleRate))
-                if index < 0 or index > len(row):
+                if index < 0 or index >= len(row):
                     continue
                 # target = [(np.cos(np.arange(-radiation, radiation + 1) * (np.pi / (radiation + 1))) + 1) / 2]
                 if labelRadiation == 0:
