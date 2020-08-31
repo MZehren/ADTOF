@@ -77,7 +77,7 @@ class RV1TF(object):
         # tfModel.summary()
         return tfModel
 
-    def _getCRNN(self, context, n_bins, output):
+    def _getCRNN(self, context, n_bins, output, batchSize):
         """
         00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>
         01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>
@@ -94,11 +94,25 @@ class RV1TF(object):
         12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>
         13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>
         14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>
+
+        TODO: How to handle recurence granularity?
+        https://www.tensorflow.org/guide/keras/rnn#cross-batch_statefulness
+        https://www.tensorflow.org/api_docs/python/tf/keras/layers/RNN#masking_2
+        https://adgefficiency.com/tf2-lstm-hidden/
+        https://www.tensorflow.org/tutorials/structured_data/time_series
+
         """
         tfModel = tf.keras.Sequential()
         tfModel.add(
             tf.keras.layers.Conv2D(
-                32, (3, 3), input_shape=(context, n_bins, 1), activation="relu", strides=(1, 1), padding="valid", name="conv11"
+                32,
+                (3, 3),
+                input_shape=(context, n_bins, 1),
+                batch_input_shape=(batchSize, context, n_bins, 1),
+                activation="relu",
+                strides=(1, 1),
+                padding="valid",
+                name="conv11",
             )
         )
         tfModel.add(tf.keras.layers.BatchNormalization())
@@ -115,15 +129,14 @@ class RV1TF(object):
 
         # we set the model as a sequential model, the recurrency is done inside the batch and not outside
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
-        stateful = False
         timeSerieDim = context - 4 * 2
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 64
-        tfModel.add(tf.keras.layers.Reshape((timeSerieDim, featureDim)))
+        tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))  # timeSerieDim might change if the full track is provided
         tfModel.add(
-            tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=True))
+            tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True))
         )  # return the whole sequence for the next layers
-        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=True)))
-        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=stateful, return_sequences=False)))
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True)))
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=False)))
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
         return tfModel
 
@@ -150,7 +163,7 @@ class RV1TF(object):
             tfModel = self._getCNN(context, n_bins, output)
 
         elif model == "CRNN":
-            tfModel = self._getCRNN(context, n_bins, output)
+            tfModel = self._getCRNN(context, n_bins, output, batchSize)
 
         else:
             raise ValueError("%s not known", model)
@@ -171,7 +184,8 @@ class RV1TF(object):
         """
         predictions = []
         Y = []
-        for i, (x, y) in enumerate(dataset()):
+        gen = dataset()
+        for i, (x, y) in enumerate([next(gen), next(gen)]):
             startTime = time.time()
             predictions.append(_model.predict(x))
             Y.append(y)

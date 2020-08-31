@@ -182,6 +182,7 @@ class DataLoader(object):
         balanceClassesDistribution=False,
         classWeights=np.array([1, 1, 1, 1, 1]),
         repeat=True,
+        batchSize=1,
         **kwargs,
     ):
         """
@@ -229,7 +230,11 @@ class DataLoader(object):
 
                             yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
                     else:  # Yield the full track split in overlapping chunks with context
-                        yield np.array([track["x"][i : i + context] for i in range(len(track["x"]) - context)]), track["y"]
+                        # Returning a number of samples multiple of batch size to enable hardcoded batchSize in the model.
+                        # used by the tf statefull RNN
+                        totalSamples = len(track["x"]) - context
+                        usableSamples = totalSamples - totalSamples % batchSize
+                        yield np.array([track["x"][i : i + context] for i in range(usableSamples)]), track["y"][:usableSamples]
                 if not repeat:
                     break
 
