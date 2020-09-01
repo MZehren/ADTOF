@@ -234,7 +234,7 @@ class DataLoader(object):
                         # used by the tf statefull RNN
                         totalSamples = len(track["x"]) - context
                         usableSamples = totalSamples - totalSamples % batchSize
-                        yield np.array([track["x"][i : i + context] for i in range(usableSamples)]), track["y"][:usableSamples]
+                        yield np.array([track["x"][i : i + context] for i in range(totalSamples)]), track["y"]
                 if not repeat:
                     break
 
