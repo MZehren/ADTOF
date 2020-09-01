@@ -59,48 +59,48 @@ Converter.checkPathExists(all_logs)
 logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=logging.DEBUG, filemode="w")
 
 paramGrid = [
-    # (
-    #     "cnn-stride(1,3)",
-    #     {
-    #         "labels": config.LABELS_5,
-    #         "classWeights": config.WEIGHTS_5 / 2,
-    #         "sampleRate": 100,
-    #         "diff": True,
-    #         "samplePerTrack": 20,
-    #         "batchSize": 100,
-    #         "context": 25,
-    #         "labelOffset": 1,
-    #         "labelRadiation": 1,
-    #         "learningRate": 0.0001,
-    #         "normalize": False,
-    #         "model": "CNN",
-    #         "fmin": 20,
-    #         "fmax": 20000,
-    #         "pad": False,
-    #         "beat_targ": False,
-    #     },
-    # ),
     (
-        "crnn-stride(1,3)",
+        "cnn-stride(1,3)",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5 / 2,
             "sampleRate": 100,
             "diff": True,
-            "samplePerTrack": 400,
-            "batchSize": 8,
-            "context": 25,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
+            "samplePerTrack": 20,
+            "batchSize": 100,
+            "context": 25,
             "labelOffset": 1,
             "labelRadiation": 1,
             "learningRate": 0.0001,
             "normalize": False,
-            "model": "CRNN",
+            "model": "CNN",
             "fmin": 20,
             "fmax": 20000,
             "pad": False,
             "beat_targ": False,
         },
     ),
+    # (
+    #     "crnn-stride(1,3)",
+    #     {
+    #         "labels": config.LABELS_5,
+    #         "classWeights": config.WEIGHTS_5 / 2,
+    #         "sampleRate": 100,
+    #         "diff": True,
+    #         "samplePerTrack": 400,
+    #         "batchSize": 8,
+    #         "context": 25,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
+    #         "labelOffset": 1,
+    #         "labelRadiation": 1,
+    #         "learningRate": 0.0001,
+    #         "normalize": False,
+    #         "model": "CRNN",
+    #         "fmin": 20,
+    #         "fmax": 20000,
+    #         "pad": False,
+    #         "beat_targ": False,
+    #     },
+    # ),
 ]
 
 

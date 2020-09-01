@@ -185,7 +185,7 @@ class RV1TF(object):
         predictions = []
         Y = []
         gen = dataset()
-        for i, (x, y) in enumerate([next(gen), next(gen)]):
+        for i, (x, y) in enumerate(gen):
             startTime = time.time()
             predictions.append(_model.predict(x))
             Y.append(y)
