@@ -148,40 +148,40 @@ def train_test_model(hparams, args, fold, modelName):
     model = modelHandler.createModel(n_bins=nBins, output=len(hparams["labels"]), **hparams)
 
     # if model is already trained, load the weights else fit
-    # if os.path.exists(checkpoint_path + ".index") and not args.restart:
-    #     logging.info("Loading model weights %s", checkpoint_path)
-    #     model.load_weights(checkpoint_path)
-    #     # vizPredictions(dataset_train, model, hparams)
-    # else:
-    #     logging.info("Training model %s", modelName)
-    #     callbacks = [
-    #         tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
-    #         tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
-    #         tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1),
-    #         tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
-    #         # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
-    #     ]
-    #     # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
-    #     # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
-    #     # limit #steps just to make sure that it progresses
-    #     train, val, test = dl.getSplit(limit=args.limit, **hparams)
-    #     steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
-    #     maxStepPerEpoch = 300
-    #     if steps_per_epoch > maxStepPerEpoch:
-    #         logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
-    #         steps_per_epoch = maxStepPerEpoch
-    #     validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch)
+    if os.path.exists(checkpoint_path + ".index") and not args.restart:
+        logging.info("Loading model weights %s", checkpoint_path)
+        model.load_weights(checkpoint_path)
+        # vizPredictions(dataset_train, model, hparams)
+    else:
+        logging.info("Training model %s", modelName)
+        callbacks = [
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=False, write_images=False),
+            tf.keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True,),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1),
+            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
+            # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
+        ]
+        # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
+        # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
+        # limit #steps just to make sure that it progresses
+        train, val, test = dl.getSplit(limit=args.limit, **hparams)
+        steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
+        maxStepPerEpoch = 300
+        if steps_per_epoch > maxStepPerEpoch:
+            logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
+            steps_per_epoch = maxStepPerEpoch
+        validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch)
 
-    #     model.fit(
-    #         dataset_train,
-    #         epochs=1000,  # Very high number of epoch to stop only with ealy stopping
-    #         initial_epoch=0,
-    #         steps_per_epoch=steps_per_epoch,
-    #         callbacks=callbacks,
-    #         validation_data=dataset_val,
-    #         validation_steps=validation_steps
-    #         # class_weight=classWeight
-    # )
+        model.fit(
+            dataset_train,
+            epochs=1000,  # Very high number of epoch to stop only with ealy stopping
+            initial_epoch=0,
+            steps_per_epoch=steps_per_epoch,
+            callbacks=callbacks,
+            validation_data=dataset_val,
+            validation_steps=validation_steps
+            # class_weight=classWeight
+        )
 
     # If the model is already evaluated, skip the evaluation
     # Predict on validation data
