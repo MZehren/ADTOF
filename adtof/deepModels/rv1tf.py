@@ -178,7 +178,7 @@ class RV1TF(object):
         )
         return tfModel
 
-    def predict(self, _model, dataset, peakPickingTarget="sum F all", peakPickingStep=0.05, sampleRate=100, labelOffset=0, **kwargs):
+    def predict(self, _model, dataset, peakPickingTarget="sum F all", peakPickingStep=0.01, sampleRate=100, labelOffset=0, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
@@ -193,7 +193,7 @@ class RV1TF(object):
 
         timeOffset = 0  # labelOffset / sampleRate
         results = []
-        for peakThreshold in np.arange(peakPickingStep, 0.5, peakPickingStep):
+        for peakThreshold in np.arange(0.1, 0.4, peakPickingStep):
             ppp = madmom.features.notes.NotePeakPickingProcessor(
                 threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
             )

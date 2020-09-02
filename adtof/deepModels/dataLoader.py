@@ -132,24 +132,32 @@ class DataLoader(object):
         -------
         (trainIndexes, validationIndexes, testIndexes)
 
+        TODO: how to handle
+        - Early stopping for the final model trained on the full training+validation fold wich overfit the test set
+        - Multiple test set: Do the full hparam search on train+validation and then eval on test, change the split and start again.
         """
 
-        # Split the data in train, validation and test, without same band in test and train+test
+        # Split the data in train, validation and test, without same band in each split
         groups = [config.getBand(path) for path in self.audioPaths]
         groupKFold = sklearn.model_selection.GroupKFold(n_splits=nFolds)
         realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
 
         # The data is split in train, val, test. Hence at least three groups are needed
         assert realNFolds >= 3
-        # validationFold holds the fold used for validation, it can't be above the number of folds available after removing the test fold
         assert validationFold < realNFolds - 1
+
         folds = [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
         testIndexes = folds.pop(0)
         valIndexes = folds.pop(validationFold)
         trainIndexes = np.concatenate(folds)
 
+        # Shuffle indexes such as the tracks from the same band will not occur in sequence
+        trainIndexes = sklearn.utils.shuffle(trainIndexes, random_state=0)
+        valIndexes = sklearn.utils.shuffle(valIndexes, random_state=0)
+        testIndexes = sklearn.utils.shuffle(testIndexes, random_state=0)
+
         # Limit the number of files as it can be memory intensive
-        # The limit is done after the split to ensure no test data leakage with different values of limit.
+        # The limit is done after the split to ensure no test data leak in the train set with different values of limit.
         if limit is not None:
             trainIndexes = trainIndexes[:limit]
             valIndexes = valIndexes[:limit]
@@ -159,7 +167,7 @@ class DataLoader(object):
 
     def getThreeSplitGen(self, **kwargs):
         """[summary]
-        TODO
+        TODO 
         """
         (trainIndexes, valIndexes, testIndexes) = self.getSplit(**kwargs)
 
@@ -186,9 +194,31 @@ class DataLoader(object):
         **kwargs,
     ):
         """
-        TODO
+        Return an infinite generator yielding samples
+
+        Parameters
+        ----------
+        trackIndexes : list(int), optional
+            Specifies which track have to be selected based on their index. (see self.getSplit to get indexes), by default None
+        samplePerTrack : int, optional
+            Specifies how many samples has to be returned before moving to the next track, the generator is infinite and will resume where it stopped at each track.
+            If None, the full track is returned without windowing by context. by default 100 TODO: Make this behavior more explicit
+        context : int, optional
+            Specifies how large the context is,, by default 25
+        balanceClassesDistribution : bool, optional
+            Not implemented, by default False
+        classWeights : [type], optional
+            the sample weight is computed by min(1, sum(classWeights * y)), by default np.array([1, 1, 1, 1, 1])
+        repeat : bool, optional
+            If False, stop after seeing each track., by default True
+        batchSize : int, optional
+            Not implemented, by default 1
+
+        Returns
+        -------
+        generator yielding unique samples(x, y, w)
         """
-        buffer = {}
+        cache = {}
         if trackIndexes is None:
             trackIndexes = list(range(len(self.audioPaths)))
 
@@ -198,15 +228,15 @@ class DataLoader(object):
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
                     # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
                     # Get the current track in the buffer, or load it from disk if the buffer is empty
-                    if trackIdx not in buffer:
+                    if trackIdx not in cache:
                         X, Y = self.readTrack(trackIdx, context=context, **kwargs)
                         indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
-                        buffer[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": self.audioPaths[trackIdx]}
+                        cache[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": self.audioPaths[trackIdx]}
 
-                    # Set the cursor to the beginning of the track if it has not been read since the last reinitialisation
+                    # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
+                    track = cache[trackIdx]
                     if trackIdx not in cursors:
-                        cursors[trackIdx] = 0
-                    track = buffer[trackIdx]
+                        cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) / 2
 
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:
