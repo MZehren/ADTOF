@@ -115,7 +115,7 @@ class CorrectAlignmentConverter(Converter):
     def getAnnotationsQuality(self, onsetsA, onsetsB, sampleRate, fftSize):
         """
         Estimate the quality of the annotations with the f_measure with a tolerance computed depending on the FFT size for training
-        # TODO: see if it is possible to compute a correlation score betweeen annotations adn estimations which is not F-measure
+        # TODO: see if it is possible to compute a correlation score betweeen annotations and estimations which is not F-measure
         """
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
         # Or we want to make sure that the fft overlaps with the actual onset
@@ -146,6 +146,26 @@ class CorrectAlignmentConverter(Converter):
         return converted
 
     def computeDNNActivationDeviation(self, beats_midi, act, fs_act=100, matchWindow=0.05, lambda_transition=0.1):
+        """TODO
+
+        Parameters
+        ----------
+        beats_midi : [type]
+            [description]
+        act : [type]
+            [description]
+        fs_act : int, optional
+            [description], by default 100
+        matchWindow : float, optional
+            [description], by default 0.05
+        lambda_transition : float, optional
+            [description], by default 0.1
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
         # compute deviation matrix
         max_deviation = int(matchWindow * fs_act)
         D_pre, list_iois_pre = tapcorrect.tapcorrection.compute_deviation_matrix(act, beats_midi, fs_act, max_deviation)

@@ -151,7 +151,7 @@ def train_test_model(hparams, args, fold, modelName):
     if os.path.exists(checkpoint_path + ".index") and not args.restart:
         logging.info("Loading model weights %s", checkpoint_path)
         model.load_weights(checkpoint_path)
-        # vizPredictions(dataset_train, model, hparams)
+        # vizPredictions(dataset_val, model, hparams)
     else:
         logging.info("Training model %s", modelName)
         callbacks = [
@@ -197,17 +197,21 @@ def vizPredictions(dataset, model, params):
     """
     Plot the input, output and target of the model
     """
-    for x, y, w in dataset:
+
+    for x, y, _ in dataset:
         predictions = model.predict(x)
         import matplotlib.pyplot as plt
 
-        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+        f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
         ax1.plot(predictions, alpha=0.8)
-        ax1.set_ylabel("Prediction")
-        ax2.plot(y, alpha=0.8)
-        ax2.set_ylabel("Truth")
+        ax1.set_ylabel("Prediction + Truth")
+
+        for classIdx in range(len(params["labels"])):
+            idx = [i for i, v in enumerate(y[:, classIdx]) if v == 1]
+            ax1.scatter(idx, [classIdx / 20 + 1 for _ in range(len(idx))])
+        ax2.set_ylabel("Input")
         ax2.set_xlabel("Time step")
-        ax3.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], -1))), aspect="auto")
+        ax2.matshow(tf.transpose(tf.reshape(x[:, 0], (params["batchSize"], -1))), aspect="auto")
         ax1.legend(params["labels"])
         plt.show()
 
