@@ -236,7 +236,7 @@ class DataLoader(object):
                     # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                     track = cache[trackIdx]
                     if trackIdx not in cursors:
-                        cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) / 2
+                        cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) // 2
 
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:
@@ -255,6 +255,7 @@ class DataLoader(object):
 
                             y = track["y"][sampleIdx]
                             # sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                            # TODO Could be faster by caching the results since the weight or target is not changing.
                             sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
                             sampleWeight = np.array([max(sampleWeight, 1)])
 
