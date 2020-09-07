@@ -49,6 +49,8 @@ class RV1TF(object):
         13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
         14:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d6a0>
         15:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d860>
+
+        TODO: Can we handle the left and right channel as input shape (context, n_bins, 2)?
         """
         tfModel = tf.keras.Sequential()
         tfModel.add(
@@ -100,7 +102,7 @@ class RV1TF(object):
         https://www.tensorflow.org/api_docs/python/tf/keras/layers/RNN#masking_2
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
-
+        TODO: How to handle bidirectionnality?
         """
         tfModel = tf.keras.Sequential()
         tfModel.add(
@@ -131,13 +133,15 @@ class RV1TF(object):
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
         timeSerieDim = context - 4 * 2
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 64
-        tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))  # timeSerieDim might change if the full track is provided
+        tfModel.add(tf.keras.layers.Reshape((1, -1)))  # timeSerieDim might change if the full track is provided
         tfModel.add(
             tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True))
         )  # return the whole sequence for the next layers
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=False)))
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
+        tfModel.build()
+        tfModel.summary()
         return tfModel
 
     def createModel(

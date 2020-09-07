@@ -60,7 +60,7 @@ logging.basicConfig(filename=os.path.join(all_logs, "training.log"), level=loggi
 
 paramGrid = [
     (
-        "cnn-stride(1,3)",
+        "cnn-stride(1,3)-shuffledinput",
         {
             "labels": config.LABELS_5,
             "classWeights": config.WEIGHTS_5 / 2,
@@ -87,8 +87,8 @@ paramGrid = [
     #         "classWeights": config.WEIGHTS_5 / 2,
     #         "sampleRate": 100,
     #         "diff": True,
-    #         "samplePerTrack": 400,
-    #         "batchSize": 8,
+    #         "samplePerTrack": 20,
+    #         "batchSize": 100,
     #         "context": 25,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
     #         "labelOffset": 1,
     #         "labelRadiation": 1,
