@@ -34,12 +34,7 @@ class MIR(object):
     def open(self, audioPath: str, cachePath: str = None):
         """
         Load an audio track and return a numpy array
-        TODO: Calling a lot of times this method will spawn a lot of threads because of FFMPEG. 
-        This might result in a raised error:
-         OpenBLAS blas_thread_init: pthread_create failed for thread 31 of 32: Resource temporarily unavailable
-         OpenBLAS blas_thread_init: RLIMIT_NPROC 4096 current, 8192 max
-        Maybe changing the ulimit could help solve this error. 
-        Once all the audio files are cached, the threads are not spawned
+        TODO: Calling a lot of times this method without cache uses much more memory!
 
         """
         # logging.debug("reading %s", audioPath)

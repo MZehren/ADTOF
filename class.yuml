@@ -1,0 +1,8 @@
+
+// {type:class}
+// {direction:topDown}
+// {generate:true}
+
+
+[Model|path:String;model:TF.Model|+Model(path:String,hParams:Dict);+fit(train:Dataset, val:Dataset);+eval(test:Dataset);+predict(...)]
+[DataLoader||+DataLoad(path);+splitDataset(nFolds:int);+getDataset();-readTrack();-getDenseEncoding()]

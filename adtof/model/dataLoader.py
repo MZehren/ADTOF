@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 import os
 
@@ -12,9 +13,9 @@ from adtof.io.textReader import TextReader
 
 
 class DataLoader(object):
-    def __init__(self, folderPath):
+    def __init__(self, folderPath, loadLabels=True):
         """
-        Class for the handling of the worflow while loading the dataset
+        Class for the handling of the workflow while loading the dataset
 
         Parameters
         ----------
@@ -22,32 +23,65 @@ class DataLoader(object):
             Path to the root folder containing the dataset
         """
         self.folderPath = folderPath
+        self.loadLabels = loadLabels
+        if loadLabels:
+            # Getting the intersection of audio and annotations files
+            self.audioPaths = config.getFilesInFolder(self.folderPath, config.AUDIO)
+            self.annotationPaths = config.getFilesInFolder(self.folderPath, config.ALIGNED_DRUM)
+            self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
+            self.featurePaths = np.array(
+                [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in self.audioPaths]
+            )
+        else:
+            self.audioPaths = config.getFilesInFolder(self.folderPath)
 
-        # Getting the intersection of audio and annotations files
-        self.audioPaths = config.getFilesInFolder(self.folderPath, config.AUDIO)
-        self.annotationPaths = config.getFilesInFolder(self.folderPath, config.ALIGNED_DRUM)
-        self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
-        self.featurePaths = np.array(
-            [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in self.audioPaths]
-        )
-
-    def readTrack(self, i, sampleRate=100, context=25, labelOffset=0, labels=[35, 38, 47, 42, 49], yDense=True, removeStart=True, **kwargs):
+    def readTrack(self, trackIdx, removeStart=True, yDense=True, labelOffset=0, sampleRate=100, **kwargs):
         """
-        Read the track and the midi to return X and Y 
+        Read all the info of the track used for training and evaluation
+        """
+        name = self.audioPaths[trackIdx]
+        X = self.readAudio(trackIdx, sampleRate=sampleRate, **kwargs)
+        if self.loadLabels:
+            notes = self.readLabels(trackIdx, **kwargs)
+            if labelOffset:
+                timeOffset = labelOffset / sampleRate
+                for k, v in notes.items():
+                    notes[k] = np.array(v) - timeOffset
+            if removeStart:
+                X, notes = self.removeStart(X, notes, sampleRate=sampleRate, **kwargs)
+            if yDense:
+                notes = self.getDenseEncoding(name, notes, sampleRate=sampleRate, **kwargs)
+            # indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
+            return {"x": X, "y": notes, "name": name}
+        else:
+            return {"x": X, "name": name}
+
+    def readAudio(self, i, sampleRate=100, **kwargs):
+        """
+        Read the track audio
         """
         mir = MIR(frameRate=sampleRate, **kwargs)
-        x = mir.open(self.audioPaths[i], cachePath=self.featurePaths[i])
+        x = mir.open(self.audioPaths[i], cachePath=self.featurePaths[i] if self.loadLabels else None)
         x = x.reshape(x.shape + (1,))  # Add the channel dimension
+        return x
 
-        # read files
+    def readLabels(self, i, **kwargs):
+        """
+        get the track annotations
+        """
         notes = TextReader().getOnsets(self.annotationPaths[i])
+        return notes
 
+    def removeStart(self, x, notes, sampleRate=100, context=25, **kwargs):
+        """
+        Trim X to start and end on notes from notes
+        Change the time of notes to start at 0
+        """
         # Trim before the first note to remove count in
         # Move the trim by the offset amount to keep the first notation
-        offsetTime = labelOffset / sampleRate
         firstNoteTime = np.min([v[0] for v in notes.values() if len(v)])
-        firstNoteTime = max(0, firstNoteTime - offsetTime)
-        firstNoteIdx = int(firstNoteTime * sampleRate)
+        firstNoteTime = max(0, firstNoteTime)
+        firstNoteIdx = int(round(firstNoteTime * sampleRate))
 
         # Trim after the last note to remove all part of the track not annotated
         # Make sure the index doesn't exceed any boundaries
@@ -56,20 +90,11 @@ class DataLoader(object):
         lastNoteIdx = min(int(lastNoteTime * sampleRate) + 1, len(x) - 1 - context)
 
         X = x[firstNoteIdx : lastNoteIdx + context]
-        if yDense:  # Return dense GT
-            y = self.getDenseEncoding(
-                self.annotationPaths[i], notes, length=lastNoteIdx, sampleRate=sampleRate, keys=labels, offset=-offsetTime, **kwargs
-            )
-            Y = y[firstNoteIdx:]
-            assert len(Y) == len(X) - context
-            return (X, Y)
-        else:  # Return sparse GT
-            notes = {k: v - firstNoteTime - offsetTime for k, v in notes.items()}
-            return (X, notes)
+        for k, v in notes.items():
+            notes[k] = v - (firstNoteTime)
+        return (X, notes)
 
-    def getDenseEncoding(
-        self, filename, notes, length=None, sampleRate=100, offset=0, keys=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs
-    ):
+    def getDenseEncoding(self, filename, notes, length=None, sampleRate=100, labels=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs):
         """
         Encode in a dense matrix the midi onsets
 
@@ -85,12 +110,12 @@ class DataLoader(object):
             length = int(np.round((lastNoteTime) * sampleRate)) + 1
 
         result = []
-        for key in keys:
+        for key in labels:
             # Size of the dense matrix
             row = np.zeros(length)
             for time in notes[key]:
                 # indexs at 1 in the dense matrix
-                index = int(np.round((time + offset) * sampleRate))
+                index = int(np.round(time * sampleRate))
                 if index < 0 or index >= len(row):
                     continue
                 # target = [(np.cos(np.arange(-radiation, radiation + 1) * (np.pi / (radiation + 1))) + 1) / 2]
@@ -115,7 +140,7 @@ class DataLoader(object):
                 logging.debug("Pitch %s is not represented in the track %s", key, filename)
         return np.array(result).T
 
-    def getSplit(self, nFolds=10, validationFold=0, limit=None, **kwargs):
+    def getSplit(self, nFolds=10, validationFold=0, tracksLimit=None, **kwargs):
         """Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
         There are no group overlap between folds
 
@@ -158,10 +183,10 @@ class DataLoader(object):
 
         # Limit the number of files as it can be memory intensive
         # The limit is done after the split to ensure no test data leak in the train set with different values of limit.
-        if limit is not None:
-            trainIndexes = trainIndexes[:limit]
-            valIndexes = valIndexes[:limit]
-            testIndexes = testIndexes[:limit]
+        if tracksLimit is not None:
+            trainIndexes = trainIndexes[:tracksLimit]
+            valIndexes = valIndexes[:tracksLimit]
+            testIndexes = testIndexes[:tracksLimit]
 
         return (trainIndexes, valIndexes, testIndexes)
 
@@ -202,7 +227,7 @@ class DataLoader(object):
             Specifies which track have to be selected based on their index. (see self.getSplit to get indexes), by default None
         samplePerTrack : int, optional
             Specifies how many samples has to be returned before moving to the next track, the generator is infinite and will resume where it stopped at each track.
-            If None, the full track is returned without windowing by context. by default 100 TODO: Make this behavior more explicit
+            If None, the full track is returned without windowing. by default 100 TODO: Make this behavior more explicit
         context : int, optional
             Specifies how large the context is,, by default 25
         balanceClassesDistribution : bool, optional
@@ -229,9 +254,7 @@ class DataLoader(object):
                     # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
                     # Get the current track in the buffer, or load it from disk if the buffer is empty
                     if trackIdx not in cache:
-                        X, Y = self.readTrack(trackIdx, context=context, **kwargs)
-                        indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
-                        cache[trackIdx] = {"x": X, "y": Y, "indexes": indexes, "name": self.audioPaths[trackIdx]}
+                        cache[trackIdx] = self.readTrack(trackIdx, **kwargs)
 
                     # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                     track = cache[trackIdx]

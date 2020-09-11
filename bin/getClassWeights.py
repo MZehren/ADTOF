@@ -18,7 +18,7 @@ import tensorflow as tf
 
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
-from adtof.deepModels.rv1tf import RV1TF
+from adtof.deepModels.rv1tf import ModelHandler
 from adtof.io import mir
 from adtof.converters.converter import Converter
 from adtof import config

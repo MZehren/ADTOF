@@ -15,15 +15,15 @@ import sklearn
 import tensorflow as tf
 
 from adtof import config
-from adtof.deepModels import dataLoader
-from adtof.deepModels.peakPicking import PeakPicking
-from adtof.deepModels.rv1tf import RV1TF
 from adtof.converters.converter import Converter
-from adtof.io.mir import MIR
+from adtof.model.dataLoader import DataLoader
+from adtof.model.modelHandler import ModelHandler
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# tf.config.experimental_run_functions_eagerly(True)
-logging.basicConfig(filename="logs/conversion.log", level=logging.DEBUG)
+# TODO: needed because error is thrown:
+# Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
+# See: https://github.com/tensorflow/tensorflow/issues/41532
+tf.config.threading.set_intra_op_parallelism_threads(32)
+tf.config.threading.set_inter_op_parallelism_threads(32)
 
 
 def main():
@@ -34,28 +34,14 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("inputPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
-    parser.add_argument(
-        "-s", "--trainSplit", type=float, default=0, help="remove the first x ratio of the tracks if it was used as training"
-    )
     args = parser.parse_args()
-    # TODO: save the meta parameters in a config file
-    sampleRate = 50
-    context = 25
-    classLabels = config.LABELS_5
-    plot = False
 
     # Get the model
-    model = RV1TF().createModel(output=len(classLabels))
-    checkpoint_path = "models/rv1.ckpt"  # TODO make the path relative to the code and not the shell
-    checkpoint_dir = os.path.dirname(checkpoint_path)
-    latest = tf.train.latest_checkpoint(checkpoint_dir)
-    if latest:
-        model.load_weights(latest)
+    model, hparams = ModelHandler.modelFactory()
 
     # Get the data
-    tracks = config.getFilesInFolder(args.inputPath)
-    tracks = tracks[int(len(tracks) * args.trainSplit) :]
-    mir = MIR(frameRate=sampleRate)
+    dl = DataLoader(args.inputPath)
+    tracks = dl.getGen(repeat=False, samplePerTrack=None, yDense=False)
 
     # Predict the file and write the output
     for track in tracks:

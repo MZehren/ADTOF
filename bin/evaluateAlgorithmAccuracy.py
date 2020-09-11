@@ -16,7 +16,7 @@ import mir_eval
 from adtof import config
 from adtof.deepModels import dataLoader
 from adtof.deepModels.peakPicking import PeakPicking
-from adtof.deepModels.rv1tf import RV1TF
+from adtof.deepModels.rv1tf import ModelHandler
 from adtof.converters.converter import Converter
 from adtof.io.mir import MIR
 from adtof.io import eval
