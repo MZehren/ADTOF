@@ -63,7 +63,7 @@ def train_test_model(hparams, args, fold, model):
     """
     # Get the data
     dl = DataLoader(args.folderPath)
-    trainGen, valGen, valFullGen = dl.getThreeSplitGen(validationFold=fold, **hparams)
+    trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
     dataset_train = tf.data.Dataset.from_generator(
         trainGen,
         (tf.float32, tf.float32, tf.float32),
@@ -100,7 +100,9 @@ def train_test_model(hparams, args, fold, model):
         return None
     else:
         logging.info("Evaluating model %s", model.name)
-        return model.evaluate(valFullGen, **hparams)
+        scoreVal = model.evaluate(valFullGen, **hparams)
+        scoreTest = model.evaluate(testFullGen, peakThreshold=scoreVal["peakThreshold"], **hparams)
+        return scoreTest
 
 
 if __name__ == "__main__":

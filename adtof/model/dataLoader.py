@@ -190,7 +190,7 @@ class DataLoader(object):
 
         return (trainIndexes, valIndexes, testIndexes)
 
-    def getThreeSplitGen(self, **kwargs):
+    def getTrainValTestGens(self, **kwargs):
         """[summary]
         TODO 
         """
@@ -205,6 +205,7 @@ class DataLoader(object):
             self.getGen(trainIndexes, **kwargs),
             self.getGen(valIndexes, **kwargs),
             self.getGen(valIndexes, **fullGenParams),
+            self.getGen(testIndexes, **fullGenParams),
         )
 
     def getGen(
