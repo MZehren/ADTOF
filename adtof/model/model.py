@@ -71,7 +71,7 @@ class Model(object):
         }
 
         for modelName, hparams in models.items():
-            modelName += "_fold" + str(fold)
+            modelName += "_Fold" + str(fold)
             yield (Model(modelName, **hparams), hparams)
 
     def __init__(self, name, **kwargs):
@@ -265,7 +265,7 @@ class Model(object):
         ]
         self.model.fit(
             dataset_train,
-            epochs=1,  # Very high number of epoch to stop only with ealy stopping
+            epochs=1000,  # Very high number of epoch to stop only with ealy stopping
             initial_epoch=0,
             steps_per_epoch=steps_per_epoch,
             callbacks=callbacks,

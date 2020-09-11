@@ -86,7 +86,7 @@ def train_test_model(hparams, args, fold, model):
         # limit #steps just to make sure that it progresses
         train, val, test = dl.getSplit(**hparams)
         steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
-        maxStepPerEpoch = 10
+        maxStepPerEpoch = 300
         if steps_per_epoch > maxStepPerEpoch:
             logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
             steps_per_epoch = maxStepPerEpoch
