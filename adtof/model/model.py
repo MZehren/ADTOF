@@ -279,7 +279,7 @@ class Model(object):
 
     @staticmethod
     def predictEnsemble(models, x, aggregation=np.mean):
-        return aggregation([model.predict(x) for model in models], axis=1)
+        return aggregation([model.predict(x) for model in models], axis=0)
 
     def evaluate(self, dataset, peakThreshold=None, **kwargs):
         """
