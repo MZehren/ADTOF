@@ -19,6 +19,7 @@ from adtof import config
 from adtof.converters.converter import Converter
 from adtof.model.dataLoader import DataLoader
 from adtof.model.model import Model
+from adtof.model import peakPicking
 
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
@@ -55,6 +56,33 @@ def main():
                     )
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
+
+    score = train_test_models(args)
+    logging.info(str(score))
+    with tf.summary.create_file_writer(hparamsLogs + "ensemble model").as_default():
+        # hp.hparams(
+        #     {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()}, trial_id=model.name,
+        # )
+        for key, value in score.items():
+            tf.summary.scalar(key, value, step=0)
+
+
+def train_test_models(args):
+    """
+    TODO factorise
+    """
+    dl = DataLoader(args.folderPath)
+    models = [Model.modelFactory(fold=fold)[0][0] for fold in range(2)]
+    _, hparams = dl = Model.modelFactory(fold=0)[0][1]
+
+    trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
+    predictions = []
+    Y = []
+    for i, (x, y) in enumerate(testFullGen()):
+        predictions.append(Model.predictEnsemble(models, x))
+        Y.append(y)
+
+    return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[0.3], **hparams)
 
 
 def train_test_model(hparams, args, fold, model):

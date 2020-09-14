@@ -274,18 +274,12 @@ class Model(object):
             # class_weight=classWeight
         )
 
-    def predict(self, dataset):
-        """
-        TODO
-        """
-        predictions = []
+    def predict(self, x):
+        return self.model.predict(x)
 
-        gen = dataset()
-        for i, x in enumerate(gen):
-            startTime = time.time()
-            predictions.append(self.model.predict(x))
-            logging.debug("track %s predicted in %s", i, time.time() - startTime)
-        return predictions
+    @staticmethod
+    def predictEnsemble(models, x, aggregation=np.mean):
+        return aggregation([model.predict(x) for model in models], axis=1)
 
     def evaluate(self, dataset, peakThreshold=None, **kwargs):
         """
@@ -296,7 +290,7 @@ class Model(object):
         gen = dataset()
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
-            predictions.append(self.model.predict(x))
+            predictions.append(self.predict(x))
             Y.append(y)
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
 
@@ -311,7 +305,7 @@ class Model(object):
         """
 
         for x, y, _ in dataset:
-            predictions = self.model.predict(x)
+            predictions = self.predict(x)
             import matplotlib.pyplot as plt
 
             f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)

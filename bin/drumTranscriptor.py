@@ -17,7 +17,7 @@ import tensorflow as tf
 from adtof import config
 from adtof.converters.converter import Converter
 from adtof.model.dataLoader import DataLoader
-from adtof.model.modelHandler import ModelHandler
+from adtof.model.model import Model
 
 # TODO: needed because error is thrown:
 # Check failed: ret == 0 (11 vs. 0)Thread creation via pthread_create() failed.
@@ -37,10 +37,12 @@ def main():
     args = parser.parse_args()
 
     # Get the model
-    model, hparams = ModelHandler.modelFactory()
-
+    models = [Model.modelFactory(fold=fold)[0] for fold in range(2)]
+    ppp = madmom.features.notes.NotePeakPickingProcessor(
+        threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
+    )
     # Get the data
-    dl = DataLoader(args.inputPath)
+    dl = DataLoader(args.inputPat, loadLabels=False)
     tracks = dl.getGen(repeat=False, samplePerTrack=None, yDense=False)
 
     # Predict the file and write the output
@@ -50,9 +52,7 @@ def main():
         if os.path.exists(os.path.join(args.outputPath, config.getFileBasename(track) + ".txt")):
             continue
 
-        X = mir.open(track)
-        X = X.reshape(X.shape + (1,))
-        Y = model.predict(np.array([X[i : i + context] for i in range(len(X) - context)]))
+        Y = Model.predictEnsemble(track)
 
         # TODO make it work for matrix
         sparseResultIdx = [PeakPicking().serialPeakPicking(Y[:, column]) for column in range(Y.shape[1])]
