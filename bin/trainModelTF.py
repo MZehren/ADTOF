@@ -72,8 +72,8 @@ def train_test_models(args):
     TODO factorise
     """
     dl = DataLoader(args.folderPath)
-    models = [Model.modelFactory(fold=fold)[0][0] for fold in range(2)]
-    _, hparams = dl = Model.modelFactory(fold=0)[0][1]
+    models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
+    _, hparams = list(Model.modelFactory(fold=0))[0][1]
 
     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
     predictions = []
