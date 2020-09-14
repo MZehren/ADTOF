@@ -79,7 +79,7 @@ class Model(object):
         self.name = name
         self.path = os.path.join(config.CHECKPOINT_DIR, name)
         # if model is already trained, load the weights
-        if os.path.exists(self.path + ".index"):
+        if os.path.exists(self.path + ".index"):  # TODO: This check is not case sensitive, but macOS is
             logging.info("Loading model weights %s", self.path)
             self.model.load_weights(self.path)
             self.weightLoadedFlag = True
@@ -303,7 +303,7 @@ class Model(object):
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)
         else:
-            return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[peakThreshold])
+            return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[peakThreshold], **kwargs)
 
     def vizPredictions(self, dataset, labels=[35], batchSize=100, **kwargs):
         """
