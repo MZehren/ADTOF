@@ -14,12 +14,10 @@ import numpy as np
 import mir_eval
 
 from adtof import config
-from adtof.deepModels import dataLoader
-from adtof.deepModels.peakPicking import PeakPicking
-from adtof.deepModels.rv1tf import ModelHandler
+
 from adtof.converters.converter import Converter
 from adtof.io.mir import MIR
-from adtof.io import eval
+from adtof.model import eval
 
 
 def main():
@@ -39,13 +37,13 @@ def main():
     estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
     groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
     tr = TextReader()
-    groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruthsPaths]
+    groundTruths = [tr.getOnsets(grounTruth, mappingDictionaries=[config.RBMA_MIDI_3]) for grounTruth in groundTruthsPaths]
     estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
 
-    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths)
+    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths, classes=config.LABELS_3)
     print(result)
-    plot(result, prefix="mean")
-    plot(result, prefix="sum")
+    plot(result, prefix="mean", groups=["all"] + [str(e) for e in config.LABELS_3])
+    plot(result, prefix="sum", groups=["all"] + [str(e) for e in config.LABELS_3])
 
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):

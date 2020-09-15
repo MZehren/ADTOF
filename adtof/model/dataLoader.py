@@ -54,7 +54,7 @@ class DataLoader(object):
             # indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
             return {"x": X, "y": notes, "name": name}
         else:
-            return {"x": X, "name": name}
+            return {"x": X, "y": None, "name": name}
 
     def readAudio(self, i, sampleRate=100, **kwargs):
         """
@@ -256,14 +256,13 @@ class DataLoader(object):
                     # Get the current track in the buffer, or load it from disk if the buffer is empty
                     if trackIdx not in cache:
                         cache[trackIdx] = self.readTrack(trackIdx, **kwargs)
-
-                    # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                     track = cache[trackIdx]
-                    if trackIdx not in cursors:
-                        cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) // 2
 
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:
+                        # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
+                        if trackIdx not in cursors:
+                            cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) // 2
                         for _ in range(samplePerTrack):
                             cursor = cursors[trackIdx]
                             if balanceClassesDistribution:
