@@ -7,6 +7,7 @@ import numpy as np
 
 from adtof import config
 from adtof.converters.converter import Converter
+import librosa
 
 
 class MIR(object):
@@ -15,7 +16,7 @@ class MIR(object):
     """
 
     def __init__(
-        self, frameRate=100, frameSize=2048, diff=False, sampleRate=44100, n_bins=12, fmin=20, fmax=20000, normalize=False, **kwargs
+        self, frameRate=100, frameSize=2048, diff=False, inputSampleRate=44100, n_bins=12, fmin=20, fmax=20000, normalize=False, **kwargs
     ):
         """
         Configure the parameters for the feature extraction
@@ -23,13 +24,29 @@ class MIR(object):
         self.frameRate = frameRate
         self.frameSize = frameSize
         self.diff = diff
-        self.sampleRate = sampleRate
+        self.sampleRate = inputSampleRate
         self.hopSize = int(self.sampleRate / self.frameRate)
         self.n_bins = n_bins  # Per octave
         self.fmin = fmin
         self.fmax = fmax
         self.normalize = normalize
         self.proc, self.diffProc = self.getMadmomProc()
+
+    def getDim(self):
+        """
+        Compute the size of the vector returned by the 
+        "log magnitude spectrogram followed by a logarithmic grouping of frequency bins"
+        """
+        fftFrequencies = madmom.audio.stft.fft_frequencies(self.frameSize // 2, self.sampleRate)
+        targetFrequencies = madmom.audio.filters.log_frequencies(self.n_bins, self.fmin, self.fmax)
+        # align to bins
+        bins = madmom.audio.filters.frequencies2bins(targetFrequencies, fftFrequencies, unique_bins=True)
+        filters = madmom.audio.filters.TriangularFilter.filters(bins, norm=True, overlap=True)
+
+        if self.diff:
+            return len(filters) * 2
+        else:
+            return len(filters)
 
     def open(self, audioPath: str, cachePath: str = None):
         """

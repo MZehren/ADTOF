@@ -17,6 +17,7 @@ from tensorflow.python.eager.monitoring import Sampler
 from adtof import config
 from adtof.model import eval
 from adtof.model import peakPicking
+from adtof.io.mir import MIR
 
 
 class Model(object):
@@ -28,11 +29,30 @@ class Model(object):
     @staticmethod
     def modelFactory(fold=0):
         models = {
-            "cnn-stride(1,3)-shuffledinput": {
+            # "cnn-stride(1,3)-shuffledinput": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 2,
+            #     "sampleRate": 100,
+            #     "diff": True,
+            #     "samplePerTrack": 20,
+            #     "batchSize": 100,
+            #     "context": 25,
+            #     "labelOffset": 1,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.0001,
+            #     "normalize": False,
+            #     "model": "CNN",
+            #     "fmin": 20,
+            #     "fmax": 20000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "tracksLimit": None,
+            # },
+            "TCN": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 2,
                 "sampleRate": 100,
-                "diff": True,
+                "diff": False,
                 "samplePerTrack": 20,
                 "batchSize": 100,
                 "context": 25,
@@ -40,9 +60,9 @@ class Model(object):
                 "labelRadiation": 1,
                 "learningRate": 0.0001,
                 "normalize": False,
-                "model": "CNN",
-                "fmin": 20,
-                "fmax": 20000,
+                "model": "TCN",
+                "fmin": 30,
+                "fmax": 17000,
                 "pad": False,
                 "beat_targ": False,
                 "tracksLimit": None,
@@ -75,7 +95,8 @@ class Model(object):
             yield (Model(modelName, **hparams), hparams)
 
     def __init__(self, name, **kwargs):
-        self.model = self._createModel(n_bins=168 if kwargs["diff"] else 84, output=len(kwargs["labels"]), **kwargs)
+        n_bins = MIR(**kwargs).getDim()
+        self.model = self._createModel(n_bins=n_bins, output=len(kwargs["labels"]), **kwargs)
         self.name = name
         self.path = os.path.join(config.CHECKPOINT_DIR, name)
         # if model is already trained, load the weights
@@ -145,6 +166,42 @@ class Model(object):
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
         # tfModel.build()
         # tfModel.summary()
+        return tfModel
+
+    def _getTCN(self, context, n_bins, output):
+        """
+        Model from MatthewDavies and Bock - 2019 - Temporal convolutional networks for musical audio
+        """
+        tfModel = tf.keras.Sequential()
+        # Conv blocks
+        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), input_shape=(context, n_bins, 1), activation="elu"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
+        tfModel.add(tf.keras.layers.Dropout(0.1))
+
+        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), activation="elu"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
+        tfModel.add(tf.keras.layers.Dropout(0.1))
+
+        tfModel.add(tf.keras.layers.Conv2D(16, (1, 8), activation="elu"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Dropout(0.1))
+
+        # TCN
+        for i in range(11):
+            tfModel.add(tf.keras.layers.Conv2D(16, (5, 5), activation="elu", strides=(1, 1), dilation_rate=2 ** i))
+            tfModel.add(tf.keras.layers.BatchNormalization())
+            tfModel.add(tf.keras.layers.Dropout(0.1))
+
+        tfModel.add(tf.keras.layers.Flatten())
+        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense1"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense2"))
+        tfModel.add(tf.keras.layers.BatchNormalization())
+        tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
+        tfModel.build()
+        tfModel.summary()
         return tfModel
 
     def _getCRNN(self, context, n_bins, output, batchSize):
@@ -231,10 +288,10 @@ class Model(object):
         # Prevent that if we feed the same track across multiple mini-batches
         if model == "CNN":
             tfModel = self._getCNN(context, n_bins, output)
-
         elif model == "CRNN":
             tfModel = self._getCRNN(context, n_bins, output, batchSize)
-
+        elif model == "TCN":
+            tfModel = self._getTCN(context, n_bins, output)
         else:
             raise ValueError("%s not known", model)
 
