@@ -48,7 +48,18 @@ def main():
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):
     """
-    {'mean F': 0.4400290519510308, 'mean P': 0.6659775429409889, 'mean R': 0.4096366303496082, 'mean F 35': 0.5989156395480592, 'mean P 35': 0.8660609488134552, 'mean R 35': 0.5240203566565339, 'mean F 38': 0.6032228067405822, 'mean P 38': 0.7579546096714384, 'mean R 38': 0.5846379121932345, 'mean F 42': 0.11794870956445104, 'mean P 42': 0.37391707033807325, 'mean R 42': 0.12025162219905618}
+    test
+
+    Parameters
+    ----------
+    result
+    prefix
+    bars
+    groups
+
+    Returns
+    -------
+
     """
     fig, ax = plt.subplots()
     ind = np.arange(len(groups))  # the x locations for the groups

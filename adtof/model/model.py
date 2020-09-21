@@ -55,8 +55,8 @@ class Model(object):
                 "diff": False,
                 "samplePerTrack": 20,
                 "batchSize": 100,
-                "context": 25,
-                "labelOffset": 1,
+                "context": 8193,
+                "labelOffset": 8193 // 2,
                 "labelRadiation": 1,
                 "learningRate": 0.0001,
                 "normalize": False,
@@ -168,41 +168,71 @@ class Model(object):
         # tfModel.summary()
         return tfModel
 
-    def _getTCN(self, context, n_bins, output):
+    def _getTCNSequential(self, context, n_bins, output):
         """
         Model from MatthewDavies and Bock - 2019 - Temporal convolutional networks for musical audio
         """
         tfModel = tf.keras.Sequential()
         # Conv blocks
-        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), input_shape=(context, n_bins, 1), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
-        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
-        tfModel.add(tf.keras.layers.Conv2D(16, (1, 8), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(32, (1, 8), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
         # TCN
+        tfModel.add(tf.keras.layers.Reshape((-1, 32)))
         for i in range(11):
-            tfModel.add(tf.keras.layers.Conv2D(16, (5, 5), activation="elu", strides=(1, 1), dilation_rate=2 ** i))
+            tfModel.add(tf.keras.layers.Conv1D(64, 5, activation="elu", strides=1, dilation_rate=2 ** i))
             tfModel.add(tf.keras.layers.BatchNormalization())
             tfModel.add(tf.keras.layers.Dropout(0.1))
 
         tfModel.add(tf.keras.layers.Flatten())
-        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense1"))
-        tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.Dense(256, activation="relu", name="dense2"))
-        tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
-        tfModel.build()
-        tfModel.summary()
+        # tfModel.build()
+        # tfModel.summary()
         return tfModel
+
+    def _getTCNFunctional(self, contex, n_bins, output):
+        """[summary]
+
+        Parameters
+        ----------
+        contex : [type]
+            [description]
+        n_bins : [type]
+            [description]
+        output : [type]
+            [description]
+        """
+        cnnInput = tf.keras.Input(shape=(5, n_bins, output))
+
+        x = tf.keras.layers.Conv2D(16, (3, 3), activation="elu")(cnnInput)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3))(x)
+        x = tf.keras.layers.Dropout(0.1)(x)
+
+        x = tf.keras.layers.Conv2D(16, (3, 3), activation="elu")(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3))(x)
+        x = tf.keras.layers.Dropout(0.1)(x)
+
+        x = tf.keras.layers.Conv2D(16, (1, 8), activation="elu")(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        cnnOutput = tf.keras.layers.Dropout(0.1)(x)
+
+        cnnModel = tf.keras.Model(cnnInput, cnnOutput)
+        cnnModel.summary()
+
+        tcnInput = tf.keras.Input(shape=())
 
     def _getCRNN(self, context, n_bins, output, batchSize):
         """
@@ -291,7 +321,7 @@ class Model(object):
         elif model == "CRNN":
             tfModel = self._getCRNN(context, n_bins, output, batchSize)
         elif model == "TCN":
-            tfModel = self._getTCN(context, n_bins, output)
+            tfModel = self._getTCNSequential(context, n_bins, output)
         else:
             raise ValueError("%s not known", model)
 

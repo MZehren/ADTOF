@@ -46,8 +46,8 @@ def main():
     for fold in range(2):
         for model, hparams in Model.modelFactory(fold=fold):
             dl = DataLoader(args.folderPath)
-            trainGen, valGen, valFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
-
+            trainGen, valGen, valFullGen, _ = dl.getTrainValTestGens(validationFold=fold, **hparams)
+            # next(trainGen())
             # trainGen = trainGen()
             # for i in range(1000):
             #     next(trainGen)

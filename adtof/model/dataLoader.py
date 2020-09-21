@@ -258,11 +258,16 @@ class DataLoader(object):
                         cache[trackIdx] = self.readTrack(trackIdx, **kwargs)
                     track = cache[trackIdx]
 
+                    # If the track is shorter than the context used to compute the output, we skip it
+                    if (len(track["x"]) - context) < 0:
+                        continue
+
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:
                         # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                         if trackIdx not in cursors:
                             cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) // 2
+
                         for _ in range(samplePerTrack):
                             cursor = cursors[trackIdx]
                             if balanceClassesDistribution:
