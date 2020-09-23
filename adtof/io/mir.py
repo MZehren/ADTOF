@@ -65,7 +65,8 @@ class MIR(object):
                 logging.warn("Cache file %s failed to load\n%s", cachePath, e)
 
         if result is None:
-            result = self.proc(audioPath)
+            # Calling np.array to reduce the memory consumption
+            result = np.array(self.proc(audioPath))
             if cachePath is not None:
                 try:
                     with open(cachePath, "wb") as cacheFile:

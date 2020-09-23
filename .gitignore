@@ -3,6 +3,9 @@
 .style.yapf
 .DS_store
 
+# pycharm files
+.idea
+
 # Compiled Python files
 *.pyc
 /build

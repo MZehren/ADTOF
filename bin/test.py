@@ -45,15 +45,15 @@ def main():
 
     for fold in range(2):
         for model, hparams in Model.modelFactory(fold=fold):
-            dl = DataLoader(args.folderPath)
+            dl = DataLoader(args.folderPath, **hparams)
             trainGen, valGen, valFullGen, _ = dl.getTrainValTestGens(validationFold=fold, **hparams)
-            # next(trainGen())
+            model.evaluate(valFullGen, **hparams)
             # trainGen = trainGen()
             # for i in range(1000):
             #     next(trainGen)
 
             dataset_train = tf.data.Dataset.from_generator(
-                trainGen,
+                valFullGen,
                 (tf.float32, tf.float32, tf.float32),
                 output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(hparams["labels"]),)), tf.TensorShape(1)),
             )

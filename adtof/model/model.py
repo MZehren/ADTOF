@@ -112,8 +112,8 @@ class Model(object):
         Parameters from Vogl
 
         import pickle
-        file="/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
-        # file = "/vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
+        # file="/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
+        file = "vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
         with open(file, "rb") as f:
             u = pickle._Unpickler(f)
             u.encoding = "latin1"
@@ -138,6 +138,10 @@ class Model(object):
         13:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d588>
         14:<madmom.ml.nn.layers.BatchNormLayer object at 0x7fd57228d6a0>
         15:<madmom.ml.nn.layers.FeedForwardLayer object at 0x7fd57228d860>
+
+        Total params: 4,591,589
+        Trainable params: 4,590,181
+        Non-trainable params: 1,408
 
         TODO: Can we handle the left and right channel as input shape (context, n_bins, 2)?
         """
@@ -166,32 +170,37 @@ class Model(object):
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
         # tfModel.build()
         # tfModel.summary()
+
         return tfModel
 
     def _getTCNSequential(self, context, n_bins, output):
         """
         Model from MatthewDavies and Bock - 2019 - Temporal convolutional networks for musical audio
+        
+        Total params: 237,061
+        Trainable params: 235,461
+        Non-trainable params: 1,600
         """
         tfModel = tf.keras.Sequential()
         # Conv blocks
-        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), input_shape=(context, n_bins, 1), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), input_shape=(context, n_bins, 1), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
-        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(16, (3, 3), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3)))
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
-        tfModel.add(tf.keras.layers.Conv2D(32, (1, 8), activation="elu"))
+        tfModel.add(tf.keras.layers.Conv2D(16, (1, 8), activation="elu"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.Dropout(0.1))
 
         # TCN
-        tfModel.add(tf.keras.layers.Reshape((-1, 32)))
+        tfModel.add(tf.keras.layers.Reshape((-1, 16)))
         for i in range(11):
-            tfModel.add(tf.keras.layers.Conv1D(64, 5, activation="elu", strides=1, dilation_rate=2 ** i))
+            tfModel.add(tf.keras.layers.Conv1D(16, 5, activation="elu", strides=1, dilation_rate=2 ** i))
             tfModel.add(tf.keras.layers.BatchNormalization())
             tfModel.add(tf.keras.layers.Dropout(0.1))
 
@@ -368,7 +377,7 @@ class Model(object):
     def predictEnsemble(models, x, aggregation=np.mean):
         return aggregation([model.predict(x) for model in models], axis=0)
 
-    def evaluate(self, dataset, peakThreshold=None, **kwargs):
+    def evaluate(self, dataset, peakThreshold=None, context=20, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
@@ -377,7 +386,16 @@ class Model(object):
         gen = dataset()
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
-            predictions.append(self.predict(x))
+            batchSize = 32
+
+            def localGenerator():
+                totalSamples = len(x) - context
+                for i in range(0, totalSamples - batchSize, batchSize):
+                    yield np.array([x[i + j : i + j + context] for j in range(batchSize)])
+
+            predictions.append(self.predict(localGenerator()))
+
+            self.model.summary()  # 4,591,589
             Y.append(y)
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
 
@@ -407,75 +425,3 @@ class Model(object):
             ax2.matshow(tf.transpose(tf.reshape(x[:, 0], (batchSize, -1))), aspect="auto")
             ax1.legend(labels)
             plt.show()
-
-
-# def log_layers(epoch, input, model, activation_model, file_writer):
-#     log_layer_activation(epoch, input, model, activation_model, file_writer)
-#     log_layer_weights(epoch, input, model, activation_model, file_writer)
-
-
-# def log_layer_activation(epoch, input, model, activation_model, file_writer):
-#     # Create a figure to contain the plot.
-#     layer_names = ["activation 0 input"] + ["activation " + str(i + 1) + " " + layer.name for i, layer in enumerate(model.layers)]
-#     layer_activations = [input] + activation_model.predict(input)
-#     for iLayer, (layer_name, layer_activation) in enumerate(zip(layer_names, layer_activations)):  # Displays the feature maps
-#         # Start next subplot.
-#         figure = plt.figure(figsize=(20, 10))
-
-#         if len(layer_activation.shape) == 4:
-#             _, sizeW, sizeH, nKernels = layer_activation.shape
-#             for iKernel in range(nKernels):
-#                 plt.subplot(nKernels // 5 + 1, 5, iKernel + 1, title=str(iKernel))
-#                 plt.xticks([])
-#                 plt.yticks([])
-#                 plt.grid(False)
-#                 plt.imshow(layer_activation[0, :, :, iKernel], cmap="viridis")
-
-#         # Save the plot to a PNG in memory.
-#         buf = io.BytesIO()
-#         plt.savefig(buf, format="png")
-#         # Closing the figure prevents it from being displayed directly inside
-#         # the notebook.
-#         plt.close(figure)
-#         buf.seek(0)
-#         # Convert PNG buffer to TF image
-#         image = tf.image.decode_png(buf.getvalue(), channels=4)
-#         # Add the batch dimension
-#         image = tf.expand_dims(image, 0)
-
-#         with file_writer.as_default():
-#             tf.summary.image(layer_name, image, step=epoch)
-
-
-# def log_layer_weights(epoch, input, model, activation_model, file_writer):
-#     # Create a figure to contain the plot.
-#     layer_names = ["weights " + str(i + 1) + " " + layer.name for i, layer in enumerate(model.layers) if len(layer.get_weights())]
-#     layer_weigths = [layer.get_weights()[0] for layer in model.layers if len(layer.get_weights())]
-#     for iLayer, (layer_name, layer_weigth) in enumerate(zip(layer_names, layer_weigths)):  # Displays the feature maps
-#         # Start next subplot.
-#         figure = plt.figure(figsize=(20, 10))
-
-#         if len(layer_weigth.shape) == 4:
-#             sizeW, sizeH, nChannel, nKernels = layer_weigth.shape
-#             for iChannel, iKernel in itertools.product(range(1), range(nKernels)):
-#                 plt.subplot(1, nKernels, iChannel * nKernels + iKernel + 1, title=str(iKernel) + "-" + str(iChannel))
-#                 plt.xticks([])
-#                 plt.yticks([])
-#                 plt.grid(False)
-#                 plt.imshow(layer_weigth[:, :, iChannel, iKernel], cmap="viridis")
-
-#         # Save the plot to a PNG in memory.
-#         buf = io.BytesIO()
-#         plt.savefig(buf, format="png")
-#         # Closing the figure prevents it from being displayed directly inside
-#         # the notebook.
-#         plt.close(figure)
-#         buf.seek(0)
-#         # Convert PNG buffer to TF image
-#         image = tf.image.decode_png(buf.getvalue(), channels=4)
-#         # Add the batch dimension
-#         image = tf.expand_dims(image, 0)
-
-#         with file_writer.as_default():
-#             tf.summary.image(layer_name, image, step=epoch)
-

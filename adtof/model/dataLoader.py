@@ -13,7 +13,7 @@ from adtof.io.textReader import TextReader
 
 
 class DataLoader(object):
-    def __init__(self, folderPath, loadLabels=True):
+    def __init__(self, folderPath, loadLabels=True, fmin=20, fmax=20000, **kwargs):
         """
         Class for the handling of the workflow while loading the dataset
 
@@ -30,7 +30,10 @@ class DataLoader(object):
             self.annotationPaths = config.getFilesInFolder(self.folderPath, config.ALIGNED_DRUM)
             self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
             self.featurePaths = np.array(
-                [os.path.join(folderPath, config.PROCESSED_AUDIO, config.getFileBasename(track) + ".npy") for track in self.audioPaths]
+                [
+                    os.path.join(folderPath, config.PROCESSED_AUDIO + str(fmin) + "-" + str(fmax), config.getFileBasename(track) + ".npy")
+                    for track in self.audioPaths
+                ]
             )
         else:
             self.audioPaths = config.getFilesInFolder(self.folderPath)
@@ -291,9 +294,10 @@ class DataLoader(object):
                     else:  # Yield the full track split in overlapping chunks with context
                         # Returning a number of samples multiple of batch size to enable hardcoded batchSize in the model.
                         # used by the tf statefull RNN
-                        totalSamples = len(track["x"]) - context
-                        usableSamples = totalSamples - totalSamples % batchSize
-                        yield np.array([track["x"][i : i + context] for i in range(totalSamples)]), track["y"]
+                        yield (track["x"], track["y"])
+                        # totalSamples = len(track["x"]) - context
+                        # usableSamples = totalSamples - totalSamples % batchSize
+                        # yield np.array([track["x"][i : i + context] for i in range(totalSamples)]), track["y"]
                 if not repeat:
                     break
 

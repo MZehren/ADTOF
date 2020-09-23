@@ -71,9 +71,9 @@ def train_test_models(args):
     """
     TODO factorise
     """
-    dl = DataLoader(args.folderPath)
     models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
     hparams = list(Model.modelFactory(fold=0))[0][1]
+    dl = DataLoader(args.folderPath, **hparams)
 
     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
     predictions = []
@@ -90,7 +90,7 @@ def train_test_model(hparams, args, fold, model):
     TODO 
     """
     # Get the data
-    dl = DataLoader(args.folderPath)
+    dl = DataLoader(args.folderPath, **hparams)
     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
     dataset_train = tf.data.Dataset.from_generator(
         trainGen,
