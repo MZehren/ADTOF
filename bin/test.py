@@ -39,6 +39,16 @@ def main():
     """
     Entry point of the program
     """
+    import pickle
+
+    # file="/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
+    file = "vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
+    with open(file, "rb") as f:
+        u = pickle._Unpickler(f)
+        u.encoding = "latin1"
+        p = u.load()
+        print(p)
+
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()

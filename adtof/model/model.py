@@ -48,46 +48,44 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "TCN": {
+            # "TCN": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 2,
+            #     "sampleRate": 100,
+            #     "diff": False,
+            #     "samplePerTrack": 20,
+            #     "batchSize": 100,
+            #     "context": 8193,
+            #     "labelOffset": 8193 // 2,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.0001,
+            #     "normalize": False,
+            #     "model": "TCN",
+            #     "fmin": 30,
+            #     "fmax": 17000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "tracksLimit": None,
+            # },
+            "crnn": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 2,
                 "sampleRate": 100,
-                "diff": False,
-                "samplePerTrack": 20,
-                "batchSize": 100,
-                "context": 8193,
-                "labelOffset": 8193 // 2,
+                "diff": True,
+                "samplePerTrack": 400,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 13,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
+                "labelOffset": 1,
                 "labelRadiation": 1,
                 "learningRate": 0.0001,
                 "normalize": False,
-                "model": "TCN",
-                "fmin": 30,
-                "fmax": 17000,
+                "model": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                "tracksLimit": None,
-            },
-            # (
-            #     "crnn-stride(1,3)",
-            #     {
-            #         "labels": config.LABELS_5,
-            #         "classWeights": config.WEIGHTS_5 / 2,
-            #         "sampleRate": 100,
-            #         "diff": True,
-            #         "samplePerTrack": 20,
-            #         "batchSize": 100,
-            #         "context": 25,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
-            #         "labelOffset": 1,
-            #         "labelRadiation": 1,
-            #         "learningRate": 0.0001,
-            #         "normalize": False,
-            #         "model": "CRNN",
-            #         "fmin": 20,
-            #         "fmax": 20000,
-            #         "pad": False,
-            #         "beat_targ": False,
-            #     },
-            # ),
+            }
         }
 
         for modelName, hparams in models.items():
@@ -243,23 +241,42 @@ class Model(object):
 
         tcnInput = tf.keras.Input(shape=())
 
-    def _getCRNN(self, context, n_bins, output, batchSize):
+    def _getCRNN(self, context, n_bins, output, batchSize, trainingSequence):
         """
-        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>
-        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>
-        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>
-        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>
+
+        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>   (1, 64, 3, 3)
+        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>       (64)
+        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>   (64, 64, 3, 3)
+        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>       (64)
         04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f6ff9a0>
-        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>
-        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>
-        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>
-        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>
+        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>   (64, 32, 3, 3)
+        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>       (32)
+        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>   (32, 32, 3, 3)
+        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>       (32)
         09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f707040>
         10:<madmom.ml.nn.layers.StrideLayer object at 0x14f7070d0> Re-arrange (stride) the data in blocks of given size (5).
-        11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>
-        12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>
-        13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>
-        14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>
+        11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>   (1120, 60)
+        12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>   (120, 60)
+        13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>   (120, 60)
+        14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>     (120, 8)
+
+        Shape of one track being analyzed
+        ('0', '<madmom.ml.nn.layers.ConvolutionalLayer object at 0x129dcd9d0>', 'in ',  (31511, 79),        'out', (31509, 77, 64))
+        ('1', '<madmom.ml.nn.layers.BatchNormLayer object at 0x129dcdf10>', 'in ',      (31509, 77, 64),    'out', (31509, 77, 64))
+        ('2', '<madmom.ml.nn.layers.ConvolutionalLayer object at 0x129dcd190>', 'in ',  (31509, 77, 64),    'out', (31507, 75, 64))
+        ('3', '<madmom.ml.nn.layers.BatchNormLayer object at 0x129dcdf90>', 'in ',      (31507, 75, 64),    'out', (31507, 75, 64))
+        ('4', '<madmom.ml.nn.layers.MaxPoolLayer object at 0x129d4ff50>', 'in ',        (31507, 75, 64),    'out', (31507, 25, 64))
+        ('5', '<madmom.ml.nn.layers.ConvolutionalLayer object at 0x129d4f250>', 'in ',  (31507, 25, 64),    'out', (31505, 23, 32))
+        ('6', '<madmom.ml.nn.layers.BatchNormLayer object at 0x129d4f750>', 'in ',      (31505, 23, 32),    'out', (31505, 23, 32))
+        ('7', '<madmom.ml.nn.layers.ConvolutionalLayer object at 0x129ddb090>', 'in ',  (31505, 23, 32),    'out', (31503, 21, 32))
+        ('8', '<madmom.ml.nn.layers.BatchNormLayer object at 0x129ddb2d0>', 'in ',      (31503, 21, 32),    'out', (31503, 21, 32))
+        ('9', '<madmom.ml.nn.layers.MaxPoolLayer object at 0x129ddb510>', 'in ',        (31503, 21, 32),    'out', (31503, 7, 32))
+        ('10', '<madmom.ml.nn.layers.StrideLayer object at 0x129ddb550>', 'in ',        (31503, 7, 32),     'out', (31499, 1120))
+        ('11', '<madmom.ml.nn.layers.BidirectionalLayer object at 0x129ddb610>', 'in ', (31499, 1120),      'out', (31499, 120))
+        ('12', '<madmom.ml.nn.layers.BidirectionalLayer object at 0x129dfc210>', 'in ', (31499, 120),       'out', (31499, 120))
+        ('13', '<madmom.ml.nn.layers.BidirectionalLayer object at 0x129dfce50>', 'in ', (31499, 120),       'out', (31499, 120))
+        ('14', '<madmom.ml.nn.layers.FeedForwardLayer object at 0x129e04990>', 'in ',   (31499, 120),       'out', (31499, 8))
+
 
         TODO: How to handle recurence granularity?
         https://www.tensorflow.org/guide/keras/rnn#cross-batch_statefulness
@@ -267,14 +284,15 @@ class Model(object):
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
         TODO: How to handle bidirectionnality?
+        TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
         """
         tfModel = tf.keras.Sequential()
         tfModel.add(
             tf.keras.layers.Conv2D(
                 32,
                 (3, 3),
-                input_shape=(context, n_bins, 1),
-                batch_input_shape=(batchSize, context, n_bins, 1),
+                input_shape=(trainingSequence, n_bins, 1),
+                batch_input_shape=(batchSize, trainingSequence, n_bins, 1),
                 activation="relu",
                 strides=(1, 1),
                 padding="valid",
@@ -295,20 +313,21 @@ class Model(object):
 
         # we set the model as a sequential model, the recurrency is done inside the batch and not outside
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
-        timeSerieDim = context - 4 * 2
+        timeSerieDim = trainingSequence - (context - 1)
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 64
-        tfModel.add(tf.keras.layers.Reshape((1, -1)))  # timeSerieDim might change if the full track is provided
-        tfModel.add(
-            tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True))
-        )  # return the whole sequence for the next layers
-        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=True)))
-        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(60, stateful=True, return_sequences=False)))
+        tfModel.add(tf.keras.layers.Reshape((timeSerieDim, -1)))  # timeSerieDim might change if the full track is provided
+        # return the whole sequence for the next layers with return_sequence
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
+        tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
         tfModel.build()
         tfModel.summary()
         return tfModel
 
-    def _createModel(self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, **kwargs):
+    def _createModel(
+        self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, trainingSequence=100, **kwargs
+    ):
         """Return a tf model based 
         
         Keyword Arguments:
@@ -328,7 +347,7 @@ class Model(object):
         if model == "CNN":
             tfModel = self._getCNN(context, n_bins, output)
         elif model == "CRNN":
-            tfModel = self._getCRNN(context, n_bins, output, batchSize)
+            tfModel = self._getCRNN(context, n_bins, output, batchSize, trainingSequence)
         elif model == "TCN":
             tfModel = self._getTCNSequential(context, n_bins, output)
         else:
@@ -370,35 +389,33 @@ class Model(object):
             # class_weight=classWeight
         )
 
-    def predict(self, x):
-        return self.model.predict(x)
+    def predict(self, x, **kwargs):
+        return self.model.predict(x, **kwargs)
 
     @staticmethod
     def predictEnsemble(models, x, aggregation=np.mean):
         return aggregation([model.predict(x) for model in models], axis=0)
 
-    def evaluate(self, dataset, peakThreshold=None, context=20, **kwargs):
+    def evaluate(self, dataset, peakThreshold=None, context=20, batchSize=32, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
+        gen = dataset()
         predictions = []
         Y = []
-        gen = dataset()
+        self.model.reset_states()
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
-            batchSize = 32
 
             def localGenerator():
-                totalSamples = len(x) - context
-                for i in range(0, totalSamples - batchSize, batchSize):
+                totalSamples2 = len(x) - context
+                for i in range(0, totalSamples2 - batchSize, batchSize):
                     yield np.array([x[i + j : i + j + context] for j in range(batchSize)])
 
             predictions.append(self.predict(localGenerator()))
-
-            self.model.summary()  # 4,591,589
+            self.model.reset_states()  # TODO is this mandatory
             Y.append(y)
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
-
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)
         else:
@@ -410,7 +427,7 @@ class Model(object):
         """
 
         for x, y, _ in dataset:
-            predictions = self.predict(x)
+            predictions = self.predict(x, batch_size=batchSize)
             import matplotlib.pyplot as plt
 
             f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)

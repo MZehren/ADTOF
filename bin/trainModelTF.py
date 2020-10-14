@@ -57,7 +57,7 @@ def main():
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
 
-    score = train_test_models(args)
+    score = test_enssemble_models(args)
     logging.info(str(score))
     with tf.summary.create_file_writer(hparamsLogs + "ensemble model").as_default():
         # hp.hparams(
@@ -67,9 +67,10 @@ def main():
             tf.summary.scalar(key, value, step=0)
 
 
-def train_test_models(args):
+def test_enssemble_models(args):
     """
     TODO factorise
+    Used to evaluate an ensemble of models
     """
     models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
     hparams = list(Model.modelFactory(fold=0))[0][1]
@@ -120,7 +121,7 @@ def train_test_model(hparams, args, fold, model):
             steps_per_epoch = maxStepPerEpoch
         validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch)
         model.fit(dataset_train, dataset_val, tensorboardLogs, steps_per_epoch, validation_steps, **hparams)
-
+        # TODO: need to call reset state?
     # If the model is already evaluated, skip the evaluation
     # Predict on validation data
     if os.path.exists(hparamsLogs + model.name):
@@ -128,8 +129,9 @@ def train_test_model(hparams, args, fold, model):
         return None
     else:
         logging.info("Evaluating model %s", model.name)
-        # scoreVal = model.evaluate(valFullGen, **hparams)
-        # scoreTest = model.evaluate(testFullGen, peakThreshold=scoreVal["peakThreshold"], **hparams)
+        scoreVal = model.evaluate(valFullGen, **hparams)
+        scoreTest = model.evaluate(testFullGen, peakThreshold=scoreVal["peakThreshold"], **hparams)
+        # model.vizPredictions(dataset_train, **hparams)
         scoreTest = model.evaluate(testFullGen, peakThreshold=0.3, **hparams)
         return scoreTest
 
