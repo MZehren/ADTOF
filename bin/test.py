@@ -42,12 +42,12 @@ def main():
     import pickle
 
     # file="/madmom-0.16.dev0/madmom/models/drums/2018/drums_cnn0_O8_S0.pkl"
-    file = "vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
-    with open(file, "rb") as f:
-        u = pickle._Unpickler(f)
-        u.encoding = "latin1"
-        p = u.load()
-        print(p)
+    # file = "vendors/madmom-0.16.dev0/madmom/models/drums/2018/drums_crnn1_O8_S0.pkl"
+    # with open(file, "rb") as f:
+    #     u = pickle._Unpickler(f)
+    #     u.encoding = "latin1"
+    #     p = u.load()
+    #     print(p)
 
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
@@ -57,6 +57,8 @@ def main():
         for model, hparams in Model.modelFactory(fold=fold):
             dl = DataLoader(args.folderPath, **hparams)
             trainGen, valGen, valFullGen, _ = dl.getTrainValTestGens(validationFold=fold, **hparams)
+            x, y, w = next(trainGen())
+            print(x.shape, y.shape, w.shape)
             model.evaluate(valFullGen, **hparams)
             # trainGen = trainGen()
             # for i in range(1000):

@@ -72,10 +72,10 @@ class Model(object):
                 "classWeights": config.WEIGHTS_5 / 2,
                 "sampleRate": 100,
                 "diff": True,
-                "samplePerTrack": 400,
+                "samplePerTrack": 1,
                 "trainingSequence": 400,
                 "batchSize": 8,
-                "context": 13,  # in RNN, The context is used as time serie, using a bigger one is not increasing the total params
+                "context": 9,
                 "labelOffset": 1,
                 "labelRadiation": 1,
                 "learningRate": 0.0001,
@@ -277,22 +277,25 @@ class Model(object):
         ('13', '<madmom.ml.nn.layers.BidirectionalLayer object at 0x129dfce50>', 'in ', (31499, 120),       'out', (31499, 120))
         ('14', '<madmom.ml.nn.layers.FeedForwardLayer object at 0x129e04990>', 'in ',   (31499, 120),       'out', (31499, 8))
 
-
         TODO: How to handle recurence granularity?
         https://www.tensorflow.org/guide/keras/rnn#cross-batch_statefulness
         https://www.tensorflow.org/api_docs/python/tf/keras/layers/RNN#masking_2
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
-        TODO: How to handle bidirectionnality?
         TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
+        TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 6 filters, then 32
+        TODO: How to construct the GT since the trainingSequence is 400, but the output is 388/392 depending on the context.
+
         """
+        xWindowSize = context + (trainingSequence - 1)
+
         tfModel = tf.keras.Sequential()
         tfModel.add(
             tf.keras.layers.Conv2D(
-                32,
+                64,
                 (3, 3),
-                input_shape=(trainingSequence, n_bins, 1),
-                batch_input_shape=(batchSize, trainingSequence, n_bins, 1),
+                # input_shape=(xWindowSize, n_bins, 1),
+                # batch_input_shape=(batchSize, xWindowSize, n_bins, 1),
                 activation="relu",
                 strides=(1, 1),
                 padding="valid",
@@ -300,29 +303,30 @@ class Model(object):
             )
         )
         tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv12"))
+        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv12"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
         tfModel.add(tf.keras.layers.Dropout(0.3))
-        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv21"))
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv21"))
         tfModel.add(tf.keras.layers.BatchNormalization())
-        tfModel.add(tf.keras.layers.Conv2D(64, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv22"))
+        tfModel.add(tf.keras.layers.Conv2D(32, (3, 3), activation="relu", strides=(1, 1), padding="valid", name="conv22"))
         tfModel.add(tf.keras.layers.BatchNormalization())
         tfModel.add(tf.keras.layers.MaxPool2D(pool_size=(1, 3), strides=(1, 3), padding="valid"))
         tfModel.add(tf.keras.layers.Dropout(0.3))
 
-        # we set the model as a sequential model, the recurrency is done inside the batch and not outside
+        # we set the model as a sequential model, the recurrency is done inside the batch and not between batches
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
-        timeSerieDim = trainingSequence - (context - 1)
-        featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 64
-        tfModel.add(tf.keras.layers.Reshape((timeSerieDim, -1)))  # timeSerieDim might change if the full track is provided
+        timeSerieDim = xWindowSize - (context - 1)
+        featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 32
+        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one
+        tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))
         # return the whole sequence for the next layers with return_sequence
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
-        tfModel.build()
-        tfModel.summary()
+        # tfModel.build()
+        # tfModel.summary()
         return tfModel
 
     def _createModel(
@@ -396,24 +400,29 @@ class Model(object):
     def predictEnsemble(models, x, aggregation=np.mean):
         return aggregation([model.predict(x) for model in models], axis=0)
 
-    def evaluate(self, dataset, peakThreshold=None, context=20, batchSize=32, **kwargs):
+    def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         """
         gen = dataset()
         predictions = []
         Y = []
+
+        def localGenerator(seq, sequence, batch):
+            """
+            iterate over a sequence by building batches of length sequence
+            """
+            totalSamples = len(seq) - sequence
+            for i in range(0, totalSamples - batch, batch):
+                yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
+
         self.model.reset_states()
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
+            # predictions.append(self.predict(localGenerator(x, context, batchSize)))
+            predictions.append(self.model(np.array([x]), training=False))
 
-            def localGenerator():
-                totalSamples2 = len(x) - context
-                for i in range(0, totalSamples2 - batchSize, batchSize):
-                    yield np.array([x[i + j : i + j + context] for j in range(batchSize)])
-
-            predictions.append(self.predict(localGenerator()))
-            self.model.reset_states()  # TODO is this mandatory
+            self.model.reset_states()  # TODO is this mandatory ?
             Y.append(y)
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
         if peakThreshold == None:

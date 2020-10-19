@@ -1,12 +1,12 @@
-from collections import defaultdict
 import logging
 import os
+from collections import defaultdict
 
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
-
+import tensorflow as tf
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
@@ -193,6 +193,21 @@ class DataLoader(object):
 
         return (trainIndexes, valIndexes, testIndexes)
 
+    def getDataset(self, gen, trainingSequence=1, labels=[1, 1, 1, 1, 1], **kwargs):
+        """
+        Get a tf.dataset from the generator.
+        Fill the right size for each dim
+        """
+        # time, feature, channel dimension
+        xShape = (None, None, 1)
+        yShape = (len(labels),) if trainingSequence == 1 else (trainingSequence, len(labels))
+        wShape = ((1),)
+        return tf.data.Dataset.from_generator(
+            gen,
+            (tf.float32, tf.float32, tf.float32),
+            output_shapes=(tf.TensorShape(xShape), tf.TensorShape(yShape), tf.TensorShape(wShape)),
+        )
+
     def getTrainValTestGens(self, **kwargs):
         """[summary]
         TODO 
@@ -216,10 +231,9 @@ class DataLoader(object):
         trackIndexes=None,
         samplePerTrack=100,
         context=25,
-        balanceClassesDistribution=False,
+        trainingSequence=1,
         classWeights=np.array([1, 1, 1, 1, 1]),
         repeat=True,
-        batchSize=1,
         **kwargs,
     ):
         """
@@ -233,64 +247,70 @@ class DataLoader(object):
             Specifies how many samples has to be returned before moving to the next track, the generator is infinite and will resume where it stopped at each track.
             If None, the full track is returned without windowing. by default 100 TODO: Make this behavior more explicit
         context : int, optional
-            Specifies how large the context is,, by default 25
-        balanceClassesDistribution : bool, optional
-            Not implemented, by default False
+            Specifies how large the context is, by default 25
+        trainingSequence : int, optional
+            Specifies how many context frames are merged together, by default 1
         classWeights : [type], optional
             the sample weight is computed by min(1, sum(classWeights * y)), by default np.array([1, 1, 1, 1, 1])
         repeat : bool, optional
             If False, stop after seeing each track., by default True
-        batchSize : int, optional
-            Not implemented, by default 1
 
         Returns
         -------
         generator yielding unique samples(x, y, w)
+
+        TODO:
+        if balanceClassesDistribution:
+            # track["cursor"] = (cursor + 1) % len(track["indexes"])
+            # sampleIdx = track["indexes"][cursor]
+            raise NotImplementedError()
         """
-        cache = {}
+        cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
         if trackIndexes is None:
             trackIndexes = list(range(len(self.audioPaths)))
+
+        # Compute how large the x time dimension has to be by merging [trainingSequence] frames of context
+        xWindowSize = context + (trainingSequence - 1)
+        yWindowSize = trainingSequence
 
         def gen():
             cursors = {}  # The cursors dictionnary are stored in the gen to make it able to reinitialize
             while True:  # Infinite yield of samples
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
-                    # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
                     # Get the current track in the buffer, or load it from disk if the buffer is empty
                     if trackIdx not in cache:
                         cache[trackIdx] = self.readTrack(trackIdx, **kwargs)
                     track = cache[trackIdx]
 
+                    # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
+                    if trackIdx not in cursors:
+                        cursors[trackIdx] = (len(track["x"]) - xWindowSize) // 2
+
                     # If the track is shorter than the context used to compute the output, we skip it
-                    if (len(track["x"]) - context) < 0:
+                    if (len(track["x"]) - xWindowSize) < 0:
                         continue
 
                     # Yield the specified number of samples per track, save the cursor to resume on the same location,
                     if samplePerTrack is not None:
-                        # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
-                        if trackIdx not in cursors:
-                            cursors[trackIdx] = min((len(track["x"]) - context), len(track["y"])) // 2
-
                         for _ in range(samplePerTrack):
-                            cursor = cursors[trackIdx]
-                            if balanceClassesDistribution:
-                                # track["cursor"] = (cursor + 1) % len(track["indexes"])
-                                # sampleIdx = track["indexes"][cursor]
-                                raise NotImplementedError()
+                            # Compute the next index
+                            sampleIdx = cursors[trackIdx]
+                            nextIdx = sampleIdx + yWindowSize
+                            if nextIdx >= (len(track["x"]) - xWindowSize) or nextIdx >= len(track["y"] - yWindowSize):
+                                cursors[trackIdx] = 0
                             else:
-                                if cursor + 1 >= (len(track["x"]) - context) or cursor + 1 >= len(track["y"]):
-                                    cursors[trackIdx] = 0
-                                else:
-                                    cursors[trackIdx] = cursor + 1
-                                sampleIdx = cursor
+                                cursors[trackIdx] = nextIdx
 
-                            y = track["y"][sampleIdx]
-                            # sampleWeight = np.array([max(np.sum(y * classWeights), 1)])
+                            x = track["x"][sampleIdx : sampleIdx + xWindowSize]
+                            y = track["y"][sampleIdx] if yWindowSize == 1 else track["y"][sampleIdx : sampleIdx + yWindowSize]
+
                             # TODO Could be faster by caching the results since the weight or target is not changing.
-                            sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
-                            sampleWeight = np.array([max(sampleWeight, 1)])
+                            sampleWeight = np.array([max(np.sum(y * classWeights), 1)]) # /yWindowSize
+                            # sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
+                            # sampleWeight = np.array([max(sampleWeight, 1)])
 
-                            yield track["x"][sampleIdx : sampleIdx + context], y, sampleWeight
+                            yield x, y, sampleWeight
+
                     else:  # Yield the full track split in overlapping chunks with context
                         # Returning a number of samples multiple of batch size to enable hardcoded batchSize in the model.
                         # used by the tf statefull RNN

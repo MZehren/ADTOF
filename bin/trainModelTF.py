@@ -88,21 +88,15 @@ def test_enssemble_models(args):
 
 def train_test_model(hparams, args, fold, model):
     """
-    TODO 
+    Train procedure for one model with one set of hparam for one fold.
+    Learn the best peak threshold on the validation data
+    Compute the score on the test data 
     """
     # Get the data
     dl = DataLoader(args.folderPath, **hparams)
     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
-    dataset_train = tf.data.Dataset.from_generator(
-        trainGen,
-        (tf.float32, tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(hparams["labels"]),)), tf.TensorShape(1)),
-    )
-    dataset_val = tf.data.Dataset.from_generator(
-        valGen,
-        (tf.float32, tf.float32, tf.float32),
-        output_shapes=(tf.TensorShape((None, None, 1)), tf.TensorShape((len(hparams["labels"]),)), tf.TensorShape(1)),
-    )
+    dataset_train = dl.getDataset(trainGen, **hparams)
+    dataset_val = dl.getDataset(valGen, **hparams)
     dataset_train = dataset_train.batch(hparams["batchSize"]).repeat()
     dataset_val = dataset_val.batch(hparams["batchSize"]).repeat()
     dataset_train = dataset_train.prefetch(buffer_size=2)
