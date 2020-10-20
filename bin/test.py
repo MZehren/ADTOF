@@ -57,12 +57,14 @@ def main():
         for model, hparams in Model.modelFactory(fold=fold):
             dl = DataLoader(args.folderPath, **hparams)
             trainGen, valGen, valFullGen, _ = dl.getTrainValTestGens(validationFold=fold, **hparams)
-            x, y, w = next(trainGen())
-            print(x.shape, y.shape, w.shape)
-            model.evaluate(valFullGen, **hparams)
-            # trainGen = trainGen()
-            # for i in range(1000):
-            #     next(trainGen)
+            # x, y, w = next(trainGen())
+            # print(x.shape, y.shape, w.shape)
+            # model.evaluate(valFullGen, **hparams)
+            trainGen = trainGen()
+            while True:
+                sample = next(trainGen)
+                if sample[1].shape != (400, 5):
+                    print("oula")
 
             dataset_train = tf.data.Dataset.from_generator(
                 valFullGen,

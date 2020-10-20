@@ -296,7 +296,7 @@ class DataLoader(object):
                             # Compute the next index
                             sampleIdx = cursors[trackIdx]
                             nextIdx = sampleIdx + yWindowSize
-                            if nextIdx >= (len(track["x"]) - xWindowSize) or nextIdx >= len(track["y"] - yWindowSize):
+                            if nextIdx + xWindowSize >= len(track["x"]) or nextIdx + yWindowSize >= len(track["y"]):
                                 cursors[trackIdx] = 0
                             else:
                                 cursors[trackIdx] = nextIdx
@@ -305,7 +305,7 @@ class DataLoader(object):
                             y = track["y"][sampleIdx] if yWindowSize == 1 else track["y"][sampleIdx : sampleIdx + yWindowSize]
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
-                            sampleWeight = np.array([max(np.sum(y * classWeights), 1)]) # /yWindowSize
+                            sampleWeight = np.array([max(np.sum(y * classWeights), 1)])  # /yWindowSize
                             # sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
                             # sampleWeight = np.array([max(sampleWeight, 1)])
 
