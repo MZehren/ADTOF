@@ -416,13 +416,13 @@ class Model(object):
             for i in range(0, totalSamples - batch, batch):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
-        self.model.reset_states()
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
-            # predictions.append(self.predict(localGenerator(x, context, batchSize)))
-            predictions.append(self.model(np.array([x]), training=False))
+            if trainingSequence == 1:
+                predictions.append(self.predict(localGenerator(x, context, batchSize)))
+            else:
+                predictions.append(np.array(self.model(np.array([x]), training=False)[0]))
 
-            self.model.reset_states()  # TODO is this mandatory ?
             Y.append(y)
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
         if peakThreshold == None:

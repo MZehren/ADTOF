@@ -126,7 +126,7 @@ def train_test_model(hparams, args, fold, model):
         # model.vizPredictions(dataset_train, **hparams)
         scoreVal = model.evaluate(valFullGen, **hparams)
         scoreTest = model.evaluate(testFullGen, peakThreshold=scoreVal["peakThreshold"], **hparams)
-        scoreTest = model.evaluate(testFullGen, peakThreshold=0.3, **hparams)
+        # scoreTest = model.evaluate(testFullGen, peakThreshold=0.3, **hparams)
         return scoreTest
 
 
