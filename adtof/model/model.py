@@ -69,7 +69,7 @@ class Model(object):
             # },
             "crnn": {
                 "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 2,
+                "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
                 "diff": True,
                 "samplePerTrack": 1,
@@ -378,8 +378,8 @@ class Model(object):
                 write_images=False,
             ),
             tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True,),
-            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1),
-            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=30, verbose=1, restore_best_weights=True),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=5),
+            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
         self.model.fit(
