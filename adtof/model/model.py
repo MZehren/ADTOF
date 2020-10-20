@@ -430,13 +430,20 @@ class Model(object):
         else:
             return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[peakThreshold], **kwargs)
 
-    def vizPredictions(self, dataset, labels=[35], batchSize=100, **kwargs):
+    def vizPredictions(self, dataset, labels=[35], batchSize=100, trainingSequence=1, **kwargs):
         """
         Plot the input, output and target of the model
         """
 
         for x, y, _ in dataset:
             predictions = self.predict(x, batch_size=batchSize)
+
+            # if the data is not a batch of samples, but a batch of sequence of samples (i.e: model crnn)
+            if trainingSequence > 1:
+                predictions = predictions[0]
+                y = y[0]
+                x = x[0]
+
             import matplotlib.pyplot as plt
 
             f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -448,6 +455,9 @@ class Model(object):
                 ax1.scatter(idx, [classIdx / 20 + 1 for _ in range(len(idx))])
             ax2.set_ylabel("Input")
             ax2.set_xlabel("Time step")
-            ax2.matshow(tf.transpose(tf.reshape(x[:, 0], (batchSize, -1))), aspect="auto")
+            if trainingSequence == 1:
+                ax2.matshow(tf.transpose(tf.reshape(x[:, 0], (batchSize, -1))), aspect="auto")
+            else:
+                ax2.matshow(tf.transpose(tf.reshape(x, x.shape[:2])), aspect="auto")
             ax1.legend(labels)
             plt.show()
