@@ -123,7 +123,7 @@ def train_test_model(hparams, args, fold, model):
         return None
     else:
         logging.info("Evaluating model %s", model.name)
-        # model.vizPredictions(dataset_train, **hparams)
+        model.vizPredictions(dataset_train, **hparams)
         scoreVal = model.evaluate(valFullGen, **hparams)
         scoreTest = model.evaluate(testFullGen, peakThreshold=scoreVal["peakThreshold"], **hparams)
         # scoreTest = model.evaluate(testFullGen, peakThreshold=0.3, **hparams)

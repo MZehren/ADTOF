@@ -124,6 +124,8 @@ def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
 # Maps Phase shift/rock band expert difficulty to std midi
 # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
 # TODO: handle "disco flip" event
+# TODO: DRUM_ROLLS = 126
+# TODO: CYMBAL_SWELL = 127
 EXPERT_MIDI = {
     95: 35,
     96: 35,
@@ -136,32 +138,33 @@ EXPERT_MIDI = {
 # Maps PS/RB animation pitches to the standard midi pitches. The animation seems to contain a better representation of the real notes
 # Not available on all charts
 ANIMATIONS_MIDI = {
-    51: 41,
-    50: 41,
-    49: 43,
-    48: 43,
-    47: 45,
-    46: 45,
-    42: 51,
-    41: 57,
-    40: 49,
-    39: 57,
-    38: 57,
-    37: 49,
-    36: 49,
-    35: 49,
-    34: 49,
+    51: 41,  # Floor Tom hit w/RH
+    50: 41,  # Floor Tom hit w/LH
+    49: 43,  # Tom2 hit w/RH
+    48: 43,  # Tom2 hit w/LH
+    47: 45,  # Tom1 hit w/RH
+    46: 45,  # Tom1 hit w/LH
+    42: 51,  # Ride Cym hit w/RH
+    41: 57,  # Crash2 Choke (hit w/RH, choke w/LH)
+    40: 49,  # Crash1 Choke (hit w/RH, choke w/LH)
+    39: 57,  # Crash2 (near Ride Cym) soft hit w/RH
+    38: 57,  # Crash2 hard hit w/RH
+    37: 49,  # Crash1 (near Hi-Hat) soft hit w/RH
+    36: 49,  # Crash1 hard hit w/RH
+    35: 49,  # Crash1 soft hit w/LH
+    34: 49,  # Crash1 hard hit w/LH
     32: 60,  # Percussion w/ RH
-    31: {"modifier": 25, True: 46, False: 42},
-    30: {"modifier": 25, True: 46, False: 42},
-    27: 38,
-    26: 38,
-    24: 35,
-    28: 38,
-    29: 38,
-    43: 51,
-    44: 57,
-    45: 57,
+    # 25:Hi-Hat pedal up (hat open) w/LF. The hat will stay open for the duration of the note. The default is pedal down (hat closed).
+    31: {"modifier": 25, True: 46, False: 42},  # Hi-Hat hit w/RH
+    30: {"modifier": 25, True: 46, False: 42},  # Hi-Hat hit w/LH
+    27: 38,  # Snare hit w/RH
+    26: 38,  # Snare hit w/LH
+    24: 35,  # Kick hit w/RF
+    28: 38,  # A soft snare hit with the left hand
+    29: 38,  # A soft snare hit with the right hand
+    43: 51,  # A ride hit with the left hand
+    44: 57,  # A hit on crash 2 with the left hand
+    45: 57,  # A soft hit on crash 2 with the left hand
 }
 # Maps all the standard midi pitches to more general consistant ones
 # ie.: converts all tom-tom to the 47 tom, converts all hi-hat to 42 hi-hat

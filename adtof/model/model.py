@@ -393,8 +393,11 @@ class Model(object):
             # class_weight=classWeight
         )
 
-    def predict(self, x, **kwargs):
-        return self.model.predict(x, **kwargs)
+    def predict(self, x, trainingSequence=1, **kwargs):
+        if trainingSequence == 1:
+            return self.model.predict(x, **kwargs)
+        else:
+            return np.array(self.model(np.array([x]), training=False)[0])
 
     @staticmethod
     def predictEnsemble(models, x, aggregation=np.mean):
@@ -418,7 +421,7 @@ class Model(object):
 
         for i, (x, y) in enumerate(gen):
             startTime = time.time()
-            if trainingSequence == 1:
+            if trainingSequence == 1:  # TODO put that into the predict method?
                 predictions.append(self.predict(localGenerator(x, context, batchSize)))
             else:
                 predictions.append(np.array(self.model(np.array([x]), training=False)[0]))

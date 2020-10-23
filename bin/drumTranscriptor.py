@@ -59,7 +59,7 @@ def main():
         if os.path.exists(outputTrackPath):
             continue
 
-        Y = model.predict(x)
+        Y = model.predict(x, **hparams)
         sparseResultIdx = peakPicking.peakPicking(Y, ppProcess=ppp, timeOffset=hparams["labelOffset"] / hparams["sampleRate"], **hparams)
 
         # write text

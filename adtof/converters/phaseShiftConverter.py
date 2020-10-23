@@ -32,9 +32,6 @@ class PhaseShiftConverter(Converter):
     PS_AUDIO_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
 
-    DRUM_ROLLS = 126  # TODO: implement
-    CYMBAL_SWELL = 127  # TODO: implement
-
     def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True):
         """
         Read the ini file and convert the midi file to the standard events

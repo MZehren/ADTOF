@@ -51,12 +51,9 @@ class MIR(object):
     def open(self, audioPath: str, cachePath: str = None):
         """
         Load an audio track and return a numpy array
-        TODO: Calling a lot of times this method without cache uses much more memory!
-
         """
-        # logging.debug("reading %s", audioPath)
         result = None
-        if cachePath is not None and Converter.checkPathExists(cachePath):
+        if cachePath is not None and Converter.checkPathExists(cachePath):  # Getting the cached file
             try:
                 with open(cachePath, "rb") as cacheFile:
                     result = pickle.load(cacheFile)
@@ -64,9 +61,8 @@ class MIR(object):
             except Exception as e:
                 logging.warn("Cache file %s failed to load\n%s", cachePath, e)
 
-        if result is None:
-            # Calling np.array to reduce the memory consumption
-            result = np.array(self.proc(audioPath))
+        else:  # Processing the file
+            result = self.proc(audioPath)
             if cachePath is not None:
                 try:
                     with open(cachePath, "wb") as cacheFile:
@@ -75,13 +71,18 @@ class MIR(object):
                 except Exception as e:
                     logging.warning("Couldn't cache processed audio \n%s", e)
 
+        # Normalizing the frequencies
         if self.normalize:
             max = np.max(result)
             min = np.min(result)
             result = (result - min) / (max - min)
 
+        # Adding the diff
         if self.diff:
             result = self.diffProc(result)
+
+        # Removing all the cached extra data from madmom
+        result = np.array(result)
 
         # self.plot([result[:2500]])
         return result
