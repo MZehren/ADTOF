@@ -221,10 +221,11 @@ class PhaseShiftConverter(Converter):
     def convertPitches(self, pitches):
         """
         Convert the notes from a list of simultaneous events to standard pitches.
-        The events which should be removed have a pitch set to None.
+        The events which should be removed have a pitch set to 0.
         """
         converted = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
-        if len(converted) == 0:
+        if len(converted) == 0:  # TODO Is it possible to merge the two (i.e Psy has a worse animation than expert) ?
             converted = config.getPitchesRemap(pitches, EXPERT_MIDI)
-        return {k: MIDI_REDUCED_8[v] for k, v in converted.items()}
+        # TODO This dict generation is very close to config.getPitchesRemap (the diff is replacement of unknown to 0)
+        return {k: MIDI_REDUCED_8[v] if v in MIDI_REDUCED_8 else 0 for k, v in converted.items()}
 

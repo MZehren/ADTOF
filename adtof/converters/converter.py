@@ -237,7 +237,7 @@ class Converter(object):
         candidates = Converter._pickVersion(candidates)
         candidateName = list(candidates.values())
         candidateName.sort(key=lambda x: x["path"])
-        logging.info("number of tracks in the dataset: " + str(len(candidates)))
+        logging.info("number of tracks in the dataset after selection: " + str(len(candidates)))
 
         # Do the conversion
         if parallelProcess:
@@ -248,7 +248,7 @@ class Converter(object):
                 ]
                 concurrent.futures.wait(futures)
         else:
-            for trackName, candidate in list(candidates.items()):
+            for i, (trackName, candidate) in enumerate(list(candidates.items())):
                 Converter.runConvertors(candidate, outputFolder, trackName)
 
     @staticmethod
@@ -292,9 +292,9 @@ class Converter(object):
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
             # if not Converter.checkPathExists(featuresExtractedPath):
             #     fe.convert(audioPath, featuresExtractedPath)
-            print(trackName + " Done.")
+            logging.log(trackName + " Done.")
         except Exception as e:
-            print(trackName + " not converted: " + str(e))
+            logging.warning(trackName + " not converted: " + str(e))
 
     @staticmethod
     def vizDataset(iterator):

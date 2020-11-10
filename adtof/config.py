@@ -73,15 +73,16 @@ def getBand(path):
 
 def remapPitches(pitches, mappings, removeIfUnknown=True):
     """
-    Map pitches to a value from a mapping such as EXPERT_MIDI or [EXPERT_MIDI, MIDI_REDUCED_3] to chain them.
+    Map pitches to a value from a mapping. and return only the converted pitches
     
     All the pitches from the same timestamp have to be converted at once because of modifiers pitches in the mappings 
     (ie: 98 = 45 if 110 in pitches else 46)
 
     pitches(int or list[int]): pitches to be converted with the mapping. If only one pitch is send instead of an iterable, 
     only one pitch is returned (or None)
-    mappings(dict or list[dict]): a (list of) mapping from one pitch to another. See config.EXPERT_MIDI or config.MIDI_REDUCED_3 for examples of mappings
-    removeIfUnknown(boolean): Specifies if any pitch not known in the mappings is removed or kept as is.
+    mappings(dict or list[dict]): a (list of) mapping from one pitch to another. See config.EXPERT_MIDI or config.MIDI_REDUCED_3 for examples of mappings. 
+    Use a list (i.e.[EXPERT_MIDI, MIDI_REDUCED_3]) to chain them.
+    removeIfUnknown(boolean): Specifies if any pitch not known in the mappings is removed or kept as it is.
     """
     if not isinstance(mappings, list):
         mappings = [mappings]
