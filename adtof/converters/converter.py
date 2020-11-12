@@ -292,7 +292,7 @@ class Converter(object):
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
             # if not Converter.checkPathExists(featuresExtractedPath):
             #     fe.convert(audioPath, featuresExtractedPath)
-            logging.log(trackName + " Done.")
+            logging.info(trackName + " Done.")
         except Exception as e:
             logging.warning(trackName + " not converted: " + str(e))
 
