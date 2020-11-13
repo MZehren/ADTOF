@@ -7,13 +7,11 @@ import argparse
 import logging
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pretty_midi
-import mir_eval
-import tensorflow as tf
+
 
 from adtof import config
-from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
+
+# from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
 from adtof.io.textReader import TextReader
 from adtof.model.model import Model
 from adtof.model.dataLoader import DataLoader

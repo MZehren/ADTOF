@@ -4,6 +4,8 @@ from collections import defaultdict
 from os import stat
 import os
 import datetime
+from madmom.audio.signal import energy
+import pandas as pd
 
 import madmom
 from markdown.test_tools import Kwargs
@@ -421,13 +423,22 @@ class Model(object):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
         for i, (x, y) in enumerate(gen):
+            Y.append(y)
             startTime = time.time()
             if trainingSequence == 1:  # TODO put that into the predict method?
                 predictions.append(self.predict(localGenerator(x, context, batchSize)))
             else:
                 predictions.append(np.array(self.model(np.array([x]), training=False)[0]))
 
-            Y.append(y)
+                df = pd.DataFrame(
+                    [
+                        peakPicking.fitPeakPicking([predictions[i]], [Y[i]], peakPickingSteps=[peakThreshold], **kwargs)
+                        for i, _ in enumerate(predictions)
+                    ],
+                    index=[kwargs["paths"][i] for i,_ in enumerate(predictions)]
+                )
+                df.to_csv("evalAnnotations.csv")
+
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)
