@@ -85,6 +85,7 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
+                "peakThreshold": 0.22,
             }
         }
 

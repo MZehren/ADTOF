@@ -15,6 +15,13 @@ import tensorflow as tf
 from adtof import config
 from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
 from adtof.io.textReader import TextReader
+from adtof.model.model import Model
+from adtof.model.dataLoader import DataLoader
+import os
+
+cwd = os.path.abspath(os.path.dirname(__file__))
+all_logs = os.path.join(cwd, "..", "logs/")
+logging.basicConfig(filename=os.path.join(all_logs, "evalAnnotations.log"), level=logging.DEBUG, filemode="w")
 
 
 def main():
@@ -33,11 +40,34 @@ def main():
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path.")
-    parser.add_argument("-d", "--distance", type=float, default=0.05, help="Hit rate distance for the precision and recall")
+    # parser.add_argument("-d", "--distance", type=float, default=0.05, help="Hit rate distance for the precision and recall")
     args = parser.parse_args()
 
-    annotatedMidis = config.getFilesInFolder(args.folderPath, config.CONVERTED_MIDI)
-    estimatedBeats = config.getFilesInFolder(args.folderPath, config.BEATS_ESTIMATIONS)
+    # evalCAC(args.folderPath)
+    evalADT(args.folderPath)
+
+
+def evalADT(folderPath):
+    """
+    Check suspicious tracks having a low ADT score
+    """
+    model, hparams = next(Model.modelFactory())
+    dl = DataLoader(folderPath, **hparams)
+    # TODO: factorise this code
+    fullGenParams = {k: v for k, v in hparams.items()}
+    fullGenParams["repeat"] = False
+    fullGenParams["samplePerTrack"] = None
+    fullGenParams["yDense"] = False
+    fullGen = dl.getGen(**fullGenParams)
+    model.evaluate(fullGen, **hparams, paths=dl.audioPaths)
+
+
+def evalCAC(folderPath):
+    """
+    Evaluate the alignment corrrection converter by looking at the improvement in F measure of the beat detection
+    """
+    annotatedMidis = config.getFilesInFolder(folderPath, config.CONVERTED_MIDI)
+    estimatedBeats = config.getFilesInFolder(folderPath, config.BEATS_ESTIMATIONS)
     annotatedMidis, estimatedBeats = config.getIntersectionOfPaths(annotatedMidis, estimatedBeats)
 
     cac = CorrectAlignmentConverter()
