@@ -62,7 +62,7 @@ def evalADT(folderPath):
 
 def evalCAC(folderPath):
     """
-    Evaluate the alignment corrrection converter by looking at the improvement in F measure of the beat detection
+    Evaluate the alignment correction converter by looking at the improvement in F measure of the beat detection
     """
     annotatedMidis = config.getFilesInFolder(folderPath, config.CONVERTED_MIDI)
     estimatedBeats = config.getFilesInFolder(folderPath, config.BEATS_ESTIMATIONS)

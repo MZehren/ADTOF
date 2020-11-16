@@ -85,14 +85,25 @@ class CorrectAlignmentConverter(Converter):
         # Measure if the annotations are of good quality and do not writte the output if needed.
         quality = self.getAnnotationsQuality(correctedBeatTimes, beats_audio, sampleRate, fftSize)
         if quality < thresholdFMeasure:
-            print("Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of " + str(quality) + "%)")
+            logging.error(
+                "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of " + str(quality) + "%)"
+            )
             return quality
 
-        # writte the output
+        # Merging the drum tracks and getting the events
         if len(midi.instruments) == 0:  # If there is no drums
+            logging.error("No drum track in the midi.")
             return quality
-        drumsPitches = [note.pitch for note in midi.instruments[0].notes]
-        drumstimes = [note.start for note in midi.instruments[0].notes]
+        elif len(midi.instruments) > 1:  # There are multiple drums
+            logging.info("multiple drums tracks on the midi file. They are merged : " + str(midi.instruments))
+        drumsPitches = [
+            note.pitch for instrument in midi.instruments for note in instrument.notes
+        ]  # [note.pitch for note in midi.instruments[0].notes]
+        drumstimes = [
+            note.start for instrument in midi.instruments for note in instrument.notes
+        ]  # [note.start for note in midi.instruments[0].notes]
+
+        # writte the output
         correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes, thresholdCorrectionWindow)
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
         tr.writteBeats(alignedBeatTextOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
