@@ -429,7 +429,10 @@ class Model(object):
                 predictions.append(self.predict(localGenerator(x, context, batchSize)))
             else:
                 predictions.append(np.array(self.model(np.array([x]), training=False)[0]))
+            logging.debug("track %s predicted in %s", i, time.time() - startTime)
 
+            # Debug
+            if "paths" in kwargs:
                 df = pd.DataFrame(
                     [
                         peakPicking.fitPeakPicking([predictions[i]], [Y[i]], peakPickingSteps=[peakThreshold], **kwargs)
@@ -439,7 +442,6 @@ class Model(object):
                 )
                 df.to_csv("evalAnnotations.csv")
 
-            logging.debug("track %s predicted in %s", i, time.time() - startTime)
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)
         else:
