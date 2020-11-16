@@ -69,7 +69,7 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "crnn-CC": {
+            "crnn-CC2-": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -435,7 +435,7 @@ class Model(object):
                         peakPicking.fitPeakPicking([predictions[i]], [Y[i]], peakPickingSteps=[peakThreshold], **kwargs)
                         for i, _ in enumerate(predictions)
                     ],
-                    index=[kwargs["paths"][i] for i,_ in enumerate(predictions)]
+                    index=[kwargs["paths"][i] for i, _ in enumerate(predictions)],
                 )
                 df.to_csv("evalAnnotations.csv")
 

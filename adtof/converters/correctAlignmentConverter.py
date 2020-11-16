@@ -145,11 +145,11 @@ class CorrectAlignmentConverter(Converter):
             y = [o["diff"] for o in offset]
             interpolation = interp1d(x, y, kind="cubic", fill_value="extrapolate")(onsets)
         except Exception as e:
-            print("Interpolation of the annotation offset failed", str(e))
+            logging.error("Interpolation of the annotation offset failed", str(e))
             return []
 
         if max(np.abs(interpolation)) > maxOffsetThreshold:
-            print("Extrapolation of annotations offset seems too extreme " + max(np.abs(interpolation)))
+            logging.error("Extrapolation of annotations offset seems too extreme " + max(np.abs(interpolation)))
             return []
 
         converted = onsets - interpolation
