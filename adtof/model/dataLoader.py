@@ -13,7 +13,7 @@ from adtof.io.textReader import TextReader
 
 
 class DataLoader(object):
-    def __init__(self, folderPath, loadLabels=True, fmin=20, fmax=20000, **kwargs):
+    def __init__(self, folderPath, loadLabels=True, fmin=20, fmax=20000, skipTracks=0, **kwargs):
         """
         Class for the handling of the workflow while loading the dataset
 
@@ -35,6 +35,11 @@ class DataLoader(object):
                     for track in self.audioPaths
                 ]
             )
+
+            # Debug tool to skip tracks in the evaluation
+            self.audioPaths = self.audioPaths[skipTracks:]
+            self.annotationPaths = self.annotationPaths[skipTracks:]
+            self.featurePaths = self.featurePaths[skipTracks:]
         else:
             self.audioPaths = config.getFilesInFolder(self.folderPath)
 

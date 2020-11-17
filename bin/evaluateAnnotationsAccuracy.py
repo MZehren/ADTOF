@@ -50,7 +50,7 @@ def evalADT(folderPath):
     Check suspicious tracks having a low ADT score
     """
     model, hparams = next(Model.modelFactory())
-    dl = DataLoader(folderPath, **hparams)
+    dl = DataLoader(folderPath, skipTracks=364, **hparams)
     # TODO: factorise this code
     fullGenParams = {k: v for k, v in hparams.items()}
     fullGenParams["repeat"] = False
