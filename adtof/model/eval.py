@@ -5,7 +5,7 @@ from adtof import config
 import logging
 
 
-def runEvaluation(groundTruths, estimations, paths=[], window=0.05, removeStart=True, classes=config.LABELS_5):
+def runEvaluation(groundTruths, estimations, paths=[], window=0.02, removeStart=True, classes=config.LABELS_5):
     """
     TODO
     """
@@ -66,7 +66,7 @@ def runEvaluation(groundTruths, estimations, paths=[], window=0.05, removeStart=
 
 def getF1(tp, fp, fn):
     """Compute the precision, recall and F-Measure from the number of true positives,
-    false positives and false negatives.
+    false positives and false negatives. Based on Madmom implementatio which is different from mir_eval
 
     Args:
         tp (int): true positives
@@ -76,10 +76,27 @@ def getF1(tp, fp, fn):
     Returns:
         (int, int, int): f, p, r
     """
-    if tp == 0:
-        return 0, 0, 0
-    p = tp / (tp + fp)
-    r = tp / (tp + fn)
+    # MIR eval
+    # if (tp + fn) == 0 or (tp + fp) == 0:
+    #     return 0., 0., 0.
+
+    # if there are no positive predictions, none of them are wrong
+    if (tp + fp) == 0:
+        p = 1.0
+    else:
+        p = tp / (tp + fp)
+
+    # if there are no positive annotations, we recalled all of them
+    if (tp + fn) == 0:
+        r = 1.0
+    else:
+        r = tp / (tp + fn)
+
     # f = 2 * tp / (2 * tp + fp + fn)
-    f = 2 * (p * r) / (p + r)
+    numerator = 2 * (p * r)
+    if numerator == 0:
+        f = 0.0
+    else:
+        f = numerator / (p + r)
     return f, p, r
+
