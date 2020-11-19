@@ -397,6 +397,10 @@ class Model(object):
         )
 
     def predict(self, x, trainingSequence=1, **kwargs):
+        """
+        Call model.predict if possible
+        If the model is a CRNN and can't utilize the batch parallelisation, call directly the model 
+        """
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
@@ -404,7 +408,31 @@ class Model(object):
 
     @staticmethod
     def predictEnsemble(models, x, aggregation=np.mean):
+        """
+        Aggregate predictions from an ensemble of models
+        """
         return aggregation([model.predict(x) for model in models], axis=0)
+
+    # def predictMultiple(self, X, trainingSequence):
+    #     """
+    #     call in parallel a predict for each input in X
+    #     (useful for BRNN where a batch parallelisation is not feasible)
+    #     """
+    #     import concurrent.futures
+
+    #     futures = []
+    #     result = -1
+    #     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+    #         # result = executor.map(self.predict, X, [trainingSequence for x in X])
+    #         futures = [executor.submit(self.predict, x, trainingSequence) for x in X]
+    #         concurrent.futures.wait(futures)
+
+    #     return [f.result() for f in futures]
+    #     return result
+
+    def evaluateDebug(self, x, y, peakThreshold=None, **kwargs):
+        predictions = self.predict(x, **kwargs)
+        return peakPicking.fitPeakPicking([predictions], [y], peakPickingSteps=[peakThreshold], **kwargs)
 
     def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """
@@ -428,19 +456,8 @@ class Model(object):
             if trainingSequence == 1:  # TODO put that into the predict method?
                 predictions.append(self.predict(localGenerator(x, context, batchSize)))
             else:
-                predictions.append(np.array(self.model(np.array([x]), training=False)[0]))
+                predictions.append(self.predict(x, trainingSequence=trainingSequence))
             logging.debug("track %s predicted in %s", i, time.time() - startTime)
-
-            # Debug
-            if "paths" in kwargs:
-                df = pd.DataFrame(
-                    [
-                        peakPicking.fitPeakPicking([predictions[i]], [Y[i]], peakPickingSteps=[peakThreshold], **kwargs)
-                        for i, _ in enumerate(predictions)
-                    ],
-                    index=[kwargs["paths"][i] for i, _ in enumerate(predictions)],
-                )
-                df.to_csv("evalAnnotations.csv")
 
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)

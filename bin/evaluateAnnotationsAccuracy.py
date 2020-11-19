@@ -49,15 +49,24 @@ def evalADT(folderPath):
     """
     Check suspicious tracks having a low ADT score
     """
+    import pandas as pd
+
     model, hparams = next(Model.modelFactory())
-    dl = DataLoader(folderPath, skipTracks=364, **hparams)
+    dl = DataLoader(folderPath, skipTracks=658, **hparams)
     # TODO: factorise this code
     fullGenParams = {k: v for k, v in hparams.items()}
     fullGenParams["repeat"] = False
     fullGenParams["samplePerTrack"] = None
     fullGenParams["yDense"] = False
     fullGen = dl.getGen(**fullGenParams)
-    model.evaluate(fullGen, **hparams, paths=dl.audioPaths)
+    # model.evaluateDebug(fullGen, **hparams, paths=dl.audioPaths)
+
+    results = []
+    for x, y in fullGen():
+        result = model.evaluateDebug(x, y, **hparams)
+        results.append(result)
+        df = pd.DataFrame(results, index=[dl.audioPaths[i] for i, _ in enumerate(results)],)
+        df.to_csv("evalAnnotations.csv")
 
 
 def evalCAC(folderPath):
