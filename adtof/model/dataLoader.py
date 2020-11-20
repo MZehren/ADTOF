@@ -189,7 +189,7 @@ class DataLoader(object):
         assert validationFold < realNFolds - 1
 
         folds = [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
-        testIndexes = folds.pop(0)
+        testIndexes = folds.pop()
         valIndexes = folds.pop(validationFold)
         trainIndexes = np.concatenate(folds)
 

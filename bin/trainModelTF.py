@@ -44,7 +44,7 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()
 
-    for fold in range(2):
+    for fold in range(3):
         for model, hparams in Model.modelFactory(fold=fold):
             score = train_test_model(hparams, args, fold, model)
 
@@ -57,14 +57,14 @@ def main():
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
 
-    score = test_enssemble_models(args)
-    logging.info(str(score))
-    with tf.summary.create_file_writer(hparamsLogs + "ensemble model").as_default():
-        # hp.hparams(
-        #     {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()}, trial_id=model.name,
-        # )
-        for key, value in score.items():
-            tf.summary.scalar(key, value, step=0)
+    # score = test_enssemble_models(args)
+    # logging.info(str(score))
+    # with tf.summary.create_file_writer(hparamsLogs + "ensemble model").as_default():
+    #     # hp.hparams(
+    #     #     {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()}, trial_id=model.name,
+    #     # )
+    #     for key, value in score.items():
+    #         tf.summary.scalar(key, value, step=0)
 
 
 def test_enssemble_models(args):
