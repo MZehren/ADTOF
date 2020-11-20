@@ -10,6 +10,7 @@ import tensorflow as tf
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
+import pandas as pd
 
 
 class DataLoader(object):
@@ -29,6 +30,14 @@ class DataLoader(object):
             self.audioPaths = config.getFilesInFolder(self.folderPath, config.AUDIO)
             self.annotationPaths = config.getFilesInFolder(self.folderPath, config.ALIGNED_DRUM)
             self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
+
+            # manual check
+            checkpath = os.path.join(self.folderPath, config.MANUAL_SUBSTRACTION)
+            if os.path.exists(checkpath):
+                toRemove = set(pd.read_csv(checkpath, sep="blablibsdf", header=None)[0])
+                self.audioPaths = [f for f in self.audioPaths if config.getFileBasename(f) not in toRemove]
+                self.annotationPaths = [f for f in self.annotationPaths if config.getFileBasename(f) not in toRemove]
+
             self.featurePaths = np.array(
                 [
                     os.path.join(folderPath, config.PROCESSED_AUDIO + str(fmin) + "-" + str(fmax), config.getFileBasename(track) + ".npy")
