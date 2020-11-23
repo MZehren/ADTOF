@@ -7,6 +7,7 @@ import argparse
 import concurrent.futures
 import logging
 import os
+import shutil
 
 import pandas as pd
 from adtof import config
@@ -33,12 +34,23 @@ def main():
 
 
 def genSplits(outputFolder, nFolds=10):
+
+    # Get split
     dl = DataLoader(outputFolder)
     trainIndexes, valIndexes, testIndexes = dl.getSplit(nFolds=nFolds)
+    tracks = [dl.audioPaths[i] for i in testIndexes]
 
+    # text
     path = os.path.join(outputFolder, config.SPLIT, str(nFolds) + "cv_test_split")
     Converter.checkPathExists(path)
-    pd.DataFrame([dl.audioPaths[i] for i in testIndexes]).to_csv(path, header=None, index=False)
+    pd.DataFrame(tracks).to_csv(path, header=None, index=False)
+
+    # audio
+    audioPath = os.path.join(outputFolder, config.SPLIT, "audio")
+    for source in tracks:
+        target = os.path.join(audioPath, os.path.basename(source))
+        Converter.checkPathExists(target)
+        shutil.copy(source, target)
 
 
 if __name__ == "__main__":

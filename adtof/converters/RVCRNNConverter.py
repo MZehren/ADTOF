@@ -9,7 +9,10 @@ class RVCRNNConverter(Converter):
     Annotate from RV-CRNN8 an audio file with the drum transcrption
     """
 
-    def convert(self, inputFolder, outputFolder):
+    def convertAll(self, inputFolder, outputFolder):
+        """
+        ConvertAll!
+        """
         # python3 DrumTranscriptor -m CRNN_8 batch -o /mnt/e/ADTSets/adtof/parsed/RV-CRNN_8 /mnt/e/ADTSets/adtof/parsed/audio/*.ogg
         args = [
             resource_filename(__name__, "../../vendors/madmomDrumsEnv/bin/python"),
@@ -19,10 +22,13 @@ class RVCRNNConverter(Converter):
             "batch",
             "-o",
             outputFolder,
-            inputFolder,
+            inputFolder + "*.ogg",
         ]  # Calling python from python, Yay...
 
         # Doing that manually while I am ot sure to keep that.
-        process = subprocess.Popen(args, stdout=subprocess.PIPE)
-        output = process.stdout.read().decode()
-        print(output)
+        # TODO: Remmove the need to manually copy and paste the line in cmd
+        print(" ".join(args))
+
+        # process = subprocess.Popen(args, stdout=subprocess.PIPE)
+        # output = process.stdout.read().decode()
+        # print(output)
