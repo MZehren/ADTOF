@@ -6,9 +6,12 @@ Convert the PhaseShift's MIDI file format into real MIDI
 import argparse
 import concurrent.futures
 import logging
-
-from adtof.converters.converter import Converter
 import os
+
+import pandas as pd
+from adtof import config
+from adtof.converters.converter import Converter
+from adtof.model.dataLoader import DataLoader
 
 
 def main():
@@ -24,8 +27,18 @@ def main():
     args = parser.parse_args()
 
     Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
+    genSplits(args.outputFolder)
 
     print("Done!")
+
+
+def genSplits(outputFolder, nFolds=10):
+    dl = DataLoader(outputFolder)
+    trainIndexes, valIndexes, testIndexes = dl.getSplit(nFolds=nFolds)
+
+    path = os.path.join(outputFolder, config.SPLIT, str(nFolds) + "cv_test_split")
+    Converter.checkPathExists(path)
+    pd.DataFrame([dl.audioPaths[i] for i in testIndexes]).to_csv(path, header=None, index=False)
 
 
 if __name__ == "__main__":

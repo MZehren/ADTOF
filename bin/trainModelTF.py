@@ -128,7 +128,10 @@ def train_test_model(hparams, args, fold, model):
         logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
         hparams["peakThreshold"] = scoreVal["peakThreshold"]
         scoreTest = model.evaluate(testFullGen, **hparams)
-        # scoreTest = model.evaluate(testFullGen, peakThreshold=0.3, **hparams)
+
+        # Merge the validation results for Hparam selection
+        for k, v in scoreVal.items():
+            scoreTest["validation_" + k] = v
         return scoreTest
 
 
