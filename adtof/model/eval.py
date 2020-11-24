@@ -5,7 +5,7 @@ from adtof import config
 import logging
 
 
-def runEvaluation(groundTruths, estimations, paths=[], window=0.02, removeStart=True, classes=config.LABELS_5):
+def runEvaluation(groundTruths, estimations, paths=[], distance=0.03, removeStart=True, classes=config.LABELS_5):
     """
     TODO
     """
@@ -22,7 +22,7 @@ def runEvaluation(groundTruths, estimations, paths=[], window=0.02, removeStart=
             y_truth = np.array(groundTruth[pitch]) if pitch in groundTruth else np.array([])
             y_pred = np.array(estimation[pitch]) if pitch in estimation else np.array([])
 
-            matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, window)]
+            matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, distance)]
             tp = len(matches)
             fp = len(y_pred) - tp
             fn = len(y_truth) - tp

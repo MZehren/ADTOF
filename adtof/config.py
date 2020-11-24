@@ -199,8 +199,8 @@ MIDI_REDUCED_3 = {
 MIDI_REDUCED_5 = {
     35: 35,  # BD
     36: 35,
-    37: 38,  # SD
-    38: 38,
+    # 37: None,
+    38: 38,  # SD
     40: 38,
     41: 47,  # TT
     43: 47,
@@ -272,7 +272,32 @@ MIDI_REDUCED_8 = {
 }
 
 # MDBS text event to midi pitches
-MDBS_MIDI = {"KD": 35, "SD": 38, "HH": 42, "TT": 47, "CY": 49, "OT": 37}
+# MDBS_MIDI = {"KD": 35, "SD": 38, "HH": 42, "TT": 47, "CY": 49, "OT": 37}
+# From Vogl
+MDBS_MIDI = {
+    "KD": 35,
+    "SD": 38,
+    "SDB": 38,
+    "SDD": 38,
+    "SDF": 38,
+    "SDG": 38,
+    "SDNS": 38,
+    "CHH": 42,
+    "OHH": 46,
+    "PHH": 44,
+    "HIT": 50,
+    "MHT": 48,
+    "HFT": 43,
+    "LFT": 41,
+    "RDC": 51,
+    "RDB": 53,
+    "CRC": 49,
+    "CHC": 52,
+    "SPC": 55,
+    "SST": 37,
+    "TMB": 54,
+}
+
 
 # RBMA event to midi pitches
 RBMA_MIDI_3 = {0: 35, 1: 38, 2: 42}
@@ -286,28 +311,72 @@ RBMA_MIDI_8 = {
     6: 53,  # ride bell / bells / etc
     7: 75,  # claves
 }
-
-ENST_MIDI = {
-    "bd": 35,  # Bass drum
-    # "sweep": None,  # Brush sweep sticks Sticks hit together
-    "sd": 38,  # Snare drum
-    "rs": 38,  # Rim shot
-    "cs": 75,  # Cross stick
-    "chh": 42,  # Hi-hat (closed)
-    "ohh": 46,  # Hi-hat (open)
-    # "cb": None,  # Cowbell
-    "c": 49,  # Other cymbals
-    "lmt": 43,  # Low-mid tom
-    "mt": 45,  # Mid tom
-    # "mtr": None,  # Mid tom, hit on the rim
-    "lt": 41,  # Low tom
-    # "ltr": None,  # Low tom, hit on the rim
-    "lft": 41,  # Lowest tom
-    "rc": 51,  # Ride cymbal
-    "ch": 52,  # Chinese ride cymbal
-    "cr": 49,  # Crash cymbal
-    "spl": 55,  # Splash cymbal
+# FROM VOGL
+RBMA_MIDI = {
+    0: 36,  # bass drum
+    1: 38,  # snare drum
+    2: 42,  # closed hi-hat
+    3: 46,  # open hi-hat
+    4: 44,  # pedal hi-hat
+    5: 56,  # cowbell
+    6: 53,  # ride bell
+    7: 41,  # low floor tom
+    9: 43,  # high floor tom
+    10: 45,  # low tom
+    11: 47,  # low-mid tom
+    12: 48,  # high-mid tom
+    13: 50,  # high tom
+    14: 37,  # side stick
+    15: 39,  # hand clap
+    16: 51,  # ride cymbal
+    17: 49,  # crash cymbal
+    18: 55,  # splash cymbal
+    19: 52,  # chinese cymbal
+    20: 70,  # shaker, maracas
+    21: 54,  # tambourine
+    22: 75,  # claves, stick click
+    23: 81,  # high bells / triangle
 }
+
+
+# FROM VOGL
+ENST_MIDI = {
+    "bd": 35,
+    "cs": 37,
+    "rs": 38,
+    "sd": 38,
+    "sd-": 38,
+    "lft": 41,
+    "chh": 42,
+    "lt": 45,
+    "ohh": 46,
+    "lmt": 47,
+    "mt": 48,
+    "cr": 49,
+    "c1": 49,
+    "cr1": 49,
+    "cr5": 49,
+    "rc": 51,
+    "rc1": 51,
+    "rc3": 51,
+    "ch": 52,
+    "ch1": 52,
+    "ch5": 52,
+    "spl": 55,
+    "spl2": 55,
+    "cb": 56,
+    "cr2": 57,
+    "c": 57,
+    "c4": 57,
+    "rc2": 59,
+    "rc4": 59,
+    "sticks": 75,
+    #'mtr': -1,
+    #'sweep': -1,
+    #'ltr': -1,
+}
+
+
 # Labels and class weights for the 5 output of the neural network
 LABELS_5 = [35, 38, 47, 42, 49]
 LABELS_3 = [35, 38, 42]

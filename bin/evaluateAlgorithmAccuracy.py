@@ -28,23 +28,51 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("groundTruthPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("estimationsPath", type=str, help="Path to output folder")
-    parser.add_argument("-w", "--window", type=float, default=0.05, help="window size for hit rate")
-    # parser.add_argument("-c", "--convertInput", action="store_true", help="Convert the pitches 0, 1, 2 to the correct 36, 40, 42")
+    parser.add_argument(
+        "-w",
+        "--distance",
+        type=float,
+        default=0.03,
+        help="distance allowed for hit rate. 0.03 is MIREX; 0.025 (50ms window) is Cartwright and Bello; ",
+    )
+    parser.add_argument(
+        "-d", "--dataset", type=str, default=None, help="specifies the dataset used for the evaluation to setup the good mapping"
+    )
     args = parser.parse_args()
-    classes = config.LABELS_5
+    if args.dataset == "RBMA":
+        classes = config.LABELS_5
+        mappingDictionaries = [config.RBMA_MIDI, config.MIDI_REDUCED_5]
+        sep = "\t"
+    elif args.dataset == "MDB":
+        classes = config.LABELS_5
+        mappingDictionaries = [config.MDBS_MIDI, config.MIDI_REDUCED_5]
+        sep = "\t"
+    elif args.dataset == "ENST":
+        classes = config.LABELS_5
+        mappingDictionaries = [config.ENST_MIDI, config.MIDI_REDUCED_5]
+        sep = " "
+    else:
+        classes = config.LABELS_5
+        mappingDictionaries = [config.RBMA_MIDI_8, config.MIDI_REDUCED_5]
+        sep = "\t"
 
-    # Get the data
+    # Get the paths
     groundTruthsPaths = config.getFilesInFolder(args.groundTruthPath)
     estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
-    groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
+    if args.dataset != "MDB":  # MDB doesn't have the same file name. but the order checks out
+        groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
+
+    # Decode
     tr = TextReader()
-    groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruthsPaths]
+    groundTruths = [tr.getOnsets(grounTruth, mappingDictionaries=mappingDictionaries, sep=sep) for grounTruth in groundTruthsPaths]
     estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
 
-    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths, classes=classes)
+    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths, classes=classes, distance=args.distance)
+    print(args.dataset)
     print(result)
     plot(result, prefix="mean", groups=["all"] + [str(e) for e in classes])
     plot(result, prefix="sum", groups=["all"] + [str(e) for e in classes])
+    # plt.show()
 
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):
@@ -79,8 +107,300 @@ def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38",
     plt.grid(axis="y", linestyle="--")
     plt.legend()
     plt.ylim(0, 1)
+
+
+def newPlot(dict, title, legend=True):
+    """
+    dictionary:
+        {
+            RBMA:{  # plot
+                MZ:{  # group
+                    All: value  # bar 
+                    KD: value
+                    ...
+                }
+                Vogl:{
+                    All: value
+                    KD: value
+                    ...
+                }
+            }
+            ENST:{ ... }
+        }
+    """
+    import pandas as pd
+
+    df = pd.DataFrame(dict)
+    df.plot.bar(edgecolor="black", legend=legend)
+    # plt.xticks(ind + width, groups)
+    plt.grid(axis="y", linestyle="--")
+    plt.ylim(0, 1)
+    plt.ylabel("F-measure")
+    plt.title(title)
+
+
+def plotResults():
+
+    # MZ
+    MZ_ADTOF = {
+        "sum F all": 0.67680,
+        "sum F 35": 0.82921,
+        "sum F 38": 0.75134,
+        "sum F 47": 0.20568,
+        "sum F 42": 0.63277,
+        "sum F 49": 0.43859,
+    }
+    MZ_RBMA = {
+        "mean F all": 0.4400764804719079,
+        "mean P all": 0.43370172930439743,
+        "mean R all": 0.8629157613633572,
+        "sum F all": 0.6319200083614953,
+        "sum P all": 0.548954329469447,
+        "sum R all": 0.7444284834804022,
+        "mean F 35": 0.7979872053672956,
+        "mean P 35": 0.728334676526333,
+        "mean R 35": 0.9431471908581083,
+        "sum F 35": 0.7997026702498714,
+        "sum P 35": 0.6910079051383399,
+        "sum R 35": 0.9489754376441851,
+        "mean F 38": 0.458201661703798,
+        "mean P 38": 0.5221524684678828,
+        "mean R 38": 0.6376646507315469,
+        "sum F 38": 0.6365693595836162,
+        "sum P 38": 0.6504046242774566,
+        "sum R 38": 0.6233104365167295,
+        "mean F 47": 0.18518518518518517,
+        "mean P 47": 0.18518518518518517,
+        "mean R 47": 1.0,
+        "sum F 47": 0.0,
+        "sum P 47": 0.0,
+        "sum R 47": 1.0,
+        "mean F 42": 0.5367861278810384,
+        "mean P 42": 0.5106140941203643,
+        "mean R 42": 0.733766965227131,
+        "sum F 42": 0.5818435754189943,
+        "sum P 42": 0.5156897938973819,
+        "sum R 42": 0.6674677561483617,
+        "mean F 49": 0.2222222222222222,
+        "mean P 49": 0.2222222222222222,
+        "mean R 49": 1.0,
+        "sum F 49": 0.0,
+        "sum P 49": 0.0,
+        "sum R 49": 1.0,
+    }
+    MZ_MDB = {
+        "mean F all": 0.6205394267178704,
+        "mean P all": 0.7551034093457771,
+        "mean R all": 0.7085228534718282,
+        "sum F all": 0.680201604316036,
+        "sum P all": 0.7773811455460004,
+        "sum R all": 0.6046188793538617,
+        "mean F 35": 0.8036480487828286,
+        "mean P 35": 0.8668979250810638,
+        "mean R 35": 0.7708456143473722,
+        "sum F 35": 0.802924791086351,
+        "sum P 35": 0.8649662415603901,
+        "sum R 35": 0.7491877842755036,
+        "mean F 38": 0.6562078114690553,
+        "mean P 38": 0.9104705355705572,
+        "mean R 38": 0.6171317584690054,
+        "sum F 38": 0.5826155050900548,
+        "sum P 38": 0.9481733220050977,
+        "sum R 38": 0.42049736247174074,
+        "mean F 47": 0.6405493861008907,
+        "mean P 47": 0.7555946291560103,
+        "mean R 47": 0.7943640637875042,
+        "sum F 47": 0.38961038961038963,
+        "sum P 47": 0.46875,
+        "sum R 47": 0.3333333333333333,
+        "mean F 42": 0.6096038245437088,
+        "mean P 42": 0.6441685373593644,
+        "mean R 42": 0.8147168240426901,
+        "sum F 42": 0.7802660380535444,
+        "sum P 42": 0.7021212121212121,
+        "sum R 42": 0.8779840848806366,
+        "mean F 49": 0.3926880626928691,
+        "mean P 49": 0.5983854195618902,
+        "mean R 49": 0.5455560067125687,
+        "sum F 49": 0.2711076684740511,
+        "sum P 49": 0.6055363321799307,
+        "sum R 49": 0.17465069860279442,
+    }
+    MZ_ENST_SUM = {
+        "mean F all": 0.41937460483851,
+        "mean P all": 0.7031660852442764,
+        "mean R all": 0.3906405077619682,
+        "sum F all": 0.5605160414191139,
+        "sum P all": 0.7608294930875577,
+        "sum R all": 0.44369793066380003,
+        "mean F 35": 0.6722256200093613,
+        "mean P 35": 0.9095032151911238,
+        "mean R 35": 0.5961506507083166,
+        "sum F 35": 0.7230587041109797,
+        "sum P 35": 0.9348206474190727,
+        "sum R 35": 0.5895172413793104,
+        "mean F 38": 0.35372965938726814,
+        "mean P 38": 0.8749765929617295,
+        "mean R 38": 0.28347707608749456,
+        "sum F 38": 0.32900432900432897,
+        "sum P 38": 0.9510807736063709,
+        "sum R 38": 0.19890554365929097,
+        "mean F 47": 0.21856691175187223,
+        "mean P 47": 0.6531099257884971,
+        "mean R 47": 0.2257805091733663,
+        "sum F 47": 0.1527272727272727,
+        "sum P 47": 0.3783783783783784,
+        "sum R 47": 0.09567198177676538,
+        "mean F 42": 0.6452080092899054,
+        "mean P 42": 0.6955183321066826,
+        "mean R 42": 0.6376495415384413,
+        "sum F 42": 0.6825396825396826,
+        "sum P 42": 0.7071473750790639,
+        "sum R 42": 0.6595870206489676,
+        "mean F 49": 0.20714282375414328,
+        "mean P 49": 0.3827223601733487,
+        "mean R 49": 0.21014476130222173,
+        "sum F 49": 0.21431828545371634,
+        "sum P 49": 0.3555219364599092,
+        "sum R 49": 0.15339425587467362,
+    }
+    MZ_ENST_WET = {
+        "mean F all": 0.5020027804384568,
+        "mean P all": 0.7909520556324104,
+        "mean R all": 0.4987024232900214,
+        "sum F all": 0.6837135196051762,
+        "sum P all": 0.8108581436077058,
+        "sum R all": 0.5910373555495835,
+        "mean F 35": 0.7638537439584842,
+        "mean P 35": 0.9754528575404453,
+        "mean R 35": 0.7196237112388244,
+        "sum F 35": 0.8169507726620997,
+        "sum P 35": 0.9668174962292609,
+        "sum R 35": 0.7073103448275863,
+        "mean F 38": 0.5358861547887056,
+        "mean P 38": 0.8140092099368544,
+        "mean R 38": 0.4786149097057931,
+        "sum F 38": 0.5403252572187188,
+        "sum P 38": 0.8930334613274822,
+        "sum R 38": 0.3873423744944088,
+        "mean F 47": 0.19890546419160124,
+        "mean P 47": 0.798469387755102,
+        "mean R 47": 0.23235776128633276,
+        "sum F 47": 0.20233463035019456,
+        "sum P 47": 0.6933333333333334,
+        "sum R 47": 0.11845102505694761,
+        "mean F 42": 0.7480107746301297,
+        "mean P 42": 0.7094225081310045,
+        "mean R 42": 0.8407725213069168,
+        "sum F 42": 0.7849083852333243,
+        "sum P 42": 0.725392058725392,
+        "sum R 42": 0.8550639134709931,
+        "mean F 49": 0.26335776462336347,
+        "mean P 49": 0.6574063147986468,
+        "mean R 49": 0.22214321291224,
+        "sum F 49": 0.2231899836690256,
+        "sum P 49": 0.6721311475409836,
+        "sum R 49": 0.13381201044386423,
+    }
+
+    # VOGL
+    VOGL_ADTOF = {
+        "mean F all": 0.508802504159026,
+        "mean P all": 0.588064022893335,
+        "mean R all": 0.6081516499677526,
+        "sum F all": 0.6241227123538473,
+        "sum P all": 0.6557991131826109,
+        "sum R all": 0.5953653809290537,
+        "mean F 35": 0.7871626597721907,
+        "mean P 35": 0.8286981823311089,
+        "mean R 35": 0.8015920494560249,
+        "sum F 35": 0.8157544501746798,
+        "sum P 35": 0.8341650127587185,
+        "sum R 35": 0.7981390049373338,
+        "mean F 38": 0.7530013627048892,
+        "mean P 38": 0.7834727246098705,
+        "mean R 38": 0.767979481529634,
+        "sum F 38": 0.7353791456429226,
+        "sum P 38": 0.7713198734367938,
+        "sum R 38": 0.7026387125553306,
+        "mean F 47": 0.1968128055707403,
+        "mean P 47": 0.18212634461155575,
+        "mean R 47": 0.6191549361024239,
+        "sum F 47": 0.18646813763308132,
+        "sum P 47": 0.11808676959155755,
+        "sum R 47": 0.44299853372434017,
+        "mean F 42": 0.5186306456026357,
+        "mean P 42": 0.6527325950325911,
+        "mean R 42": 0.5177904233962511,
+        "sum F 42": 0.5937763553402677,
+        "sum P 42": 0.7149962242533136,
+        "sum R 42": 0.5077011260470018,
+        "mean F 49": 0.28840504714467463,
+        "mean P 49": 0.49329026788154823,
+        "mean R 49": 0.3342413593544291,
+        "sum F 49": 0.3633130307206687,
+        "sum P 49": 0.5687639198218263,
+        "sum R 49": 0.26690182245737804,
+    }
+    VOGL_RBMA_MIREX = {
+        "sum F all": 0.58,
+        "sum F 35": 0.85,
+        "sum F 38": 0.27,
+        "sum F 47": 0.13,
+        "sum F 42": 0.48,
+        "sum F 49": np.mean([0.64, 0.79, 0.82]),
+    }
+    VOGL_RBMA = {
+        "sum F all": 0.54,
+        "sum F 35": 0.78,
+        "sum F 38": 0.53,
+        "sum F 47": 0.16,
+        "sum F 42": 0.57,
+        "sum F 49": np.mean([0.0, 0.07, 0.0]),
+    }
+    VOGL_MDB = {
+        "sum F all": 0.57,
+        "sum F 35": 0.64,
+        "sum F 38": 0.55,
+        "sum F 47": 0.25,
+        "sum F 42": 0.70,
+        "sum F 49": np.mean([0.11, 0.23, 0.00]),
+    }
+    VOGL_MDB_MIREX = {
+        "sum F all": 0.60,
+        "sum F 35": 0.72,
+        "sum F 38": 0.63,
+        "sum F 47": 0.60,
+        "sum F 42": 0.60,
+        "sum F 49": np.mean([0.27, 0.66, 0.91]),
+    }
+    VOGL_ENST = {
+        "sum F all": 0.62,
+        "sum F 35": 0.79,
+        "sum F 38": 0.53,
+        "sum F 47": 0.16,
+        "sum F 42": 0.75,
+        "sum F 49": np.mean([0.07, 0.21, 0.02]),
+    }
+
+    def map(dict):
+        mapping = {"sum F all": "SUM", "sum F 35": "KD", "sum F 38": "SD", "sum F 47": "TT", "sum F 42": "HH", "sum F 49": "CY"}
+        return {v: dict[k] for k, v in mapping.items()}
+
+    # results = {
+    #     "ADTOF": {"ADTOF": map(MZ_ADTOF), "All+MIDI": map(VOGL_ADTOF)},
+    #     "RBMA": {"ADTOF": map(MZ_RBMA), "all+MIDI": map(VOGL_RBMA)},
+    #     "MDB": {"ADTOF": map(MZ_MDB), "all+MIDI": map(VOGL_MDB)},
+    #     "ENST": {"ADTOF": map(MZ_ENST_WET), "all+MIDI": map(VOGL_ENST)},
+    # }
+    # newPlot(results, "test")
+    newPlot({"ADTOF": map(MZ_ADTOF), "All+MIDI": map(VOGL_ADTOF)}, "ADTOF")
+    newPlot({"ADTOF": map(MZ_RBMA), "all+MIDI": map(VOGL_RBMA), "RV3": map(VOGL_RBMA_MIREX)}, "RBMA", legend=False)
+    newPlot({"ADTOF": map(MZ_MDB), "all+MIDI": map(VOGL_MDB), "RV3": map(VOGL_MDB_MIREX)}, "MDB", legend=False)
+    newPlot({"ADTOF": map(MZ_ENST_WET), "all+MIDI": map(VOGL_ENST)}, "ENST", legend=False)
     plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    plotResults()

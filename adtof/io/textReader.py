@@ -28,7 +28,18 @@ class TextReader(object):
         except ValueError:
             return s
 
-    def getOnsets(self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True):
+    def decode(self, line, sep):
+        time, pitch = line.replace("\r\n", "").replace("\n", "").split(sep)
+        time = time.replace(" ", "")
+        pitch = pitch.replace(" ", "")
+        time = float(time)
+        pitch = self.castInt(pitch)
+
+        return time, pitch
+
+    def getOnsets(
+        self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True, sep="\t", removeIfClassUnknown=False
+    ):
         """
             Parse the text file following Mirex encoding:
             [time]\t[class]\n 
@@ -46,14 +57,12 @@ class TextReader(object):
         with open(txtFilePath, "r") as f:
             for line in f:
                 try:
-                    time, pitch = line.replace(" ", "").replace("\r\n", "").replace("\n", "").split("\t")
+                    time, pitch = self.decode(line, sep)
                 except:
                     print("Line couldn't be decoded, passing.", line)
                     continue
-                time = float(time)
 
-                pitch = self.castInt(pitch)
-                pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=False)
+                pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=removeIfClassUnknown)
                 if pitch != None:
                     events.append({"time": time, "pitch": pitch})
 
