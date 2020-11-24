@@ -287,6 +287,27 @@ RBMA_MIDI_8 = {
     7: 75,  # claves
 }
 
+ENST_MIDI = {
+    "bd": 35,  # Bass drum
+    # "sweep": None,  # Brush sweep sticks Sticks hit together
+    "sd": 38,  # Snare drum
+    "rs": 38,  # Rim shot
+    "cs": 75,  # Cross stick
+    "chh": 42,  # Hi-hat (closed)
+    "ohh": 46,  # Hi-hat (open)
+    # "cb": None,  # Cowbell
+    "c": 49,  # Other cymbals
+    "lmt": 43,  # Low-mid tom
+    "mt": 45,  # Mid tom
+    # "mtr": None,  # Mid tom, hit on the rim
+    "lt": 41,  # Low tom
+    # "ltr": None,  # Low tom, hit on the rim
+    "lft": 41,  # Lowest tom
+    "rc": 51,  # Ride cymbal
+    "ch": 52,  # Chinese ride cymbal
+    "cr": 49,  # Crash cymbal
+    "spl": 55,  # Splash cymbal
+}
 # Labels and class weights for the 5 output of the neural network
 LABELS_5 = [35, 38, 47, 42, 49]
 LABELS_3 = [35, 38, 42]

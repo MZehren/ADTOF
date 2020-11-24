@@ -40,12 +40,11 @@ def main():
     parser.add_argument("inputPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
     args = parser.parse_args()
+    writeMidi = False
 
     # Get the model
     model, hparams = next(Model.modelFactory(fold=0))
-    ppp = madmom.features.notes.NotePeakPickingProcessor(
-        threshold=0.3, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=hparams["sampleRate"]
-    )
+    ppp = peakPicking.getPPProcess(**hparams)
     # Get the data
     dl = DataLoader(args.inputPath, loadLabels=False)
     hparams["samplePerTrack"] = None
@@ -68,14 +67,15 @@ def main():
         TextReader().writteBeats(outputTrackPath, formatedOutput)
 
         #  write midi
-        midi = pretty_midi.PrettyMIDI()
-        instrument = cello = pretty_midi.Instrument(program=1, is_drum=True)
-        midi.instruments.append(instrument)
-        for pitch, notes in sparseResultIdx.items():
-            for i in notes:
-                note = pretty_midi.Note(velocity=100, pitch=pitch, start=i, end=i)
-                instrument.notes.append(note)
-        midi.write(os.path.join(args.outputPath, config.getFileBasename(track) + ".mid"))
+        if writeMidi:
+            midi = pretty_midi.PrettyMIDI()
+            instrument = cello = pretty_midi.Instrument(program=1, is_drum=True)
+            midi.instruments.append(instrument)
+            for pitch, notes in sparseResultIdx.items():
+                for i in notes:
+                    note = pretty_midi.Note(velocity=100, pitch=pitch, start=i, end=i)
+                    instrument.notes.append(note)
+            midi.write(os.path.join(args.outputPath, config.getFileBasename(track) + ".mid"))
 
         # # plot
         # if plot:

@@ -31,19 +31,20 @@ def main():
     parser.add_argument("-w", "--window", type=float, default=0.05, help="window size for hit rate")
     # parser.add_argument("-c", "--convertInput", action="store_true", help="Convert the pitches 0, 1, 2 to the correct 36, 40, 42")
     args = parser.parse_args()
+    classes = config.LABELS_5
 
     # Get the data
     groundTruthsPaths = config.getFilesInFolder(args.groundTruthPath)
     estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
     groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
     tr = TextReader()
-    groundTruths = [tr.getOnsets(grounTruth, mappingDictionaries=[config.RBMA_MIDI_3]) for grounTruth in groundTruthsPaths]
+    groundTruths = [tr.getOnsets(grounTruth) for grounTruth in groundTruthsPaths]
     estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
 
-    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths, classes=config.LABELS_3)
+    result = eval.runEvaluation(groundTruths, estimations, paths=groundTruthsPaths, classes=classes)
     print(result)
-    plot(result, prefix="mean", groups=["all"] + [str(e) for e in config.LABELS_3])
-    plot(result, prefix="sum", groups=["all"] + [str(e) for e in config.LABELS_3])
+    plot(result, prefix="mean", groups=["all"] + [str(e) for e in classes])
+    plot(result, prefix="sum", groups=["all"] + [str(e) for e in classes])
 
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):

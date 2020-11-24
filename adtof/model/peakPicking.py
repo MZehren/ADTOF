@@ -34,15 +34,22 @@ def fitPeakPicking(
     timeOffset = 0  # labelOffset / sampleRate
 
     for peakThreshold in peakPickingSteps:
-        ppp = madmom.features.notes.NotePeakPickingProcessor(
-            threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
-        )
+        ppp = getPPProcess(peakThreshold=peakThreshold, **kwargs)
         YHat = [peakPicking(prediction, ppProcess=ppp, timeOffset=timeOffset, **kwargs) for prediction in predictions]
         score = eval.runEvaluation(Y, YHat)
         score["peakThreshold"] = peakThreshold
         results.append(score)
 
     return max(results, key=lambda x: x[peakPickingTarget])
+
+
+def getPPProcess(peakThreshold=0.3, sampleRate=100, **kwargs):
+    """
+    Return Madmom's peak processor
+    """
+    return madmom.features.notes.NotePeakPickingProcessor(
+        threshold=peakThreshold, smooth=0, pre_avg=0.1, post_avg=0.01, pre_max=0.02, post_max=0.01, combine=0.02, fps=sampleRate
+    )
 
 
 def peakPicking(prediction, ppProcess=madmom.features.notes.NotePeakPickingProcessor(), timeOffset=0, labels=[36], **kwargs):
