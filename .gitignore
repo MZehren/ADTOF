@@ -22,3 +22,6 @@ bin/profile
 
 # vendors
 /vendors/*
+
+# plots generated
+*.png

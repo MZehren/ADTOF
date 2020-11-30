@@ -101,21 +101,24 @@ class Converter(object):
             if psc.isConvertible(root):
                 meta = psc.getMetaInfo(root)
                 if not meta["pro_drums"]:
-                    genres["pro_drums:False"].append(root)
-                    # continue
-                else:
-                    genres["pro_drums:True"].append(root)
+                    # genres["pro_drums:False"].append(root)
+                    logging.info("track not contianing pro_drums tag " + meta["name"])
+                    continue
+                # else:
+                #     genres["pro_drums:True"].append(root)
                 genres[meta["genre"]].append(root)
                 # if meta["genre"] == "Pop/Dance/Electronic":
                 results[meta["name"]].append({"path": root, "convertor": psc})
 
-        # Remove duplicate
-        # genresN = [k for k, v in genres.items()]
-        # genresV = [len(v) for k, v in genres.items()]
-        # genrePos = np.arange(len(genresV))
-        # plt.bar(genrePos, genresV)
-        # plt.xticks(genrePos, genresN, rotation=70)
-        # plt.show()
+        values = [[k if k != "Pop/Dance/Electronic" else "Dance/Electronic", len(v)] for k, v in genres.items()]
+        values.sort(key=lambda e: e[1])
+        plt.figure(figsize=(10.1, 6))
+        plt.barh(range(len(values)), [v[1] for v in values], edgecolor="black")
+        plt.grid(axis="x", linestyle="--")
+        plt.yticks(range(len(values)), [v[0] for v in values])
+        plt.xlabel("Count")
+        plt.savefig("Genre distribution.png", dpi=600)
+
         return results
 
     @staticmethod

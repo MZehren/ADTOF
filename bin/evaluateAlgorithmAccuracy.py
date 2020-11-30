@@ -131,12 +131,15 @@ def newPlot(dict, title, legend=True):
     import pandas as pd
 
     df = pd.DataFrame(dict)
-    df.plot.bar(edgecolor="black", legend=legend)
+    df.plot.bar(edgecolor="black", legend=legend, figsize=(10, 2))
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
     plt.ylim(0, 1)
     plt.ylabel("F-measure")
+    plt.xticks(rotation=0)
     plt.title(title)
+
+    plt.savefig(title + ".png", dpi=600)
 
 
 def plotResults():
@@ -304,7 +307,28 @@ def plotResults():
     }
 
     # VOGL
-    VOGL_ADTOF = {
+    # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
+    # correlation found is:
+
+    # all
+    # MIDI
+    # MIDI bal.
+    # all+MIDI
+    # pt MIDI
+    # pt MIDI bal.
+
+    # enst
+    # enst(all)
+    # enst(all+md1%)
+    # (all+md_bm1%)
+    # enst(mdb)
+    # enst(midi)
+    # enst(midi_10p)
+    # enst(midi_1p)
+    # (midi_bal_m)
+    # enst(rbma)
+
+    VOGL_ADTOF_ALLMIDI = {
         "mean F all": 0.508802504159026,
         "mean P all": 0.588064022893335,
         "mean R all": 0.6081516499677526,
@@ -350,15 +374,15 @@ def plotResults():
         "sum F 42": 0.48,
         "sum F 49": np.mean([0.64, 0.79, 0.82]),
     }
-    VOGL_RBMA = {
-        "sum F all": 0.54,
-        "sum F 35": 0.78,
-        "sum F 38": 0.53,
-        "sum F 47": 0.16,
-        "sum F 42": 0.57,
-        "sum F 49": np.mean([0.0, 0.07, 0.0]),
+    VOGL_RBMA_ALLMIDI = {
+        "sum F all": 0.52,
+        "sum F 35": 0.77,
+        "sum F 38": 0.49,
+        "sum F 47": 0.25,
+        "sum F 42": 0.58,
+        "sum F 49": np.mean([0.6, 0.03, 0.05]),
     }
-    VOGL_MDB = {
+    VOGL_MDB_ALLMIDI = {
         "sum F all": 0.57,
         "sum F 35": 0.64,
         "sum F 38": 0.55,
@@ -374,7 +398,7 @@ def plotResults():
         "sum F 42": 0.60,
         "sum F 49": np.mean([0.27, 0.66, 0.91]),
     }
-    VOGL_ENST = {
+    VOGL_ENST_ALLMIDI = {
         "sum F all": 0.62,
         "sum F 35": 0.79,
         "sum F 38": 0.53,
@@ -383,8 +407,41 @@ def plotResults():
         "sum F 49": np.mean([0.07, 0.21, 0.02]),
     }
 
-    def map(dict):
-        mapping = {"sum F all": "SUM", "sum F 35": "KD", "sum F 38": "SD", "sum F 47": "TT", "sum F 42": "HH", "sum F 49": "CY"}
+    # Approximative value from the plot TODO: double check, there was an error
+    VOGL_RBMA_PTMIDI = {
+        "sum F all": 0.56,
+        "sum F 35": 0.80,
+        "sum F 38": 0.55,
+        "sum F 47": 0.28,
+        "sum F 42": 0.61,
+        "sum F 49": np.mean([0.21, 0.07, 0.23]),
+    }
+    VOGL_MDB_PTMIDI = {
+        "sum F all": 0.68,
+        "sum F 35": 0.7,
+        "sum F 38": 0.61,
+        "sum F 47": 0.33,
+        "sum F 42": 0.58,
+        "sum F 49": np.mean([0.29, 0.55, 0.18]),
+    }
+    VOGL_ENST_PTMIDI = {
+        "sum F all": 0.68,
+        "sum F 35": 0.79,
+        "sum F 38": 0.58,
+        "sum F 47": 0.29,
+        "sum F 42": 0.80,
+        "sum F 49": np.mean([0.21, 0.5, 0.13]),
+    }
+
+    def map(dict, add=""):
+        mapping = {
+            "sum F all": "SUM" + add,
+            "sum F 35": "KD",
+            "sum F 38": "SD",
+            "sum F 47": "TT",
+            "sum F 42": "HH",
+            "sum F 49": "CY + RD" + add,
+        }
         return {v: dict[k] for k, v in mapping.items()}
 
     # results = {
@@ -394,11 +451,23 @@ def plotResults():
     #     "ENST": {"ADTOF": map(MZ_ENST_WET), "all+MIDI": map(VOGL_ENST)},
     # }
     # newPlot(results, "test")
-    newPlot({"ADTOF": map(MZ_ADTOF), "All+MIDI": map(VOGL_ADTOF)}, "ADTOF")
-    newPlot({"ADTOF": map(MZ_RBMA), "all+MIDI": map(VOGL_RBMA), "RV3": map(VOGL_RBMA_MIREX)}, "RBMA", legend=False)
-    newPlot({"ADTOF": map(MZ_MDB), "all+MIDI": map(VOGL_MDB), "RV3": map(VOGL_MDB_MIREX)}, "MDB", legend=False)
-    newPlot({"ADTOF": map(MZ_ENST_WET), "all+MIDI": map(VOGL_ENST)}, "ENST", legend=False)
-    plt.show()
+    newPlot({"Train on ADTOF": map(MZ_ADTOF), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True)
+    newPlot(
+        {"Train on ADTOF": map(MZ_RBMA, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")},
+        "Test on RBMA",
+        legend=False,
+    )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
+    newPlot(
+        {"Train on ADTOF": map(MZ_MDB, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")},
+        "Test on MDB",
+        legend=False,
+    )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
+    newPlot(
+        {"Train on ADTOF": map(MZ_ENST_WET, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")},
+        "Test on ENST",
+        legend=False,
+    )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
+    # plt.show()
 
 
 if __name__ == "__main__":
