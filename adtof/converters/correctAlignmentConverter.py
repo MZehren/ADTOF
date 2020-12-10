@@ -143,7 +143,8 @@ class CorrectAlignmentConverter(Converter):
         try:
             x = [o["time"] for o in offset]
             y = [o["diff"] for o in offset]
-            interpolation = interp1d(x, y, kind="cubic", fill_value="extrapolate")(onsets)
+            interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
+            # self.plot(offset, interp1d(x, y, kind="linear", fill_value="extrapolate"))
         except Exception as e:
             logging.error("Interpolation of the annotation offset failed", str(e))
             return []
@@ -219,29 +220,18 @@ class CorrectAlignmentConverter(Converter):
         # plt.show()
         return [{"time": matches[i][0], "diff": weightedAverage[i]} for i in range(len(weightedAverage))]
 
-    def plot(self, corrections, labels, title):
-        fig, axs = plt.subplots(2)
-        axs[0].set_title("Deviation " + title)
-        axs[1].set_title("Tempo")
+    def plot(self, correction, interp):
+        correction = [e for e in correction if e["time"] <= 10]
+        interValues = np.arange(0, 10, 0.05)
 
-        for correction, label in zip(corrections, labels):
-            axs[0].plot([t["time"] for t in correction], [t["diff"] for t in correction], label=label)
-
-            newPositions = self.setDynamicOffset(correction, [e["time"] for e in correction], 0.5)
-            # newPositions = [p["time"] + p["diff"] for p in correction]
-            axs[1].plot(
-                [newPositions[i] for i in range(len(newPositions) - 1)],
-                [60 / (newPositions[i + 1] - newPositions[i]) for i in range(len(newPositions) - 1)],
-            )
-
-        axs[1].plot(
-            [corrections[0][i]["time"] for i in range(len(corrections[0]) - 1)],
-            [60 / (corrections[0][i + 1]["time"] - corrections[0][i]["time"]) for i in range(len(corrections[0]) - 1)],
-            "--",
-        )
-
-        axs[0].legend()
-        plt.show()
+        plt.figure(figsize=(10, 4))
+        plt.plot([t["time"] for t in correction], [t["diff"] for t in correction], "+", zorder=5, label="Beats deviation")
+        plt.plot(interValues, interp(interValues), "--", label="Interpolation")
+        plt.legend()
+        plt.ylabel("Deviation (s)")
+        plt.xlabel("Position (s)")
+        plt.savefig("alignment.png", dpi=600)
+        # plt.show()
 
     def getEventsMatch(self, onsetsA, onsetsB, window):
         """Compute the closest position in B for each element of A

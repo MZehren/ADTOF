@@ -110,15 +110,16 @@ class Converter(object):
                 # if meta["genre"] == "Pop/Dance/Electronic":
                 results[meta["name"]].append({"path": root, "convertor": psc})
 
-        values = [[k if k != "Pop/Dance/Electronic" else "Dance/Electronic", len(v)] for k, v in genres.items()]
-        values.sort(key=lambda e: e[1])
-        plt.figure(figsize=(10.1, 6))
-        plt.barh(range(len(values)), [v[1] for v in values], edgecolor="black")
-        plt.grid(axis="x", linestyle="--")
-        plt.yticks(range(len(values)), [v[0] for v in values])
-        plt.xlabel("Count")
-        plt.savefig("Genre distribution.png", dpi=600)
-
+        # # Plot
+        # values = [[k, len(v)] for k, v in genres.items()]
+        # values.sort(key=lambda e: -e[1])
+        # plt.figure(figsize=(10, 4))
+        # plt.bar(range(len(values)), [v[1] for v in values], edgecolor="black")
+        # plt.grid(axis="y", linestyle="--")
+        # plt.xticks(range(len(values)), [v[0] for v in values], rotation=90)
+        # plt.ylabel("Count")
+        # plt.gcf().subplots_adjust(bottom=0.4)
+        # plt.savefig("Genre distribution.png", dpi=600)
         return results
 
     @staticmethod
@@ -281,7 +282,7 @@ class Converter(object):
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
             if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
                 mbc.convert(audioPath, beatsEstimationsPath, beatsActivationPath)
-            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
+            if True:  # not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
                     beatsEstimationsPath,
                     beatsActivationPath,

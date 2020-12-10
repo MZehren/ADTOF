@@ -39,20 +39,17 @@ def main():
         "-d", "--dataset", type=str, default=None, help="specifies the dataset used for the evaluation to setup the good mapping"
     )
     args = parser.parse_args()
+    classes = config.LABELS_3
     if args.dataset == "RBMA":
-        classes = config.LABELS_5
-        mappingDictionaries = [config.RBMA_MIDI, config.MIDI_REDUCED_5]
+        mappingDictionaries = [config.RBMA_MIDI_8, config.MIDI_REDUCED_5]
         sep = "\t"
     elif args.dataset == "MDB":
-        classes = config.LABELS_5
         mappingDictionaries = [config.MDBS_MIDI, config.MIDI_REDUCED_5]
         sep = "\t"
     elif args.dataset == "ENST":
-        classes = config.LABELS_5
         mappingDictionaries = [config.ENST_MIDI, config.MIDI_REDUCED_5]
         sep = " "
     else:
-        classes = config.LABELS_5
         mappingDictionaries = [config.RBMA_MIDI_8, config.MIDI_REDUCED_5]
         sep = "\t"
 
@@ -72,7 +69,7 @@ def main():
     print(result)
     plot(result, prefix="mean", groups=["all"] + [str(e) for e in classes])
     plot(result, prefix="sum", groups=["all"] + [str(e) for e in classes])
-    # plt.show()
+    plt.show()
 
 
 def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38", "47", "42", "49"]):
@@ -154,6 +151,44 @@ def plotResults():
         "sum F 49": 0.43859,
     }
     MZ_RBMA = {
+        "mean F all": 0.41724200722886723,
+        "mean P all": 0.4789603867137693,
+        "mean R all": 0.6553960804728254,
+        "sum F all": 0.6040870576507726,
+        "sum P all": 0.5484824714897725,
+        "sum R all": 0.6722378346398462,
+        "mean F 35": 0.797350918151105,
+        "mean P 35": 0.7276143192983746,
+        "mean R 35": 0.9440304358114014,
+        "sum F 35": 0.7983332381985273,
+        "sum P 35": 0.6888976455521624,
+        "sum R 35": 0.9491042345276873,
+        "mean F 38": 0.349059579905169,
+        "mean P 38": 0.34417343377375537,
+        "mean R 38": 0.6924806314557463,
+        "sum F 38": 0.56391970417327,
+        "sum P 38": 0.49409858828974773,
+        "sum R 38": 0.6567210089203322,
+        "mean F 47": 0.23895618894714168,
+        "mean P 47": 0.42822780173901076,
+        "mean R 47": 0.38238624603515414,
+        "sum F 47": 0.24012393493415957,
+        "sum P 47": 0.33101975440469833,
+        "sum R 47": 0.18839258584017016,
+        "mean F 42": 0.538877934032345,
+        "mean P 42": 0.5100097880426789,
+        "mean R 42": 0.7420741543359596,
+        "sum F 42": 0.5869136498098324,
+        "sum P 42": 0.5158155369854535,
+        "sum R 42": 0.6807450371701659,
+        "mean F 49": 0.1619654151085756,
+        "mean P 49": 0.38477659071502673,
+        "mean R 49": 0.516008934725866,
+        "sum F 49": 0.1286549707602339,
+        "sum P 49": 0.15325077399380804,
+        "sum R 49": 0.11086226203807391,
+    }
+    MZ_RBMA_3 = {
         "mean F all": 0.4400764804719079,
         "mean P all": 0.43370172930439743,
         "mean R all": 0.8629157613633572,
@@ -471,5 +506,5 @@ def plotResults():
 
 
 if __name__ == "__main__":
-    # main()
-    plotResults()
+    main()
+    # plotResults()

@@ -5,6 +5,7 @@ import mir_eval
 import numpy as np
 import tensorflow as tf
 from adtof.model import eval
+from adtof import config
 
 
 def fitPeakPicking(
@@ -52,7 +53,7 @@ def getPPProcess(peakThreshold=0.3, sampleRate=100, **kwargs):
     )
 
 
-def peakPicking(prediction, ppProcess=madmom.features.notes.NotePeakPickingProcessor(), timeOffset=0, labels=[36], **kwargs):
+def peakPicking(prediction, ppProcess=madmom.features.notes.NotePeakPickingProcessor(), timeOffset=0, labels=config.LABELS_5, **kwargs):
     """
     Call Madmom's peak picking processor on one track's prediction and transform the output in the correct format 
     """

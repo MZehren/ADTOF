@@ -539,6 +539,7 @@ class Model(object):
 
             f, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
             ax1.plot(predictions, alpha=0.8)
+
             ax1.set_ylabel("Prediction + Truth")
 
             for classIdx in range(len(labels)):
@@ -552,3 +553,13 @@ class Model(object):
                 ax2.matshow(tf.transpose(tf.reshape(x, x.shape[:2])), aspect="auto")
             ax1.legend(labels)
             plt.show()
+
+            # Paper viz
+            plt.plot(np.array([c + i for i, c in enumerate(predictions.T)]).T)
+            pp = peakPicking.peakPicking(predictions, **kwargs)
+
+            for cli, cl in enumerate(labels):
+                idx = [int(v * kwargs["sampleRate"]) for v in pp[cl]]
+                plt.scatter(idx, [predictions[sample][cli] + float(cli) for sample in idx], facecolors="none", edgecolors="r")
+            plt.show()
+
