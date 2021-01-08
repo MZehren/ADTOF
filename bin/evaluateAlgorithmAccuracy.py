@@ -106,7 +106,7 @@ def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38",
     plt.ylim(0, 1)
 
 
-def newPlot(dict, title, legend=True):
+def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure"):
     """
     dictionary:
         {
@@ -128,15 +128,18 @@ def newPlot(dict, title, legend=True):
     import pandas as pd
 
     df = pd.DataFrame(dict)
+    if sort:
+        df = df.sort_values("", ascending=False)
     df.plot.bar(edgecolor="black", legend=legend, figsize=(10, 2))
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
-    plt.ylim(0, 1)
-    plt.ylabel("F-measure")
+    if ylim:
+        plt.ylim(0, 1)
+    plt.ylabel(ylabel)
     plt.xticks(rotation=0)
     plt.title(title)
 
-    plt.savefig(title + ".png", dpi=600)
+    plt.savefig(title + ".pdf", dpi=600)
 
 
 def plotResults():
@@ -471,7 +474,7 @@ def plotResults():
     def map(dict, add=""):
         mapping = {
             "sum F all": "SUM" + add,
-            "sum F 35": "KD",
+            "sum F 35": "BD",
             "sum F 38": "SD",
             "sum F 47": "TT",
             "sum F 42": "HH",
@@ -505,6 +508,65 @@ def plotResults():
     # plt.show()
 
 
+def plotInstrumentClasses():
+    """
+    Count the number of onsets for each instrument in the datet
+    """
+    parser = argparse.ArgumentParser(description="todo")
+    parser.add_argument("groundTruthPath", type=str, help="Path to music or folder containing music to transcribe")
+    parser.add_argument("estimationsPath", type=str, help="Path to output folder")
+    parser.add_argument(
+        "-w",
+        "--distance",
+        type=float,
+        default=0.03,
+        help="distance allowed for hit rate. 0.03 is MIREX; 0.025 (50ms window) is Cartwright and Bello; ",
+    )
+    parser.add_argument(
+        "-d", "--dataset", type=str, default=None, help="specifies the dataset used for the evaluation to setup the good mapping"
+    )
+    args = parser.parse_args()
+    classes = config.LABELS_3
+    if args.dataset == "RBMA":
+        mappingDictionaries = [config.RBMA_MIDI_8]
+        sep = "\t"
+    elif args.dataset == "MDB":
+        mappingDictionaries = []
+        sep = "\t"
+    elif args.dataset == "ENST":
+        mappingDictionaries = [config.ENST_MIDI, config.MIDI_REDUCED_5]
+        sep = " "
+    else:
+        mappingDictionaries = [config.RBMA_MIDI_8, config.MIDI_REDUCED_5]
+        sep = "\t"
+
+    # Get the paths
+    groundTruthsPaths = config.getFilesInFolder(args.groundTruthPath)
+    estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
+    if args.dataset != "MDB":  # MDB doesn't have the same file name. but the order checks out
+        groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
+
+    # Decode
+    tr = TextReader()
+    groundTruths = [tr.getOnsets(grounTruth, mappingDictionaries=mappingDictionaries, sep=sep) for grounTruth in groundTruthsPaths]
+    estimations = [tr.getOnsets(estimation) for estimation in estimationsPaths]
+
+    sum = {}
+    for est in groundTruths:
+        for inst, oc in est.items():
+            if inst not in sum:
+                sum[inst] = 0
+            sum[inst] += len(oc)
+
+    # def map(dict, add=""):
+    #     mapping = {42: "HH", 35: "BD", 38: "SD", 47: "TT", 75: "CL", 53: "BE", 51: "RD", 49: "CY"}
+    #     return {v: dict[k] for k, v in mapping.items()}
+
+    newPlot({"": sum}, "Instrument classes", ylim=False, legend=False, sort=True, ylabel="Count")
+    plt.show()
+
+
 if __name__ == "__main__":
-    main()
+    # main()
     # plotResults()
+    plotInstrumentClasses()

@@ -25,3 +25,4 @@ bin/profile
 
 # plots generated
 *.png
+*.pdf

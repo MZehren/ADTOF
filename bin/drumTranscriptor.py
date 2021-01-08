@@ -40,7 +40,7 @@ def main():
     parser.add_argument("inputPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
     args = parser.parse_args()
-    writeMidi = False
+    writeMidi = True
 
     # Get the model
     model, hparams = next(Model.modelFactory(fold=0))
