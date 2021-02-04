@@ -130,7 +130,11 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure")
     df = pd.DataFrame(dict)
     if sort:
         df = df.sort_values("", ascending=False)
-    df.plot.bar(edgecolor="black", legend=legend, figsize=(10, 2))
+    ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(10, 2))
+
+    # for i, patch in enumerate(ax.patches):
+    #     patch.set_alpha(0.25 if i < 6 else 1)
+
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
     if ylim:
@@ -489,23 +493,48 @@ def plotResults():
     #     "ENST": {"ADTOF": map(MZ_ENST_WET), "all+MIDI": map(VOGL_ENST)},
     # }
     # newPlot(results, "test")
-    newPlot({"Train on ADTOF": map(MZ_ADTOF), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True)
+
+    # newPlot(
+    #     {
+    #         "Test on ADTOF": map(VOGL_ADTOF_ALLMIDI, add="*"),
+    #         "Test on RBMA": map(VOGL_RBMA_ALLMIDI, add="*"),
+    #         "Test on MDB": map(VOGL_MDB_ALLMIDI, add="*"),
+    #         "Test on ENST": map(VOGL_ENST_ALLMIDI, add="*"),
+    #     },
+    #     "",
+    #     legend=True,
+    # )
+
+    # Plot only one bar
+    # newPlot({"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True)
+    # newPlot(
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")}, "Test on RBMA", legend=False,
+    # )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
+    # newPlot(
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")}, "Test on MDB", legend=False,
+    # )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
+    # newPlot(
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")}, "Test on ENST", legend=False,
+    # )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
+    # plt.show()
+
+    newPlot({"Train on ADTOF": map(MZ_ADTOF), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True)
     newPlot(
-        {"Train on ADTOF": map(MZ_RBMA, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")},
+        {"Train on ADTOF": map(MZ_RBMA, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")},
         "Test on RBMA",
         legend=False,
     )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     newPlot(
-        {"Train on ADTOF": map(MZ_MDB, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")},
+        {"Train on ADTOF": map(MZ_MDB, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")},
         "Test on MDB",
         legend=False,
     )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
     newPlot(
-        {"Train on ADTOF": map(MZ_ENST_WET, add="*"), "Train on RBMA, MDB, ENST, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")},
+        {"Train on ADTOF": map(MZ_ENST_WET, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")},
         "Test on ENST",
         legend=False,
     )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
-    # plt.show()
+    plt.show()
 
 
 def plotInstrumentClasses():
@@ -568,5 +597,5 @@ def plotInstrumentClasses():
 
 if __name__ == "__main__":
     # main()
-    # plotResults()
-    plotInstrumentClasses()
+    plotResults()
+    # plotInstrumentClasses()

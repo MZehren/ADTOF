@@ -290,6 +290,7 @@ class Converter(object):
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,
                     alignedMidiAnotationsPath,
+                    audioPath=audioPath,
                 )
 
             # # Extract Features

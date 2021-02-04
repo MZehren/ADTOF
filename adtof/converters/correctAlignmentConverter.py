@@ -21,7 +21,7 @@ from adtof.io.textReader import TextReader
 
 class CorrectAlignmentConverter(Converter):
     """
-    Converter which tries to align the midi file to the music file as close as possible 
+    Converter which tries to align the midi file to the music file as close as possible
     by looking at the difference between annotated MIDI beats and estimated beats from Madmom
     """
 
@@ -39,15 +39,16 @@ class CorrectAlignmentConverter(Converter):
         fftSize=2048,
         thresholdCorrectionWindow=0.1,
         smoothingCorrectionWindow=5,
+        audioPath=None,
     ):
-        """        
+        """
         # TODO: possibility to compute a dynamic smoothing window depending on the variability of the offset
         # TODO: utiliser un jeu de données non aligné pour le test
 
         Parameters
         ----------
         deviationDerivation : str, optional
-            Select the method used to estimate the deviation of the notes. 
+            Select the method used to estimate the deviation of the notes.
             "act" to use the method in [TOWARDS AUTOMATICALLY CORRECTING TAPPED BEAT ANNOTATIONS FOR MUSIC RECORDINGS, imsir 2019]
             "track" to use the difference between the annotated and tracked beats (after Madmom's DBNDownBeatTrackingProcessor) averaged on a small window.
             by default "act"
@@ -71,13 +72,15 @@ class CorrectAlignmentConverter(Converter):
         if deviationDerivation == "act":
             beatAct = np.load(refBeatActivationInput, allow_pickle=True)
             correction = self.computeDNNActivationDeviation(beats_midi, beatAct, matchWindow=thresholdCorrectionWindow)
+
+            # self.plotActivation(audioPath, beatAct)
         elif deviationDerivation == "track":
             correction = self.computeTrackedBeatsDeviation(
                 beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
             )
         else:
             raise Exception("deviationDerivation is set to an unknown value")
-        # self.plot([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
+        # self.plotCorrection([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
 
         # Apply the dynamic offset to beat and notes
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
@@ -220,7 +223,10 @@ class CorrectAlignmentConverter(Converter):
         # plt.show()
         return [{"time": matches[i][0], "diff": weightedAverage[i]} for i in range(len(weightedAverage))]
 
-    def plot(self, correction, interp):
+    def plotCorrection(self, correction, interp):
+        """
+        Debug method used to plot the correction applied
+        """
         correction = [e for e in correction if e["time"] <= 10]
         interValues = np.arange(0, 10, 0.05)
 
@@ -232,6 +238,21 @@ class CorrectAlignmentConverter(Converter):
         plt.xlabel("Position (s)")
         plt.savefig("alignment.png", dpi=600)
         # plt.show()
+
+    def plotActivation(self, audioPath, beatAct):
+        """
+        Debug Method used to plot the beat activation
+        """
+        audio = librosa.load(audioPath)
+        sStart = 5
+        sStop = 7
+
+        fig, axs = plt.subplots(2)
+        axs[0].plot(np.arange(0, sStop - sStart, 1 / 22050), audio[0][int(sStart * 22050) : int(sStop * 22050)])
+        axs[0].set(ylabel="Amplitude")
+        axs[1].plot(np.arange(0, sStop - sStart, 1 / 100), beatAct[int(sStart * 100) : int(sStop * 100)])
+        axs[1].set(xlabel="Time (s)", ylabel="Audio cue")
+        plt.show()
 
     def getEventsMatch(self, onsetsA, onsetsB, window):
         """Compute the closest position in B for each element of A
