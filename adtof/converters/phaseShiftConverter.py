@@ -12,6 +12,7 @@ from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDU
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PythonMidiProxy
 import pandas as pd
+import copy
 
 
 class PhaseShiftConverter(Converter):
@@ -167,7 +168,11 @@ class PhaseShiftConverter(Converter):
         midi.addDelay(delay)
 
         # Convert the pitches
-        self.convertTracks(midi)
+        if len(midi.tracks) != 2:
+            print("stop")
+        midi.tracks.append(copy.deepcopy(midi.tracks[1]))
+        self.convertTrack(midi, midi.tracks[1], useAnimation=True)
+        self.convertTrack(midi, midi.tracks[2], useAnimation=False)
 
         return midi
 
@@ -191,7 +196,7 @@ class PhaseShiftConverter(Converter):
         for trackId in sorted(tracksToRemove, reverse=True):
             del midi.tracks[trackId]
 
-    def convertTracks(self, midi):
+    def convertTrack(self, midi, track, useAnimation=True):
         """Convert the pitches from the midi tracks
 
         Parameters
@@ -201,45 +206,46 @@ class PhaseShiftConverter(Converter):
         # TODO: clean the code
         self.expertDiscrepancies = defaultdict(int)
         self.animDiscrepancies = defaultdict(int)
-        for track in midi.tracks:
-            notesOn = {}
-            hasAnimation = any([True for event in track if midi.getEventPith(event) in config.ANIMATIONS_MIDI])
-            for event in track:
-                # Keep the original pitch as a key
-                notePitch = midi.getEventPith(event)
 
-                # Before the start of a new time step, do the conversion
-                if midi.getEventTick(event) > 0:
-                    # Convert the note on and off events to the same pitches
-                    conversion = self.convertPitches(notesOn.keys(), hasAnimation)
-                    for pitch, passedEvent in notesOn.items():
-                        # Set the pitch, if the note is not converted we set it to 0 and remove it later
-                        midi.setEventPitch(passedEvent, conversion.get(pitch, 0))
+        notesOn = {}
+        hasAnimation = any([True for event in track if midi.getEventPith(event) in config.ANIMATIONS_MIDI])
+        for event in track:
+            # Keep the original pitch as a key
+            notePitch = midi.getEventPith(event)
 
-                # Keep track of the notes currently playing
-                if midi.isEventNoteOn(event):
-                    if notePitch in notesOn:
-                        warnings.warn("error MIDI Note On overriding existing note")
-                    else:
-                        notesOn[notePitch] = event
-                elif midi.isEventNoteOff(event):
-                    if notePitch not in notesOn:
-                        warnings.warn("error MIDI Note Off not existing")
-                    else:
-                        midi.setEventPitch(event, notesOn[notePitch].pitch)
-                    notesOn.pop(notePitch, None)
+            # Before the start of a new time step, do the conversion
+            if midi.getEventTick(event) > 0:
+                # Convert the note on and off events to the same pitches
+                conversion = self.convertPitches(notesOn.keys(), useAnimation)
+                for pitch, passedEvent in notesOn.items():
+                    # Set the pitch, if the note is not converted we set it to 0 and remove it later
+                    midi.setEventPitch(passedEvent, conversion.get(pitch, 0))
+                    passedEvent.velocity = 128 if useAnimation else 1
 
-            # Remove empty events with a pitch set to 0 from the convertPitches method:
-            eventsToRemove = [
-                j
-                for j, event in enumerate(track)
-                if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
-            ]
-            for j in sorted(eventsToRemove, reverse=True):
-                # Save to time information from the event removed in the next event
-                if midi.getEventTick(track[j]) and len(track) > j + 1:
-                    midi.setEventTick(track[j + 1], midi.getEventTick(track[j]) + midi.getEventTick(track[j + 1]))
-                del track[j]
+            # Keep track of the notes currently playing
+            if midi.isEventNoteOn(event):
+                if notePitch in notesOn:
+                    warnings.warn("error MIDI Note On overriding existing note")
+                else:
+                    notesOn[notePitch] = event
+            elif midi.isEventNoteOff(event):
+                if notePitch not in notesOn:
+                    warnings.warn("error MIDI Note Off not existing")
+                else:
+                    midi.setEventPitch(event, notesOn[notePitch].pitch)
+                notesOn.pop(notePitch, None)
+
+        # Remove empty events with a pitch set to 0 from the convertPitches method:
+        eventsToRemove = [
+            j
+            for j, event in enumerate(track)
+            if (midi.isEventNoteOn(event) or midi.isEventNoteOff(event)) and midi.getEventPith(event) == 0
+        ]
+        for j in sorted(eventsToRemove, reverse=True):
+            # Save to time information from the event removed in the next event
+            if midi.getEventTick(track[j]) and len(track) > j + 1:
+                midi.setEventTick(track[j + 1], midi.getEventTick(track[j]) + midi.getEventTick(track[j + 1]))
+            del track[j]
 
         if len(self.expertDiscrepancies) or len(self.animDiscrepancies):
             table = pd.DataFrame({"Expert addition": self.expertDiscrepancies, "anim addition": self.animDiscrepancies})
@@ -250,24 +256,13 @@ class PhaseShiftConverter(Converter):
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed have a pitch set to 0.
         """
-
-        converted = config.getPitchesRemap(pitches, EXPERT_MIDI)
-
         if useAnimation:
-            animation = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
-            # Check if there are discrepeancies between expert and animation
-            simpleExpert = set(config.remapPitches(converted.values(), MIDI_REDUCED_5))
-            simpleAnim = set(config.remapPitches(animation.values(), MIDI_REDUCED_5))
-
-            for pitch in simpleExpert:
-                if pitch not in simpleAnim:
-                    self.expertDiscrepancies[pitch] += 1
-            for pitch in simpleAnim:
-                if pitch not in simpleExpert:
-                    self.animDiscrepancies[pitch] += 1
-
-            converted = animation
+            conv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
+        else:
+            conv = config.getPitchesRemap(pitches, EXPERT_MIDI)
 
         # TODO This dict generation is very close to config.getPitchesRemap (the diff is replacement of unknown to 0)
-        return {k: MIDI_REDUCED_8[v] if v in MIDI_REDUCED_8 else 0 for k, v in converted.items()}
+        return {k: MIDI_REDUCED_5[v] if v in MIDI_REDUCED_5 else 0 for k, v in conv.items()}
 
+    def diffTwoTracks(self, A, B):
+        pass
