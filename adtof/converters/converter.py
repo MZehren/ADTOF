@@ -245,7 +245,7 @@ class Converter(object):
 
         # Do the conversion
         if parallelProcess:
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
                 futures = [
                     executor.submit(Converter.runConvertors, candidate, outputFolder, trackName)
                     for trackName, candidate in list(candidates.items())
@@ -269,7 +269,7 @@ class Converter(object):
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
-            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+            if True:  # not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
                 # print(trackName + "TODO ")
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
@@ -282,7 +282,7 @@ class Converter(object):
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
             if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
                 mbc.convert(audioPath, beatsEstimationsPath, beatsActivationPath)
-            if True:  # not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
+            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
                     beatsEstimationsPath,
                     beatsActivationPath,

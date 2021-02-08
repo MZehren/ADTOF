@@ -4,7 +4,7 @@ Config file keeping folder name
 import logging
 import os
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Iterable
 
 AUDIO = "audio/audio"  # Folder containging .ogg files
 PROCESSED_AUDIO = "audio/processed"  # Folder containing .npy files
@@ -90,7 +90,7 @@ def remapPitches(pitches, mappings, removeIfUnknown=True):
         mappings = [mappings]
 
     returnIterable = True
-    if not isinstance(pitches, list):
+    if not isinstance(pitches, Iterable):
         pitches = [pitches]
         returnIterable = False
 
