@@ -153,7 +153,7 @@ class CorrectAlignmentConverter(Converter):
             return []
 
         if max(np.abs(interpolation)) > maxOffsetThreshold:
-            logging.error("Extrapolation of annotations offset seems too extreme " + max(np.abs(interpolation)))
+            logging.error("Extrapolation of annotations offset seems too extreme " + str(max(np.abs(interpolation))))
             return []
 
         converted = onsets - interpolation

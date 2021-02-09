@@ -1,12 +1,13 @@
 import logging
+import re
 import warnings
 from collections import defaultdict
 
-import numpy as np
 import midi
-from mido import MidiFile
 import mido
+import numpy as np
 import pretty_midi
+from mido import MidiFile
 
 # TODO Remove those two implementations and use only one class with pretty midi
 
@@ -520,7 +521,7 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
         return midi
 
-    def get_beats_with_index(self):
+    def get_beats_with_index(self, ingoreStart=False):
         """call get_beats and get_downbeats to return the list of beats and the list of beats index
 
         Returns
@@ -537,4 +538,63 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
                 beatCursor = 1
             beatIdx.append(beatCursor)
             beatCursor = beatCursor + 1 if beatCursor != -1 else -1
+
+        if ingoreStart:
+            firstNote = self.get_onsets()[0]
         return beats, beatIdx
+
+    def _load_metadata(self, midi_data):
+        """
+        Call base class load_meatadata and add text events as well
+
+        See: http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring#Pro_Drum_and_Disco_Flip
+        """
+        from pretty_midi.containers import Note
+
+        super()._load_metadata(midi_data)
+        self.discoFlip = []
+        for track in midi_data.tracks:
+            flipStart = None
+            for event in track:
+                if event.type == "text":
+                    if re.search("\[mix 3 drums[0-3]d\]", event.text) is not None:
+                        assert flipStart == None
+                        flipStart = self._PrettyMIDI__tick_to_time[event.time]
+                    elif (
+                        re.search("\[mix 3 drums[0-3]dnoflip\]", event.text) is not None
+                        or re.search("\[mix 3 drums[0-3]\]", event.text) is not None
+                    ):
+                        # assert flipStart != None
+                        if flipStart != None:
+                            self.discoFlip.append(Note(0, "disco", flipStart, self._PrettyMIDI__tick_to_time[event.time]))
+                        flipStart = None
+
+                    if event.text == "[mix 2 drums2d]" or event.text == "[mix 4 drums4d]":
+                        raise NotImplementedError("mix not implemented")
+
+            if flipStart != None:
+                self.discoFlip.append(Note(0, "disco", flipStart, self._PrettyMIDI__tick_to_time[track[-1].time]))
+
+        self.discoFlip.sort(key=lambda x: x.start)
+        if len(self.discoFlip) != 0:
+            logging.info("Disco Flip found in track ")
+
+    def addDelay(self, delay):
+        """
+        move the notes according to a delay
+
+        Parameters
+        ----------
+        delay : int
+            delay in ms
+
+        Raises
+        ------
+        NotImplementedError
+            todo
+        """
+        if delay != 0:
+            raise NotImplementedError("Add delay with PrettyMIDI not implemented")
+            logging.debug("Delay in raw midi")
+            originalTimes = np.array([0, midi.get_end_time()])
+            midi.adjust_times(originalTimes, originalTimes + delay)

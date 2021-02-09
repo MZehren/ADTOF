@@ -115,9 +115,14 @@ def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
     for pitch in pitches:
         if pitch not in mapping or mapping[pitch] is None:
             continue
+
         mapped = mapping[pitch]
-        if isinstance(mapped, dict):
-            mapped = mapped[mapped["modifier"] in pitches]
+        if isinstance(mapped, dict):  # If the target pitch is conditionned by other pitches
+            conditionFound = [key for key in mapped.keys() if key in pitches]
+            if len(conditionFound):
+                mapped = mapped[conditionFound[0]]
+            else:
+                mapped = mapped["default"]
 
         result[pitch] = mapped
 
@@ -132,10 +137,10 @@ def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
 EXPERT_MIDI = {
     95: 35,
     96: 35,
-    97: 38,
-    98: {"modifier": 110, True: 45, False: 42},
-    99: {"modifier": 111, True: 43, False: 57},
-    100: {"modifier": 112, True: 41, False: 49},
+    97: {"disco": 42, "default": 38},
+    98: {110: 45, "disco": 38, "default": 42},
+    99: {111: 43, "default": 57},
+    100: {112: 41, "default": 49},
 }
 
 # Maps PS/RB animation pitches to the standard midi pitches. The animation seems to contain a better representation of the real notes
@@ -158,8 +163,8 @@ ANIMATIONS_MIDI = {
     34: 49,  # Crash1 hard hit w/LH
     32: 60,  # Percussion w/ RH
     # 25:Hi-Hat pedal up (hat open) w/LF. The hat will stay open for the duration of the note. The default is pedal down (hat closed).
-    31: {"modifier": 25, True: 46, False: 42},  # Hi-Hat hit w/RH
-    30: {"modifier": 25, True: 46, False: 42},  # Hi-Hat hit w/LH
+    31: {25: 46, "default": 42},  # Hi-Hat hit w/RH
+    30: {25: 46, "default": 42},  # Hi-Hat hit w/LH
     27: 38,  # Snare hit w/RH
     26: 38,  # Snare hit w/LH
     24: 35,  # Kick hit w/RF
