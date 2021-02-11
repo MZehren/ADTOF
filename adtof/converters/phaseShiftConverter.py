@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-from collections import defaultdict
+import logging
 import os
 import warnings
+from collections import defaultdict
 from shutil import copyfile
 from typing import List, Tuple
 
 import ffmpeg
+import pandas as pd
 from adtof import config
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_8
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PrettyMidiWrapper
-import pandas as pd
-import copy
 
 
 class PhaseShiftConverter(Converter):
@@ -51,7 +51,7 @@ class PhaseShiftConverter(Converter):
         midi = PrettyMidiWrapper(inputMidiPath)
 
         # clean the midi
-        self.cleanMidi(midi, delay=delay)
+        debug = self.cleanMidi(midi, delay=delay)
 
         # Write the resulting file
         if outputMidiPath:
@@ -63,7 +63,7 @@ class PhaseShiftConverter(Converter):
             copyfile(inputMidiPath, outputRawMidiPath)
             self.cleanAudio(inputAudioFiles, outputAudioPath)
 
-        return midi
+        return debug
 
     def cleanAudio(self, audioFiles, outputAudioPath):
         """
@@ -74,7 +74,7 @@ class PhaseShiftConverter(Converter):
         else:
             ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles)).filter(
                 "volume", len(audioFiles)
-            ).output(outputAudioPath, **{"b:a": "128k"}).run(overwrite_output=True)
+            ).output(outputAudioPath, **{"b:a": "128k"}).global_args("-loglevel", "error").run(overwrite_output=True)
 
     def isConvertible(self, inputFolder):
         """
@@ -165,10 +165,10 @@ class PhaseShiftConverter(Converter):
 
         # Convert the pitches
         assert len(midi.instruments) == 1
-        self.convertTrack(midi, midi.instruments[0], useAnimation=True)
+        self.convertTrack(midi, midi.instruments[0], useAnimation=False)
 
         # Debug issues
-        # self.diffTwoTracks()
+        # return self.diffTwoTracks(midi.instruments[0])
 
     def removeUnwantedTracks(self, midi):
         """Delete tracks without drums
@@ -205,7 +205,7 @@ class PhaseShiftConverter(Converter):
 
         cursor = 0
         notesOn = {}
-        hasAnimation = any([True for event in track.notes if event.pitch in config.ANIMATIONS_MIDI])
+        # hasAnimation = any([True for event in track.notes if event.pitch in config.ANIMATIONS_MIDI])
         for event in events:
             # Copy the original pitch
             notePitch = event.pitch
@@ -215,12 +215,13 @@ class PhaseShiftConverter(Converter):
                 cursor = event.start
 
                 # Convert the note on and off events to the same pitches
-                conversions = self.convertPitches(notesOn.keys(), hasAnimation)
+                conversions = self.convertPitches(notesOn.keys(), useAnimation)
                 for pitch, passedEvent in notesOn.items():
                     # Set the pitch, if the note is not converted we set it to 0 and remove it later
                     conversion = conversions.get(pitch, {})
                     passedEvent.pitch = conversion["pitch"] if "pitch" in conversion else 0
-                    passedEvent.velocity = conversion["velocity"] if "velocity" in conversion else 0
+                    if useAnimation:
+                        passedEvent.velocity = conversion["velocity"] if "velocity" in conversion else 0
 
                 # remove finished events
                 notesOn = {k: v for k, v in notesOn.items() if v.end > event.start}
@@ -256,4 +257,25 @@ class PhaseShiftConverter(Converter):
         return conv
 
     def diffTwoTracks(self, track):
-        pass
+        errors = defaultdict(list)
+        for i, event in enumerate(track.notes):
+            if event.velocity != 1:
+                errors[event.start].append(event)
+
+        name = {64: "expert", 127: "animation"}
+        log = defaultdict(int)
+        for error in errors.values():
+            if len(error) == 1:
+                log[str(name[error[0].velocity]) + "_" + str(error[0].pitch)] += 1
+            elif len(error) == 2 and error[0].velocity != error[1].velocity:
+                error.sort(key=lambda e: e.velocity)
+                log[str(error[0].pitch) + "<->" + str(error[1].pitch)] += 1
+            else:
+                log["other"] += 1
+
+        debug = [(k, v) for k, v in log.items()]
+        debug.sort(key=lambda e: e[1], reverse=True)
+        if len(errors):
+            logging.debug("difference in the notes" + ", ".join([k + ": " + str(v) for k, v in debug]))
+        return log
+

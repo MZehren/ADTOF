@@ -88,17 +88,18 @@ class CorrectAlignmentConverter(Converter):
         # Measure if the annotations are of good quality and do not writte the output if needed.
         quality = self.getAnnotationsQuality(correctedBeatTimes, beats_audio, sampleRate, fftSize)
         if quality < thresholdFMeasure:
-            logging.error(
-                "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of " + str(quality) + "%)"
+            raise ValueError(
+                "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of "
+                + str(np.round(quality, decimals=1))
+                + "%)"
             )
-            return quality
 
         # Merging the drum tracks and getting the events
         if len(midi.instruments) == 0:  # If there is no drums
-            logging.error("No drum track in the midi.")
-            return quality
+            raise ValueError("No drum track in the midi.")
+
         elif len(midi.instruments) > 1:  # There are multiple drums
-            logging.info("multiple drums tracks on the midi file. They are merged : " + str(midi.instruments))
+            logging.debug("multiple drums tracks on the midi file. They are merged : " + str(midi.instruments))
         drumsPitches = [
             note.pitch for instrument in midi.instruments for note in instrument.notes
         ]  # [note.pitch for note in midi.instruments[0].notes]

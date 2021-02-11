@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import warnings
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 import jellyfish
 import matplotlib.pyplot as plt
@@ -67,8 +67,8 @@ class Converter(object):
                 try:
                     ac.convert(fullPath)
                 except Exception as e:
-                    logging.info(e)
-                    logging.info("Archive not working: " + file)
+                    logging.warning(e)
+                    logging.warning("Archive not working: " + file)
 
         rbc = RockBandConverter()
         psc = PhaseShiftConverter()
@@ -102,7 +102,7 @@ class Converter(object):
                 meta = psc.getMetaInfo(root)
                 if not meta["pro_drums"]:
                     # genres["pro_drums:False"].append(root)
-                    logging.info("track not contianing pro_drums tag " + meta["name"])
+                    logging.warning(meta["name"] + "track not containing pro_drums tag ")
                     continue
                 # else:
                 #     genres["pro_drums:True"].append(root)
@@ -198,7 +198,7 @@ class Converter(object):
             else:
                 key = min(row, key=lambda k: k[1])[0]
                 result[key] = candidates[key]
-                logging.debug(("removing doubles: ", key, row))
+                logging.warning("Duplicated tracks, (keeping min value): " + str(row))
         return result
 
     @staticmethod
@@ -244,6 +244,7 @@ class Converter(object):
         logging.info("number of tracks in the dataset after selection: " + str(len(candidates)))
 
         # Do the conversion
+        results = []
         if parallelProcess:
             with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
                 futures = [
@@ -251,9 +252,11 @@ class Converter(object):
                     for trackName, candidate in list(candidates.items())
                 ]
                 concurrent.futures.wait(futures)
+                results = futures
         else:
             for i, (trackName, candidate) in enumerate(list(candidates.items())):
-                Converter.runConvertors(candidate, outputFolder, trackName)
+                results.append(Converter.runConvertors(candidate, outputFolder, trackName))
+        logging.info(str(Counter(results)))
 
     @staticmethod
     def runConvertors(candidate, outputFolder, trackName):
@@ -261,6 +264,8 @@ class Converter(object):
             from adtof.converters.madmomBeatConverter import MadmomBeatConverter
             from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
             from adtof import config
+
+            logging.debug("\n\n" + trackName)
 
             mbc = MadmomBeatConverter()
             ca = CorrectAlignmentConverter()
@@ -270,7 +275,6 @@ class Converter(object):
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
             if True:  # not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
-                # print(trackName + "TODO ")
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
             # Align the annotations by looking at the average beat estimation difference
@@ -297,9 +301,12 @@ class Converter(object):
             # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
             # if not Converter.checkPathExists(featuresExtractedPath):
             #     fe.convert(audioPath, featuresExtractedPath)
-            logging.info(trackName + " Done.")
+
+            return "converted"
+
         except Exception as e:
             logging.warning(trackName + " not converted: " + str(e))
+            return str(e)
 
     @staticmethod
     def vizDataset(iterator):

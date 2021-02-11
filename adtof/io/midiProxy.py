@@ -577,7 +577,7 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
         self.discoFlip.sort(key=lambda x: x.start)
         if len(self.discoFlip) != 0:
-            logging.info("Disco Flip found in track ")
+            logging.debug("Disco Flip found in track ")
 
     def addDelay(self, delay):
         """
