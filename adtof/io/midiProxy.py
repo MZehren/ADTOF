@@ -586,7 +586,7 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
         Parameters
         ----------
         delay : int
-            delay in ms
+            delay in s
 
         Raises
         ------
@@ -594,7 +594,6 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
             todo
         """
         if delay != 0:
-            raise NotImplementedError("Add delay with PrettyMIDI not implemented")
-            logging.debug("Delay in raw midi")
-            originalTimes = np.array([0, midi.get_end_time()])
-            midi.adjust_times(originalTimes, originalTimes + delay)
+            intervals = [0, self.get_end_time()]
+            self.adjust_times(intervals, [i + delay for i in intervals])
+

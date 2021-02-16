@@ -252,7 +252,7 @@ class Converter(object):
                     for trackName, candidate in list(candidates.items())
                 ]
                 concurrent.futures.wait(futures)
-                results = futures
+                results = [f._result for f in futures]
         else:
             for i, (trackName, candidate) in enumerate(list(candidates.items())):
                 results.append(Converter.runConvertors(candidate, outputFolder, trackName))

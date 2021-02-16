@@ -36,7 +36,7 @@ class PhaseShiftConverter(Converter):
         self.name = ""
         try:
             metadata = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
-            delay = float(metadata["delay"]) / 1000 if "delay" in metadata and metadata["delay"] != "" else 0.0
+            delay = float(metadata["delay"]) / 1000 if "delay" in metadata and metadata["delay"] != "" else 0.0  # Get the delay in s
             self.name = metadata["name"]
             if "pro_drums" not in metadata or not metadata["pro_drums"] or metadata["pro_drums"] != "True":
                 warnings.warn("song.ini doesn't contain pro_drums = True " + self.name)
@@ -61,7 +61,7 @@ class PhaseShiftConverter(Converter):
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
             midi.write(outputMidiPath)
             copyfile(inputMidiPath, outputRawMidiPath)
-            self.cleanAudio(inputAudioFiles, outputAudioPath)
+            # self.cleanAudio(inputAudioFiles, outputAudioPath)
 
         return debug
 
