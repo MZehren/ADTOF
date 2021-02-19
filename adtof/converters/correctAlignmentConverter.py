@@ -34,10 +34,10 @@ class CorrectAlignmentConverter(Converter):
         alignedBeatTextOutput,
         alignedMidiOutput,
         deviationDerivation="act",
-        thresholdFMeasure=0.9,
+        thresholdFMeasure=0.85,
         sampleRate=100,
         fftSize=2048,
-        thresholdCorrectionWindow=0.1,
+        thresholdCorrectionWindow=0.05,
         smoothingCorrectionWindow=5,
         audioPath=None,
     ):
@@ -82,12 +82,29 @@ class CorrectAlignmentConverter(Converter):
             raise Exception("deviationDerivation is set to an unknown value")
         # self.plotCorrection([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
 
-        # Apply the dynamic offset to beat and notes
+        # Apply the dynamic offset to beat
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
 
         # Measure if the annotations are of good quality and do not writte the output if needed.
-        quality = self.getAnnotationsQuality(correctedBeatTimes, beats_audio, sampleRate, fftSize)
+        midiLimit = midi.get_end_time()
+        # qualityAct = self.getAnnotationQualityThroughAct(correctedBeatTimes, beatAct, sampleRate)
+        quality = self.getAnnotationsQuality([t for t in beats_audio if t <= midiLimit], correctedBeatTimes, sampleRate, fftSize)
+
         if quality < thresholdFMeasure:
+            # if qualityAct > thresholdFMeasure:
+            #     print("suspi")
+            #     from automix.model.classes.signal import Signal
+            #     import matplotlib.pyplot as plt
+
+            #     # plt.title(missalignedMidiInput)
+            #     # Signal(1, times=beats_midi).plot(asVerticalLine=True, color="red", label="corrected")
+            #     # Signal(1, times=correctedBeatTimes).plot(asVerticalLine=True, color="green", label="corrected")
+            #     # Signal(1, times=[t for t in beats_audio if t <= midiLimit]).plot(asVerticalLine=True, color="blue", label="CPU", show=True)
+
+            #     Signal(0, times=correctedBeatTimes).plot(asVerticalLine=True, color="green", label="corrected")
+            #     Signal(1, times=beats_midi).plot(asVerticalLine=True, color="red", label="original")
+            #     Signal(beatAct, sampleRate=100).plot(show=True, maxSamples=len(beatAct))
+
             raise ValueError(
                 "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of "
                 + str(np.round(quality, decimals=1))
@@ -127,7 +144,11 @@ class CorrectAlignmentConverter(Converter):
 
         return quality
 
-    def getAnnotationsQuality(self, onsetsA, onsetsB, sampleRate, fftSize):
+    def getAnnotationQualityThroughAct(self, estBeats, act, sampleRate, threshold=0.1):
+        acts = [act[int(np.round(t * sampleRate))] for t in estBeats]
+        return len([1 for act in acts if act >= threshold]) / len(acts)
+
+    def getAnnotationsQuality(self, refBeats, estBeats, sampleRate, fftSize):
         """
         Estimate the quality of the annotations with the f_measure with a tolerance computed depending on the FFT size for training
         # TODO: see if it is possible to compute a correlation score betweeen annotations and estimations which is not F-measure
@@ -136,9 +157,19 @@ class CorrectAlignmentConverter(Converter):
         # Or we want to make sure that the fft overlaps with the actual onset
         # toleranceWindow = 1 / (sampleRate * 2)
         toleranceWindow = (fftSize / 44100) * 0.8 / 2
-        f, p, r = mir_eval.onset.f_measure(np.array(onsetsA), np.array(onsetsB), window=toleranceWindow)
-        # TODO see std ?
-        return f
+
+        # if debug:  # return events without a match
+        #     match = mir_eval.onset.util.match_events(np.array(refBeats), np.array(estBeats), toleranceWindow)
+        #     mySet = set([m[0] for m in match])
+        #     return [refBeats[i] for i in range(len(refBeats)) if i not in mySet]
+
+        f, p, r = mir_eval.onset.f_measure(np.array(refBeats), np.array(estBeats), window=toleranceWindow)
+
+        # we want to return precision (how many annotation was corrected)
+        # Since it's ok to have low recall (more beats detected by the computer because of odd time signature or octave problem)
+        # if f < 0.9:
+        #     logging.debug("f, p, r: ", f, p, r)
+        return p
 
     def setDynamicOffset(self, offset, onsets, maxOffsetThreshold, interpolation="cubic"):
         """

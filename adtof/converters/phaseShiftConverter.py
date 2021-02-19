@@ -61,20 +61,25 @@ class PhaseShiftConverter(Converter):
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
             midi.write(outputMidiPath)
             copyfile(inputMidiPath, outputRawMidiPath)
-            # self.cleanAudio(inputAudioFiles, outputAudioPath)
+            self.cleanAudio(inputAudioFiles, outputAudioPath, delay)
 
         return debug
 
-    def cleanAudio(self, audioFiles, outputAudioPath):
+    def cleanAudio(self, audioFiles, outputAudioPath, delay):
         """
         Copy the audio file or generate one from multi inputs
+        If there is a delay in the song.ini, trim the beginning of the audio (delaying the midi file is harder)
         """
-        if len(audioFiles) == 1:
+        if len(audioFiles) == 1 and delay == 0:
             copyfile(os.path.join(audioFiles[0]), outputAudioPath)
         else:
+            outputArgs = {"b:a": "128k"}  # TODO can we keep the original bitrate?
+            if delay > 0:
+                outputArgs["ss"] = str(delay)
+
             ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles)).filter(
                 "volume", len(audioFiles)
-            ).output(outputAudioPath, **{"b:a": "128k"}).global_args("-loglevel", "error").run(overwrite_output=True)
+            ).output(outputAudioPath, **outputArgs).global_args("-loglevel", "error").run(overwrite_output=True)
 
     def isConvertible(self, inputFolder):
         """
@@ -160,8 +165,8 @@ class PhaseShiftConverter(Converter):
         # Remove the non-drum tracks
         self.removeUnwantedTracks(midi)
 
-        # add the delay
-        midi.addDelay(delay)
+        # add the delay is removed from the midi. Instead let's trunk the start of the audio track
+        # midi.addDelay(delay)
 
         # Convert the pitches
         assert len(midi.instruments) == 1

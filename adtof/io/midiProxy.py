@@ -593,7 +593,37 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
         NotImplementedError
             todo
         """
-        if delay != 0:
-            intervals = [0, self.get_end_time()]
-            self.adjust_times(intervals, [i + delay for i in intervals])
+        raise NotImplementedError("pretty_midi doesn't adjust the timing of the beats")
+        # This correctly change the time of the notes, but doesn't adapt the time of the beats
+        # if delay != 0:
+        #     intervals = [0, self.get_end_time()]
+        #     self.adjust_times(intervals, [i + delay for i in intervals])
+        #     self.adjust_times(intervals, intervals)
+
+        # # add the delay
+        # if delay > 0:
+        #     self.get_tempo_changes
+        #     for i, track in enumerate(self.tracks):
+        #         if i == 0:
+        #             # If this is the tempo track, add a set tempo meta event event such as the delay is a 4 beats
+        #             event = midi.SetTempoEvent()
+        #             event.mpqn = int(delay * 1000000 / 4)
+        #             track.insert(0, event)
+        #             track[1].tick += 4 * self.tracks.resolution
+        #         else:
+        #             # If this is a standard track, add a delay of 4 beats to the first event
+        #             track[0].tick += 4 * self.tracks.resolution
+        # elif delay < 0:
+        #     # reduce the position of the events until the delay is consummed
+        #     warnings.warn("Track with negatie delay, the corrected midi has now misaligned beats")
+        #     ticksToRemove = self.getSecondToTicks(-delay)
+        #     for i, track in enumerate(self.tracks):
+        #         decrement = ticksToRemove
+        #         for event in track:
+        #             if event.tick >= decrement:
+        #                 event.tick -= decrement
+        #                 break
+        #             else:
+        #                 decrement -= event.tick
+        #                 event.tick = 0
 
