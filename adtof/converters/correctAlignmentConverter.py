@@ -34,7 +34,7 @@ class CorrectAlignmentConverter(Converter):
         alignedBeatTextOutput,
         alignedMidiOutput,
         deviationDerivation="act",
-        thresholdFMeasure=0.85,
+        thresholdQuality=0.5,
         sampleRate=100,
         fftSize=2048,
         thresholdCorrectionWindow=0.05,
@@ -42,27 +42,24 @@ class CorrectAlignmentConverter(Converter):
         audioPath=None,
     ):
         """
-        # TODO: possibility to compute a dynamic smoothing window depending on the variability of the offset
         # TODO: utiliser un jeu de données non aligné pour le test
 
         Parameters
         ----------
         deviationDerivation : str, optional
             Select the method used to estimate the deviation of the notes.
-            "act" to use the method in [TOWARDS AUTOMATICALLY CORRECTING TAPPED BEAT ANNOTATIONS FOR MUSIC RECORDINGS, imsir 2019]
-            "track" to use the difference between the annotated and tracked beats (after Madmom's DBNDownBeatTrackingProcessor) averaged on a small window.
+            "act" (recommended) to use the method in [TOWARDS AUTOMATICALLY CORRECTING TAPPED BEAT ANNOTATIONS FOR MUSIC RECORDINGS, imsir 2019]
+            "track" (not recommended) to use the difference between the annotated and tracked beats (after Madmom's DBNDownBeatTrackingProcessor) averaged on a small window.
             by default "act"
-        thresholdFMeasure : float, optional
-            ThresholdFMeasure = the limit at which the track will not get rendered because there are too many beats missed, by default 0.9
-            The score uses the F-Measure with a size equal to the fftSize
+        thresholdQuality : float, optional
+            the limit at which the track will get discarded because there are too many beats annotated are not identified and aligned to the computer estimations
+            TODO: The score uses either the precision of the beats hit rate, or the value of the beat activation function after the alignment, or the maximum correction offset. 
         thresholdCorrectionWindow : float, optional
             Threshold below which the estimated beat (or activation peak) is a match with the neighbooring annotated beat, by default 0.05
         smoothingCorrectionWindow : int, optional
-            [description], by default 5
+            used only for "track" deviationDerivation, smooth the correction over that many beats (by default 5)
         """
         # Get annotations and estimation data used as reference.
-        # kicks_midi = [note.start for note in midi.instruments[0].notes if note.pitch == 36]
-        # kicks_audio = tr.getOnsets(alignedDrumsInput, separated=True)[36]
         midi = PrettyMidiWrapper(missalignedMidiInput)
         beats_midi, beatIdx = midi.get_beats_with_index()
         tr = TextReader()
@@ -72,51 +69,52 @@ class CorrectAlignmentConverter(Converter):
         if deviationDerivation == "act":
             beatAct = np.load(refBeatActivationInput, allow_pickle=True)
             correction = self.computeDNNActivationDeviation(beats_midi, beatAct, matchWindow=thresholdCorrectionWindow)
-
-            # self.plotActivation(audioPath, beatAct)
         elif deviationDerivation == "track":
             correction = self.computeTrackedBeatsDeviation(
                 beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
             )
         else:
             raise Exception("deviationDerivation is set to an unknown value")
-        # self.plotCorrection([correctionAct, correctionTrack], ["activation", "tracked onset"], refBeatInput)
 
         # Apply the dynamic offset to beat
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
 
-        # Measure if the annotations are of good quality and do not writte the output if needed.
+        # Measure if the annotations are of good quality.
         midiLimit = midi.get_end_time()
-        # qualityAct = self.getAnnotationQualityThroughAct(correctedBeatTimes, beatAct, sampleRate)
-        quality = self.getAnnotationsQuality([t for t in beats_audio if t <= midiLimit], correctedBeatTimes, sampleRate, fftSize)
+        qualityAct = self.getAnnotationsQualityAct(correctedBeatTimes, beatAct, sampleRate)
+        qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midiLimit], correctedBeatTimes, sampleRate, fftSize)
+        qualityOffset = len([c for c in correction if np.abs(c["diff"]) < 0.03]) / len(correction)
 
-        if quality < thresholdFMeasure:
-            # if qualityAct > thresholdFMeasure:
-            #     print("suspi")
-            #     from automix.model.classes.signal import Signal
-            #     import matplotlib.pyplot as plt
-
-            #     # plt.title(missalignedMidiInput)
-            #     # Signal(1, times=beats_midi).plot(asVerticalLine=True, color="red", label="corrected")
-            #     # Signal(1, times=correctedBeatTimes).plot(asVerticalLine=True, color="green", label="corrected")
-            #     # Signal(1, times=[t for t in beats_audio if t <= midiLimit]).plot(asVerticalLine=True, color="blue", label="CPU", show=True)
-
-            #     Signal(0, times=correctedBeatTimes).plot(asVerticalLine=True, color="green", label="corrected")
-            #     Signal(1, times=beats_midi).plot(asVerticalLine=True, color="red", label="original")
-            #     Signal(beatAct, sampleRate=100).plot(show=True, maxSamples=len(beatAct))
+        # Discard the tracks with a low quality
+        if qualityAct < thresholdQuality:
+            # debug
+            print("investigate", os.path.basename(audioPath))
+            print(
+                "odd Time",
+                len([t for t in midi.time_signature_changes if t.numerator != 4]) > 0,
+                "fast tempo",
+                max(midi.get_tempo_changes()[1]) > 215,
+            )
+            print("activation quality", qualityAct, "hitRate quality", qualityHit)
+            print(
+                "fishy corrections",
+                len([c for c in correction if np.abs(c["diff"]) > 0.02]),
+                max([c["diff"] for c in correction if np.abs(c["diff"]) > 0.02]),
+            )
 
             raise ValueError(
                 "Not enough overlap between track's estimated and annotated beats to ensure alignment (overlap of "
-                + str(np.round(quality, decimals=1))
+                + str(np.round(qualityAct, decimals=1))
                 + "%)"
             )
 
-        # Merging the drum tracks and getting the events
+        # Merging the drum tracks and getting the events TODO: not necesary anymore
         if len(midi.instruments) == 0:  # If there is no drums
             raise ValueError("No drum track in the midi.")
-
         elif len(midi.instruments) > 1:  # There are multiple drums
+            raise ValueError("multiple drums tracks on the midi file")
             logging.debug("multiple drums tracks on the midi file. They are merged : " + str(midi.instruments))
+
         drumsPitches = [
             note.pitch for instrument in midi.instruments for note in instrument.notes
         ]  # [note.pitch for note in midi.instruments[0].notes]
@@ -134,41 +132,35 @@ class CorrectAlignmentConverter(Converter):
         )
         newMidi.write(alignedMidiOutput)
 
-        # # TESSSSST
-        # correctedDrumsTimes = self.setDynamicOffset(correctionAct, drumstimes, thresholdCorrectionWindow, interpolation="linear")
-        # newMidi = PrettyMidiWrapper.fromListOfNotes(
-        #     [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))],
-        #     beats=[(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))],
-        # )
-        # newMidi.write(alignedMidiOutput[:-5] + "test.midi")
+        return qualityAct
 
-        return quality
-
-    def getAnnotationQualityThroughAct(self, estBeats, act, sampleRate, threshold=0.1):
-        acts = [act[int(np.round(t * sampleRate))] for t in estBeats]
-        return len([1 for act in acts if act >= threshold]) / len(acts)
-
-    def getAnnotationsQuality(self, refBeats, estBeats, sampleRate, fftSize):
+    def getAnnotationsQualityAct(self, correctedBeats, act, sampleRate, threshold=0.1):
         """
-        Estimate the quality of the annotations with the f_measure with a tolerance computed depending on the FFT size for training
-        # TODO: see if it is possible to compute a correlation score betweeen annotations and estimations which is not F-measure
+        Get the activation value for each position of the annotated beats after the correction.
+        This gives an indication of how many beats were effectively corrected / on an audio cue.
+
+        The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
+        """
+        beatsAct = [act[int(np.round(t * sampleRate))] for t in correctedBeats]
+        return len([1 for ba in beatsAct if ba >= threshold]) / len(beatsAct)
+
+    def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize):
+        """
+        Estimate the quality of the annotations with their precision in relation to the algorithm estimations.
+        It uses a hit rate tolerance computed depending on the FFT size used for preprocessing the data later on
+
+        Limitation: This method doesn't handle octave issues where the beats annotated are twice as fast as the beats estimated.
+        When that's the case, the precision drops and the score decreases even though the activation function used to correct the beats migh work.
+        See "getAnntotationQualityAct"
         """
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
-        # Or we want to make sure that the fft overlaps with the actual onset
         # toleranceWindow = 1 / (sampleRate * 2)
+        # Or we want to make sure that the fft overlaps with the actual onset
         toleranceWindow = (fftSize / 44100) * 0.8 / 2
-
-        # if debug:  # return events without a match
-        #     match = mir_eval.onset.util.match_events(np.array(refBeats), np.array(estBeats), toleranceWindow)
-        #     mySet = set([m[0] for m in match])
-        #     return [refBeats[i] for i in range(len(refBeats)) if i not in mySet]
-
-        f, p, r = mir_eval.onset.f_measure(np.array(refBeats), np.array(estBeats), window=toleranceWindow)
 
         # we want to return precision (how many annotation was corrected)
         # Since it's ok to have low recall (more beats detected by the computer because of odd time signature or octave problem)
-        # if f < 0.9:
-        #     logging.debug("f, p, r: ", f, p, r)
+        f, p, r = mir_eval.onset.f_measure(np.array(refBeats), np.array(estBeats), window=toleranceWindow)
         return p
 
     def setDynamicOffset(self, offset, onsets, maxOffsetThreshold, interpolation="cubic"):
@@ -193,7 +185,8 @@ class CorrectAlignmentConverter(Converter):
         return converted
 
     def computeDNNActivationDeviation(self, beats_midi, act, fs_act=100, matchWindow=0.05, lambda_transition=0.1):
-        """TODO
+        """
+        From tapcorrect, compute the most likely offset of the annotated beats according to an activation function
 
         Parameters
         ----------
@@ -202,7 +195,7 @@ class CorrectAlignmentConverter(Converter):
         act : [type]
             [description]
         fs_act : int, optional
-            [description], by default 100
+            sample rate of the activation. If using Madmom, it is 100Hz by default. By default 100
         matchWindow : float, optional
             [description], by default 0.05
         lambda_transition : float, optional

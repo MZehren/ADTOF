@@ -523,7 +523,7 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
     def get_beats_with_index(self, ingoreStart=False):
         """call get_beats and get_downbeats to return the list of beats and the list of beats index
-
+        
         Returns
         -------
         (list, list)
