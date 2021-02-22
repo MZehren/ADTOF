@@ -302,7 +302,7 @@ class Converter(object):
 
             return "converted"
 
-        except Exception as e:
+        except ValueError as e:
             logging.warning(trackName + " not converted: " + str(e))
             return str(e)
 

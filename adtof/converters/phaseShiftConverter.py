@@ -169,7 +169,8 @@ class PhaseShiftConverter(Converter):
         # midi.addDelay(delay)
 
         # Convert the pitches
-        assert len(midi.instruments) == 1
+        if len(midi.instruments) != 1:
+            raise ValueError("number of drum tracks in the midi file != 1")  # TODO: should I use the track.is_drum?
         self.convertTrack(midi, midi.instruments[0], useAnimation=False)
 
         # Debug issues
