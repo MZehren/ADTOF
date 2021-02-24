@@ -131,17 +131,21 @@ def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
 
 # Maps Phase shift/rock band expert difficulty to std midi
 # For more documentation on the MIDI specifications for PhaseShift or RockBand, check http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring
-# TODO: handle "disco flip" event
 # TODO: DRUM_ROLLS = 126
 # TODO: CYMBAL_SWELL = 127
 EXPERT_MIDI = {
-    95: 35,
-    96: 35,
-    97: {"disco": 42, "default": 38},
-    98: {110: 45, "disco": 38, "default": 42},
-    99: {111: 43, "default": 57},
-    100: {112: 41, "default": 49},
+    95: 35,  # Kick note, orange
+    96: 35,  # Kick note, orange
+    97: {"disco": 42, "default": 38},  # Snare, red
+    98: {110: 45, "disco": 38, "default": 42},  # hi-hat / high tom, yellow
+    99: {111: 43, "default": 57},  # Open Hi-hat / ride / cowbell / Medium tom, blue
+    100: {112: 41, "default": 49},  # Crash / low tom, green
 }
+
+SPECIAL_CASES = [
+    {"expert": {97: 38, 98: 47}, "animation": {27: 38, 26: 38}, "result": {97: 38}},  # Snare flam
+    # {"expert": {98:42, 100:49}, "animation": {49}, "result": {98: 42}},  # Double crashs
+]
 
 # Maps PS/RB animation pitches to the standard midi pitches. The animation seems to contain a better representation of the real notes
 # Not available on all charts
