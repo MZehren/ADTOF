@@ -23,13 +23,11 @@ from adtof.io.mir import MIR
 
 
 class Model(object):
-    """
-    Richard Vogl model
-    http://ifs.tuwien.ac.at/~vogl/
-    """
-
     @staticmethod
     def modelFactory(fold=0):
+        """
+        Yield models with different hyperparameters to be trained
+        """
         models = {
             # "cnn-stride(1,3)-shuffledinput": {
             #     "labels": config.LABELS_5,
@@ -87,7 +85,7 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                # "peakThreshold": 0.24,
+                "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
             },
             "crnn-YT-rad0-diff": {
                 "labels": config.LABELS_5,
@@ -153,12 +151,16 @@ class Model(object):
             yield (Model(modelName, **hparams), hparams)
 
     def __init__(self, name, **kwargs):
+        """
+        Encapsulate a TF model which knows how to create itself and ease the workflow.
+        Should be created with the static function Model.modelFactory()
+        """
         n_bins = MIR(**kwargs).getDim()
         self.model = self._createModel(n_bins=n_bins, output=len(kwargs["labels"]), **kwargs)
         self.name = name
         self.path = os.path.join(config.CHECKPOINT_DIR, name)
-        # if model is already trained, load the weights
-        if os.path.exists(self.path + ".index"):  # TODO: This check is not case sensitive, but macOS is
+        # if model is already trained, load the weights and flag to not retrain
+        if os.path.exists(self.path + ".index"):  # TODO: This check is not case sensitive, but macOS/Linux are
             logging.info("Loading model weights %s", self.path)
             self.model.load_weights(self.path)
             self.weightLoadedFlag = True
@@ -303,6 +305,8 @@ class Model(object):
 
     def _getCRNN(self, context, n_bins, output, batchSize, trainingSequence):
         """
+        Richard Vogl model
+        http://ifs.tuwien.ac.at/~vogl/
 
         00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>   (1, 64, 3, 3)
         01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>       (64)
@@ -350,12 +354,14 @@ class Model(object):
         xWindowSize = context + (trainingSequence - 1)
 
         tfModel = tf.keras.Sequential()
+
         tfModel.add(
             tf.keras.layers.Conv2D(
                 64,
                 (3, 3),
-                # input_shape=(xWindowSize, n_bins, 1),
-                # batch_input_shape=(batchSize, xWindowSize, n_bins, 1),
+                # input shape is optional for the first layer, if ommited the model is built with the first call to training.
+                # The batch size is ommited
+                input_shape=(None, n_bins, 1,),
                 activation="relu",
                 strides=(1, 1),
                 padding="valid",
@@ -378,14 +384,15 @@ class Model(object):
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
         timeSerieDim = xWindowSize - (context - 1)
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 32
-        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one
+        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one.
+        # This
         tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))
         # return the whole sequence for the next layers with return_sequence
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Dense(output, activation="sigmoid", name="denseOutput"))
-        # tfModel.build()
+        # tfModel.build((batchSize, None, n_bins, 1))
         # tfModel.summary()
         return tfModel
 
@@ -428,6 +435,9 @@ class Model(object):
         return tfModel
 
     def fit(self, dataset_train, dataset_val, log_dir, steps_per_epoch, validation_steps, **kwargs):
+        """
+        Fits the model to the train dataset and validate on the val dataset to reduce LR on plateau and do an earlystopping. 
+        """
         logging.info("Training model %s", self.name)
 
         callbacks = [
@@ -487,13 +497,14 @@ class Model(object):
     #     return [f.result() for f in futures]
     #     return result
 
-    def evaluateDebug(self, x, y, peakThreshold=None, **kwargs):
-        predictions = self.predict(x, **kwargs)
-        return peakPicking.fitPeakPicking([predictions], [y], peakPickingSteps=[peakThreshold], **kwargs)
+    # def evaluateDebug(self, x, y, peakThreshold=None, **kwargs):
+    #     predictions = self.predict(x, **kwargs)
+    #     return peakPicking.fitPeakPicking([predictions], [y], peakPickingSteps=[peakThreshold], **kwargs)
 
     def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
+        The dataset needs to be full tracks and not independant 
         """
         gen = dataset()
         predictions = []

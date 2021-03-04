@@ -124,10 +124,11 @@ def train_test_model(hparams, args, fold, model):
     else:
         logging.info("Evaluating model %s", model.name)
         # model.vizPredictions(dataset_train, **hparams)
+        if "peakThreshold" not in hparams:
+            scoreVal = model.evaluate(valFullGen, **hparams)
+            logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
+            hparams["peakThreshold"] = scoreVal["peakThreshold"]
 
-        scoreVal = model.evaluate(valFullGen, **hparams)
-        logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
-        hparams["peakThreshold"] = scoreVal["peakThreshold"]
         scoreTest = model.evaluate(testFullGen, **hparams)
 
         # Merge the validation results for Hparam selection
