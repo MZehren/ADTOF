@@ -242,13 +242,16 @@ class PhaseShiftConverter(Converter):
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed are not mapped
         """
+
         conv = config.getPitchesRemap(pitches, EXPERT_MIDI)
         conv = {k: MIDI_REDUCED_5[v] for k, v in conv.items() if v in MIDI_REDUCED_5}
 
-        # TODO: check flams and other stuff when animation and expert don't agree
-        # if useAnimation:
-        #     animconv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
-        #     animconv = {k: MIDI_REDUCED_5[v] for k, v in animconv.items() if v in MIDI_REDUCED_5}
+        # TODO: Check flams
+        # TODO: Check HH as crash
+        if useAnimation:
+            raise NotImplementedError()
+            animconv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
+            animconv = {k: MIDI_REDUCED_5[v] for k, v in animconv.items() if v in MIDI_REDUCED_5}
 
         return conv
 

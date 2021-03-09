@@ -272,7 +272,7 @@ class Converter(object):
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
-            if True:  # not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
             # Align the annotations by looking at the average beat estimation difference

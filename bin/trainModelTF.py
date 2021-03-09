@@ -132,8 +132,9 @@ def train_test_model(hparams, args, fold, model):
         scoreTest = model.evaluate(testFullGen, **hparams)
 
         # Merge the validation results for Hparam selection
-        for k, v in scoreVal.items():
-            scoreTest["validation_" + k] = v
+        if scoreVal is not None:
+            for k, v in scoreVal.items():
+                scoreTest["validation_" + k] = v
         return scoreTest
 
 
