@@ -519,7 +519,7 @@ class Model(object):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
         for i, (x, y) in enumerate(gen):
-            if i < 100:
+            if i < 101:
                 continue
             Y.append(y)
             startTime = time.time()

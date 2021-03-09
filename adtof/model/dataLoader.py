@@ -57,6 +57,7 @@ class DataLoader(object):
         Read all the info of the track used for training and evaluation
         """
         name = self.audioPaths[trackIdx]
+        print(name)
         X = self.readAudio(trackIdx, sampleRate=sampleRate, **kwargs)
         if self.loadLabels:
             notes = self.readLabels(trackIdx, **kwargs)
