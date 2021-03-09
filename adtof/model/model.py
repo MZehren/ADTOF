@@ -471,6 +471,8 @@ class Model(object):
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
+            if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised!
+                raise ValueError("The input array is too big")
             return np.array(self.model(np.array([x]), training=False)[0])
 
     @staticmethod
@@ -521,13 +523,16 @@ class Model(object):
         for i, (x, y) in enumerate(gen):
             if i < 101:
                 continue
-            Y.append(y)
-            startTime = time.time()
-            if trainingSequence == 1:  # TODO put that into the predict method?
-                predictions.append(self.predict(localGenerator(x, context, batchSize)))
-            else:
-                predictions.append(self.predict(x, trainingSequence=trainingSequence))
-            logging.debug("track %s predicted in %s", i, time.time() - startTime)
+            try:
+                startTime = time.time()
+                if trainingSequence == 1:  # TODO put that into the predict method?
+                    predictions.append(self.predict(localGenerator(x, context, batchSize)))
+                else:
+                    predictions.append(self.predict(x, trainingSequence=trainingSequence))
+                logging.debug("track %s predicted in %s", i, time.time() - startTime)
+                Y.append(y)
+            except Exception as e:
+                logging.debug("track %s not predicted! Skipped because of %s", str(e))
 
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)
