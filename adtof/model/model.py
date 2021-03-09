@@ -519,6 +519,8 @@ class Model(object):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
         for i, (x, y) in enumerate(gen):
+            if i < 100:
+                continue
             Y.append(y)
             startTime = time.time()
             if trainingSequence == 1:  # TODO put that into the predict method?
