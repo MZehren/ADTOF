@@ -224,10 +224,7 @@ class PhaseShiftConverter(Converter):
                 conversions = self.convertPitches(notesOn.keys(), useAnimation)
                 for pitch, passedEvent in notesOn.items():
                     # Set the pitch, if the note is not converted we set it to 0 and remove it later
-                    conversion = conversions.get(pitch, {})
-                    passedEvent.pitch = conversion["pitch"] if "pitch" in conversion else 0
-                    if useAnimation:
-                        passedEvent.velocity = conversion["velocity"] if "velocity" in conversion else 0
+                    passedEvent.pitch = conversions.get(pitch, 0)
 
                 # remove finished events
                 notesOn = {k: v for k, v in notesOn.items() if v.end > event.start}
@@ -239,26 +236,19 @@ class PhaseShiftConverter(Converter):
         # Remove empty events with a pitch set to 0 from the convertPitches method:
         track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to pure
 
-    def convertPitches(self, pitches, useAnimation):
+    def convertPitches(self, pitches, useAnimation=True):
         """
         TODO better comments
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed are not mapped
         """
         conv = config.getPitchesRemap(pitches, EXPERT_MIDI)
-        # TODO This dict generation is very close to config.getPitchesRemap (the diff is replacement of unknown to 0)
-        conv = {k: {"pitch": MIDI_REDUCED_5[v], "velocity": 64 if useAnimation else 1} for k, v in conv.items() if v in MIDI_REDUCED_5}
+        conv = {k: MIDI_REDUCED_5[v] for k, v in conv.items() if v in MIDI_REDUCED_5}
 
-        if useAnimation:
-            animconv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
-            animconv = {k: {"pitch": MIDI_REDUCED_5[v], "velocity": 127} for k, v in animconv.items() if v in MIDI_REDUCED_5}
-            convLookup = {v["pitch"]: k for k, v in conv.items()}
-
-            for k, v in animconv.items():
-                if v["pitch"] in convLookup:
-                    conv[convLookup[v["pitch"]]]["velocity"] = 1
-                else:
-                    conv[k] = v
+        # TODO: check flams and other stuff when animation and expert don't agree
+        # if useAnimation:
+        #     animconv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
+        #     animconv = {k: MIDI_REDUCED_5[v] for k, v in animconv.items() if v in MIDI_REDUCED_5}
 
         return conv
 

@@ -521,8 +521,6 @@ class Model(object):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
         for i, (x, y) in enumerate(gen):
-            if i < 101:
-                continue
             try:
                 startTime = time.time()
                 if trainingSequence == 1:  # TODO put that into the predict method?
@@ -532,7 +530,7 @@ class Model(object):
                 logging.debug("track %s predicted in %s", i, time.time() - startTime)
                 Y.append(y)
             except Exception as e:
-                logging.debug("track %s not predicted! Skipped because of %s", str(e))
+                logging.error("track %s not predicted! Skipped because of %s", i, str(e))
 
         if peakThreshold == None:
             return peakPicking.fitPeakPicking(predictions, Y, **kwargs)

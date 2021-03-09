@@ -272,7 +272,7 @@ class Converter(object):
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
-            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+            if True:  # not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
             # Align the annotations by looking at the average beat estimation difference
@@ -303,6 +303,13 @@ class Converter(object):
             return "converted"
 
         except ValueError as e:
+            # 'converted': 2377,
+            # 'Extreme correction needed for this track': 271,
+            # 'Extrapolation of annotations offset seems too extreme ': 107,
+            # "Not enough overlap between track's estimated and annotated beats to ensure alignment": 80,
+            # 'number of drum tracks in the midi file != 1': 58,
+            # None: 26,
+            # 'data byte must be in range 0..127': 7
             logging.warning(trackName + " not converted: " + str(e))
             return str(e)
 
