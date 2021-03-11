@@ -545,9 +545,18 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
     def _load_metadata(self, midi_data):
         """
-        Call base class load_meatadata and add text events as well
-
+        Call base class load_meatadata 
+        
+        This implementation add text events as well to search for discoflip events:
         See: http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring#Pro_Drum_and_Disco_Flip
+
+        looking for [mix <difficulty> drums<configuration>] text events
+        <difficulty> is a value, 0 through 3, where 0 is Easy, 1 is Medium, 2 is Hard, and 3 is Expert: 
+        We only look for expert difficulty: 3
+
+        <configuration> refers to the configuration of the drum audio streams.
+        is a value between 0 though 4 with different configuration of stems
+        or a value of "0d" to "4d" for a "discoflip" mix inverting snare and HH
         """
         from pretty_midi.containers import Note
 
@@ -557,22 +566,20 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
             flipStart = None
             for event in track:
                 if event.type == "text":
-                    if re.search("\[mix 3 drums[0-3]d\]", event.text) is not None:
+
+                    if re.search("\[mix 3 drums[0-4]d\]", event.text) is not None:
                         assert flipStart == None
                         flipStart = self._PrettyMIDI__tick_to_time[event.time]
                     elif (
-                        re.search("\[mix 3 drums[0-3]dnoflip\]", event.text) is not None
-                        or re.search("\[mix 3 drums[0-3]\]", event.text) is not None
+                        re.search("\[mix 3 drums[0-4]dnoflip\]", event.text) is not None
+                        or re.search("\[mix 3 drums[0-4]\]", event.text) is not None
                     ):
                         # assert flipStart != None
                         if flipStart != None:
                             self.discoFlip.append(Note(0, "disco", flipStart, self._PrettyMIDI__tick_to_time[event.time]))
                         flipStart = None
 
-                    if event.text == "[mix 2 drums2d]" or event.text == "[mix 4 drums4d]":
-                        raise NotImplementedError("mix not implemented")
-
-            if flipStart != None:
+            if flipStart != None:  # insterting end of disco flip if needed at the end
                 self.discoFlip.append(Note(0, "disco", flipStart, self._PrettyMIDI__tick_to_time[track[-1].time]))
 
         self.discoFlip.sort(key=lambda x: x.start)
