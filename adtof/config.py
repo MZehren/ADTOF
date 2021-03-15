@@ -112,13 +112,14 @@ def getPitchesRemap(pitches: List[int], mapping: Dict[int, int]):
     (ie: 98 = 45 if 110 in pitches else 46)
     """
     result = {}
+    setPitches = set(pitches)
     for pitch in pitches:
         if pitch not in mapping or mapping[pitch] is None:
             continue
 
         mapped = mapping[pitch]
         if isinstance(mapped, dict):  # If the target pitch is conditionned by other pitches
-            conditionFound = [key for key in mapped.keys() if key in pitches]
+            conditionFound = [key for key in mapped.keys() if key in setPitches]
             if len(conditionFound):
                 mapped = mapped[conditionFound[0]]
             else:
@@ -143,14 +144,17 @@ EXPERT_MIDI = {
 }
 
 # Test of using the expert annotation augmented with animation checks
-# {"expert": {97: 38, 98: 47}, "animation": {27: 38, 26: 38}, "result": {97: 38}},  # Snare flam
+# DONE:
+# Open HH on Crash to differentiate with the closed HH
+# Snare flam: snare + tom on expert, but snare only on animation
+# TODO:
 # {"expert": {98:42, 100:49}, "animation": {49}, "result": {98: 42}},  # Double crashs
 EXPERT_ANIMATION_MIDI = {
     95: 35,  # Kick note, orange
     96: 35,  # Kick note, orange
     97: {"disco": 42, "default": 38},  # Snare, red
     98: {110: 45, "disco": 38, "default": 42},  # hi-hat / high tom, yellow
-    99: {111: 43, "default": 57},  # Open Hi-hat / ride / cowbell / Medium tom, blue
+    99: {111: 43, 31: 46, 30: 46, "default": 57},  # Open Hi-hat / ride / cowbell / Medium tom, blue
     100: {112: 41, "default": 49},  # Crash / low tom, green
 }
 

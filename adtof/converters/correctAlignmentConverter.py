@@ -147,7 +147,8 @@ class CorrectAlignmentConverter(Converter):
 
         The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
         """
-        intersection = set(correctedBeats).intersection(correctedOnsets)
+        # Round the timings to milliseconds to correct float imprecisions possibly creating an empty intersection
+        intersection = set(np.round(correctedBeats, decimals=4)).intersection(np.round(correctedOnsets, decimals=4))
         beatsAct = [act[int(np.round(t * sampleRate))] for t in intersection if int(np.round(t * sampleRate)) < len(act)]
 
         return len([1 for ba in beatsAct if ba >= threshold]) / len(beatsAct)

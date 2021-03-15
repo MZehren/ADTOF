@@ -10,7 +10,7 @@ from typing import List, Tuple
 import ffmpeg
 import pandas as pd
 from adtof import config
-from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_8
+from adtof.config import ANIMATIONS_MIDI, EXPERT_ANIMATION_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_8
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PrettyMidiWrapper
 
@@ -26,6 +26,7 @@ class PhaseShiftConverter(Converter):
     PS_MIDI_NAMES = ["notes.mid"]
     PS_AUDIO_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
+    ANIM_MISMATCH = defaultdict(int)  # Debug difference between expert and anim
 
     def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True):
         """
@@ -76,6 +77,8 @@ class PhaseShiftConverter(Converter):
             outputArgs = {"b:a": "128k"}  # TODO can we keep the original bitrate?
             if delay > 0:
                 outputArgs["ss"] = str(delay)
+            elif delay < 0:
+                raise ValueError("midi delay is negative")
 
             ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles)).filter(
                 "volume", len(audioFiles)
@@ -165,16 +168,11 @@ class PhaseShiftConverter(Converter):
         # Remove the non-drum tracks
         self.removeUnwantedTracks(midi)
 
-        # add the delay is removed from the midi. Instead let's trunk the start of the audio track
+        # The delay used to be removed from the midi. Instead let's trunk the start of the audio track
         # midi.addDelay(delay)
 
         # Convert the pitches
-        if len(midi.instruments) != 1:
-            raise ValueError("number of drum tracks in the midi file != 1")  # TODO: should I use the track.is_drum?
         self.convertTrack(midi, midi.instruments[0], useAnimation=False)
-
-        # Debug issues
-        # return self.diffTwoTracks(midi.instruments[0])
 
     def removeUnwantedTracks(self, midi):
         """Delete tracks without drums
@@ -196,6 +194,15 @@ class PhaseShiftConverter(Converter):
         for trackId in sorted(tracksToRemove, reverse=True):
             del midi.instruments[trackId]
 
+        # Pretty midi split the notes from the same track on drum and not drum channel.
+        # We should merge them in case of error of channel from the annotator
+        if len(midi.instruments) != 1:
+            logging.debug("number of drum tracks in the midi file != 1, merging the tracks")
+            midi.instruments[0].notes = [note for instrument in midi.instruments for note in instrument.notes]
+            midi.instruments[0].notes.sort(key=lambda n: n.start)
+            for trackId in sorted(range(1, len(midi.instruments)), reverse=True):
+                del midi.instruments[trackId]
+
     def convertTrack(self, midi, track, useAnimation=True):
         """Convert the pitches from the midi tracks
 
@@ -205,13 +212,16 @@ class PhaseShiftConverter(Converter):
         """
         from pretty_midi.containers import Note
 
+        # Add the discoFlip events as notes
         events = [note for note in track.notes] + midi.discoFlip
         events.sort(key=lambda x: x.start)
-        events += [Note(0, 0, events[-1].start + 1, events[-1].end + 1)]  # Add a fake event to parse the last note as well
+        # Add a fake event to parse the last note as well
+        events += [Note(0, 0, events[-1].start + 1, events[-1].end + 1)]
 
         cursor = 0
         notesOn = {}
-        # hasAnimation = any([True for event in track.notes if event.pitch in config.ANIMATIONS_MIDI])
+
+        hasAnimation = any([True for event in track.notes if event.pitch in config.ANIMATIONS_MIDI])
         for event in events:
             # Copy the original pitch
             notePitch = event.pitch
@@ -221,60 +231,93 @@ class PhaseShiftConverter(Converter):
                 cursor = event.start
 
                 # Convert the note on and off events to the same pitches
-                conversions = self.convertPitches(notesOn.keys(), useAnimation)
+                conversions = self.convertPitches(notesOn.keys(), False)
                 for pitch, passedEvent in notesOn.items():
                     # Set the pitch, if the note is not converted we set it to 0 and remove it later
                     passedEvent.pitch = conversions.get(pitch, 0)
+
+                # Debug
+                animConversions = self.convertPitches(notesOn.keys(), True)
+                notesExpert = set(conversions.values())
+                notesAnim = set(animConversions.values())
+                if notesExpert != notesAnim:
+                    diffExpert = [v for k, v in conversions.items() if v not in notesAnim]
+                    diffAnim = [v for k, v in animConversions.items() if v not in notesExpert]
+
+                    if hasAnimation and len(diffExpert + diffAnim) >= 1:
+                        diff = (
+                            str(sorted(conversions.values()))
+                            + str(sorted(animConversions.values()))
+                            + str(sorted(conversions.keys()))
+                            + str(sorted(animConversions.keys()))
+                        )
+                        # diff.sort()
+                        PhaseShiftConverter.ANIM_MISMATCH[diff] += 1
 
                 # remove finished events
                 notesOn = {k: v for k, v in notesOn.items() if v.end > event.start}
 
             # Keep track of the notes currently playing
-            assert notePitch not in notesOn
-            notesOn[notePitch] = event
+            # don't register duplicate note on the same location
+            if notePitch not in notesOn:
+                notesOn[notePitch] = event
 
         # Remove empty events with a pitch set to 0 from the convertPitches method:
-        track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to pure
+        print(sorted([(k, v) for k, v in PhaseShiftConverter.ANIM_MISMATCH.items()], key=lambda e: e[1], reverse=True)[:10], self.name)
+        track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to be pure
 
     def convertPitches(self, pitches, useAnimation=True):
         """
         TODO better comments
         Convert the notes from a list of simultaneous events to standard pitches.
         The events which should be removed are not mapped
-        """
 
-        conv = config.getPitchesRemap(pitches, EXPERT_MIDI)
-        conv = {k: MIDI_REDUCED_5[v] for k, v in conv.items() if v in MIDI_REDUCED_5}
+        There are discrepancies between expert and animation annotations:
+        - The animations are not always provided
+        - When provided, the animations are not always accurate
+        - The expert annotations have innacuracies to enhance the gameplay
+            In RB set
+            - Open HH is played as a crash (+2000 occurences)
+            - Flam is played as Snare + tom (+2000 occurences)
+            In YT set
+            - The annimations seems to have been automatically created from the expert with errors
+            In CC set
+            - Open HH is played as a crash (+2000 occurences)
+        """
 
         # TODO: Check flams
         # TODO: Check HH as crash
         if useAnimation:
-            raise NotImplementedError()
+            # raise NotImplementedError()
             animconv = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
             animconv = {k: MIDI_REDUCED_5[v] for k, v in animconv.items() if v in MIDI_REDUCED_5}
+            return animconv
+        else:
+            conv = config.getPitchesRemap(pitches, EXPERT_ANIMATION_MIDI)
+            # conv = config.getPitchesRemap(pitches, EXPERT_MIDI)
+            conv = {k: MIDI_REDUCED_5[v] for k, v in conv.items() if v in MIDI_REDUCED_5}
+            return conv
 
-        return conv
+    # def diffTwoTracks(self, track):
+    #     errors = defaultdict(list)
+    #     for i, event in enumerate(track.notes):
+    #         if event.velocity != 1:
+    #             errors[event.start].append(event)
 
-    def diffTwoTracks(self, track):
-        errors = defaultdict(list)
-        for i, event in enumerate(track.notes):
-            if event.velocity != 1:
-                errors[event.start].append(event)
+    #     name = {64: "expert", 127: "animation"}
+    #     log = defaultdict(int)
+    #     for error in errors.values():
+    #         if len(error) == 1:
+    #             log[str(name[error[0].velocity]) + "_" + str(error[0].pitch)] += 1
+    #         elif len(error) == 2 and error[0].velocity != error[1].velocity:
+    #             error.sort(key=lambda e: e.velocity)
+    #             log[str(error[0].pitch) + "<->" + str(error[1].pitch)] += 1
+    #         else:
+    #             log["other"] += 1
 
-        name = {64: "expert", 127: "animation"}
-        log = defaultdict(int)
-        for error in errors.values():
-            if len(error) == 1:
-                log[str(name[error[0].velocity]) + "_" + str(error[0].pitch)] += 1
-            elif len(error) == 2 and error[0].velocity != error[1].velocity:
-                error.sort(key=lambda e: e.velocity)
-                log[str(error[0].pitch) + "<->" + str(error[1].pitch)] += 1
-            else:
-                log["other"] += 1
-
-        debug = [(k, v) for k, v in log.items()]
-        debug.sort(key=lambda e: e[1], reverse=True)
-        if len(errors):
-            logging.debug("difference in the notes" + ", ".join([k + ": " + str(v) for k, v in debug]))
-        return log
+    #     debug = [(k, v) for k, v in log.items()]
+    #     debug.sort(key=lambda e: e[1], reverse=True)
+    #     if len(errors):
+    #         logging.debug("difference in the notes" + ", ".join([k + ": " + str(v) for k, v in debug]))
+    #     return log
 
