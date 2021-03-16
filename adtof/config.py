@@ -143,22 +143,6 @@ EXPERT_MIDI = {
     100: {112: 41, "default": 49},  # Crash / low tom, green
 }
 
-# Test of using the expert annotation augmented with animation checks
-# DONE:
-# Open HH on Crash to differentiate with the closed HH
-# Snare flam: snare + tom on expert, but snare only on animation
-# TODO:
-# {"expert": {98:42, 100:49}, "animation": {49}, "result": {98: 42}},  # Double crashs
-EXPERT_ANIMATION_MIDI = {
-    95: 35,  # Kick note, orange
-    96: 35,  # Kick note, orange
-    97: {"disco": 42, "default": 38},  # Snare, red
-    98: {110: 45, "disco": 38, "default": 42},  # hi-hat / high tom, yellow
-    99: {111: 43, 31: 46, 30: 46, "default": 57},  # Open Hi-hat / ride / cowbell / Medium tom, blue
-    100: {112: 41, "default": 49},  # Crash / low tom, green
-}
-
-
 # Maps PS/RB animation pitches to the standard midi pitches. The animation seems to contain a better representation of the real notes
 # Not available on all charts
 ANIMATIONS_MIDI = {

@@ -2,6 +2,7 @@ import concurrent.futures
 import logging
 import os
 import sys
+import time
 import warnings
 from collections import defaultdict, Counter
 
@@ -234,6 +235,20 @@ class Converter(object):
         from adtof.converters.featuresExctractorConverter import FeaturesExtractorConverter
         from adtof import config
 
+        # debug
+        from adtof.io.midiProxy import PrettyMidiWrapper
+        from adtof.converters.phaseShiftConverter import PhaseShiftConverter
+
+        basePath = outputFolder + "/" + config.RAW_MIDI + "/"
+        psc = PhaseShiftConverter()
+        for file in os.listdir(basePath)[:50]:
+            start_time = time.time()
+            psc.name = file
+            midi = PrettyMidiWrapper(basePath + file)
+            psc.cleanMidi(midi)
+            print("--- %s seconds ---" % (time.time() - start_time))
+        return "test"
+
         # Get all possible convertible files
         candidates = Converter._getFileCandidates(inputFolder)
         # remove duplicated ones
@@ -272,6 +287,7 @@ class Converter(object):
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
+
             if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
                 candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
