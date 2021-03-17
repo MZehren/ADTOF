@@ -568,7 +568,9 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
                 if event.type == "text":
 
                     if re.search("\[mix 3 drums[0-4]d\]", event.text) is not None:
-                        assert flipStart == None
+                        if flipStart is not None:
+                            raise ValueError("DiscoFlip event before the end of the previous one")
+
                         flipStart = self._PrettyMIDI__tick_to_time[event.time]
                     elif (
                         re.search("\[mix 3 drums[0-4]dnoflip\]", event.text) is not None

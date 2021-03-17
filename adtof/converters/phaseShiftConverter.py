@@ -36,6 +36,7 @@ class PhaseShiftConverter(Converter):
     EXPERT = []
     ANIM_KEY = []
     EXPERT_KEY = []
+    HAS_ANIM = []
 
     def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True):
         """
@@ -232,6 +233,7 @@ class PhaseShiftConverter(Converter):
 
         # TODO use the conversion later on
         hasAnimation = len([1 for event in track.notes if event.pitch in config.ANIMATIONS_MIDI]) > 100
+        PhaseShiftConverter.HAS_ANIM.append(int(hasAnimation))
         for event in events:
             # Copy the original pitch
             notePitch = event.pitch
@@ -312,9 +314,9 @@ class PhaseShiftConverter(Converter):
         expert = {k: MIDI_REDUCED_5[v] for k, v in expert.items() if v in MIDI_REDUCED_5}
 
         for k, v in expert.items():
-            # Kick simplification in animation
-            if v == 35 and 35 not in expert.values():
-                print("TODO")
+            # Animation has only simplified Kick
+            if v == 35 and 35 not in animation.values():
+                animation[k] = v
 
             # HH on crash
             if v == 49 and 49 not in animation.values() and 42 in animation.values():
@@ -347,9 +349,11 @@ class PhaseShiftConverter(Converter):
         """
         Plot yTrue against yPred
         """
+        print("ratio of tracks with annimation", np.mean(PhaseShiftConverter.HAS_ANIM))
+
         difference = defaultdict(lambda: defaultdict(int))
         for i in range(len(PhaseShiftConverter.EXPERT)):
-            if PhaseShiftConverter.EXPERT[i] != PhaseShiftConverter.ANIM[i] and len(PhaseShiftConverter.ANIM[i]) > 0:
+            if PhaseShiftConverter.EXPERT[i] != PhaseShiftConverter.ANIM[i]:  # and len(PhaseShiftConverter.ANIM[i]) > 0
                 # difference[str(PhaseShiftConverter.ANIM_KEY[i])][str(PhaseShiftConverter.EXPERT_KEY[i])] += 1
                 difference[str(PhaseShiftConverter.ANIM[i])][str(PhaseShiftConverter.EXPERT[i])] += 1
         df = pd.DataFrame(difference)

@@ -10,6 +10,7 @@ import jellyfish
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
+from random import shuffle
 
 
 class Converter(object):
@@ -241,7 +242,9 @@ class Converter(object):
 
         basePath = outputFolder + "/" + config.RAW_MIDI + "/"
         psc = PhaseShiftConverter()
-        for file in os.listdir(basePath)[:50]:
+        listOfPath = list(os.listdir(basePath))
+        shuffle(listOfPath)
+        for file in listOfPath[:200]:
             start_time = time.time()
             psc.name = file
             midi = PrettyMidiWrapper(basePath + file)
