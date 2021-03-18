@@ -257,7 +257,7 @@ class Converter(object):
         # Do the conversion
         results = []
         if parallelProcess:
-            with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
                 futures = [
                     executor.submit(Converter.runConvertors, candidate, outputFolder, trackName)
                     for trackName, candidate in list(candidates.items())
@@ -284,8 +284,8 @@ class Converter(object):
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
 
-            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
-                candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
+            # if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+            delay = candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
             # Align the annotations by looking at the average beat estimation difference
             # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
@@ -294,7 +294,7 @@ class Converter(object):
             alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
-            if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
+            if delay != 0 or not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
                 mbc.convert(audioPath, convertedMidiPath, beatsEstimationsPath, beatsActivationPath)
             if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(

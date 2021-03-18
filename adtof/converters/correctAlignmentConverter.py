@@ -101,7 +101,7 @@ class CorrectAlignmentConverter(Converter):
         drumstimesSet = set(drumstimes)
         fishy_corrections = [c for c in correction if np.abs(c["diff"]) > 0.025 and c["time"] in drumstimesSet]
 
-        # Discard the tracks with a low quality
+        # Discard the tracks with a low quality and with extreme corrections (set to 25ms)
         if qualityAct < thresholdQuality:
             # debug
             # print("investigate", os.path.basename(audioPath))
@@ -116,7 +116,7 @@ class CorrectAlignmentConverter(Converter):
             # print("fishy_corrections", [c for c in correction if np.abs(c["diff"]) > 0.03 and c["time"].in(correctedDrumsTimesSet)])
 
             raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
-        elif len(fishy_corrections) > 2:
+        elif len(fishy_corrections) > 2:  # TODO: Why 2 again?
             # debug
             # for c in fishy_corrections:
             #     print(

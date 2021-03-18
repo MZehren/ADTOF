@@ -75,7 +75,7 @@ class PhaseShiftConverter(Converter):
             copyfile(inputMidiPath, outputRawMidiPath)
             self.cleanAudio(inputAudioFiles, outputAudioPath, delay)
 
-        return debug
+        return delay
 
     def cleanAudio(self, audioFiles, outputAudioPath, delay):
         """
