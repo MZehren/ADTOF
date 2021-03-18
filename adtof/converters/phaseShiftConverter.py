@@ -31,7 +31,8 @@ class PhaseShiftConverter(Converter):
     PS_MIDI_NAMES = ["notes.mid"]
     PS_AUDIO_NAMES = ["song.ogg", "drums.ogg", "guitar.ogg"]
     PS_DRUM_TRACK_NAMES = ["PART REAL_DRUMS_PS", "PART DRUMS_2X", "PART DRUMS"]  # By order of quality
-    ANIM_MISMATCH = defaultdict(int)  # Debug difference between expert and anim
+
+    # Debug difference between expert and anim
     ANIM = []
     EXPERT = []
     ANIM_KEY = []
@@ -62,7 +63,7 @@ class PhaseShiftConverter(Converter):
         midi = PrettyMidiWrapper(inputMidiPath)
 
         # clean the midi
-        debug = self.cleanMidi(midi, delay=delay)
+        debug = self.cleanMidi(midi)
 
         # Write the resulting file
         if outputMidiPath:
@@ -79,7 +80,7 @@ class PhaseShiftConverter(Converter):
     def cleanAudio(self, audioFiles, outputAudioPath, delay):
         """
         Copy the audio file or generate one from multi inputs
-        If there is a delay in the song.ini, trim the beginning of the audio (delaying the midi file is harder)
+        If there is a delay in the song.ini, trim the beginning of the audio (delaying the midi file was harder)
         """
         if len(audioFiles) == 1 and delay == 0:
             copyfile(os.path.join(audioFiles[0]), outputAudioPath)
@@ -167,22 +168,18 @@ class PhaseShiftConverter(Converter):
             items = [row.split(" = ") for row in rows]
             return {item[0]: item[1] for item in items if len(item) == 2}
 
-    def cleanMidi(self, midi, delay=0):
+    def cleanMidi(self, midi):
         """
         Clean the midi file to a standard file with standard pitches, only one drum track, and remove the duplicated events.
 
         Arguments:
             midi: midi file from python-midi
-            delay (seconds): add this delay at the start of the midi file
         """
         # Remove the non-drum tracks
         self.removeUnwantedTracks(midi)
 
-        # The delay used to be removed from the midi. Instead let's trunk the start of the audio track
-        # midi.addDelay(delay)
-
         # Convert the pitches
-        self.convertTrack(midi, midi.instruments[0], useAnimation=False)
+        self.convertTrack(midi)
 
     def removeUnwantedTracks(self, midi):
         """Delete tracks without drums
@@ -213,27 +210,31 @@ class PhaseShiftConverter(Converter):
             for trackId in sorted(range(1, len(midi.instruments)), reverse=True):
                 del midi.instruments[trackId]
 
-    def convertTrack(self, midi, track, useAnimation=True):
+    def convertTrack(self, midi, debug=False):
         """Convert the pitches from the midi tracks
 
         Parameters
         ----------
         midi : the midi object to convert
+        debug: If plotting the "animation" and "expert" mismatch
         """
         from pretty_midi.containers import Note
 
         # Add the discoFlip events as notes
+        track = midi.instruments[0]
         events = [note for note in track.notes] + midi.discoFlip
         events.sort(key=lambda x: x.start)
-        # Add a fake event to parse the last note as well
+        # DIRTY code: Adding a fake event at the end so the for loop works
         events += [Note(0, 0, events[-1].start + 1, events[-1].end + 1)]
 
+        # Check if the track has "annimation" annotations or only "expert" ones
+        if debug:
+            hasAnimation = len([1 for event in track.notes if event.pitch in config.ANIMATIONS_MIDI]) > 100
+            PhaseShiftConverter.HAS_ANIM.append(int(hasAnimation))
+
+        # Convert all the pitches
         cursor = 0
         notesOn = {}
-
-        # TODO use the conversion later on
-        hasAnimation = len([1 for event in track.notes if event.pitch in config.ANIMATIONS_MIDI]) > 100
-        PhaseShiftConverter.HAS_ANIM.append(int(hasAnimation))
         for event in events:
             # Copy the original pitch
             notePitch = event.pitch
@@ -245,36 +246,17 @@ class PhaseShiftConverter(Converter):
                 # Convert the note on events to the same pitches
                 animConversions, conversions = self.convertPitches(notesOn.keys())
                 for pitch, passedEvent in notesOn.items():
-                    # Set the pitch, if the note is not converted we set it to 0 and remove it later
+                    # convert the pitch, if the note is not converted we set it to 0 and remove it later
                     passedEvent.pitch = conversions.get(pitch, 0)
 
-                # Debug
-                # animConversions = self.convertPitches(notesOn.keys(), True)
-                notesExpert = set(conversions.values())
-                notesAnim = set(animConversions.values())
-                if hasAnimation:
+                # Save the discrepancies between "expert" and "animation" for debugging
+                if debug and hasAnimation:
                     PhaseShiftConverter.EXPERT.append(sorted(list(set(conversions.values()))))
                     PhaseShiftConverter.ANIM.append(sorted(list(set(animConversions.values()))))
                     PhaseShiftConverter.EXPERT_KEY.append(sorted(list(conversions.keys())))
                     PhaseShiftConverter.ANIM_KEY.append(sorted(list(animConversions.keys())))
 
-                    # if (35 in notesExpert) and (35 not in notesAnim):
-                    #     print("stop")
-
-                if notesExpert != notesAnim and len(notesAnim) > 0:
-
-                    diffExpert = [v for k, v in conversions.items() if v not in notesAnim]
-                    diffAnim = [v for k, v in animConversions.items() if v not in notesExpert]
-                    if hasAnimation:
-                        diff = (
-                            str(sorted(conversions.values()))
-                            + str(sorted(animConversions.values()))
-                            + str(sorted(conversions.keys()))
-                            + str(sorted(animConversions.keys()))
-                        )
-                        PhaseShiftConverter.ANIM_MISMATCH[diff] += 1
-
-                # remove finished events
+                # Remove finished events
                 notesOn = {k: v for k, v in notesOn.items() if v.end > event.start}
 
             # Keep track of the notes currently playing
@@ -282,19 +264,18 @@ class PhaseShiftConverter(Converter):
             if notePitch not in notesOn:
                 notesOn[notePitch] = event
 
-        # Debug
-        # print(sorted([(k, v) for k, v in PhaseShiftConverter.ANIM_MISMATCH.items()], key=lambda e: e[1], reverse=True)[:10], self.name)
-        self.confusionMatrix(yTrueLabel="Expert", yPredLabel="Anim")
+        if debug:
+            self._plotDebugMatrices()
         # Remove empty events with a pitch set to 0 from the convertPitches method:
-        track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to be pure
+        track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to be pure?
 
-    def convertPitches(self, pitches, useAnimation=True):
+    def convertPitches(self, pitches):
         """
-        TODO better comments
-        Convert the notes from a list of simultaneous events to standard pitches.
-        The events which should be removed are not mapped
+        Return a mapping converting the notes from a list of simultaneous events to standard pitches.
+        The events which should be removed are not mapped.
 
-        There are discrepancies between expert and animation annotations:
+        There are discrepancies between expert and animation annotations, tries to correct them, but return both mapings for debugging.
+        If unsure, use the "expert" mapping:
         - The animations are not always provided
         - When provided, the animations are not always accurate
         - The expert annotations have innacuracies to enhance the gameplay
@@ -307,49 +288,54 @@ class PhaseShiftConverter(Converter):
             - Open HH is played as a crash (+2000 occurences)
         """
 
+        # Get the animation and expert notes mapped to standard events
         animation = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
-        animation = {k: MIDI_REDUCED_5[v] for k, v in animation.items() if v in MIDI_REDUCED_5}
-        # conv = config.getPitchesRemap(pitches, EXPERT_ANIMATION_MIDI)
         expert = config.getPitchesRemap(pitches, EXPERT_MIDI)
+        # Reduce the vocabulary to only 5 classes to remove ambiguity
+        animation = {k: MIDI_REDUCED_5[v] for k, v in animation.items() if v in MIDI_REDUCED_5}
         expert = {k: MIDI_REDUCED_5[v] for k, v in expert.items() if v in MIDI_REDUCED_5}
+        animationValues = set(animation.values())
+        expertValues = set(expert.values())
 
+        # Correct "animation" and "expert" notes mismatch to get more precise annotations
+        # TODO add the conditions in an external mapping
         for k, v in expert.items():
-            # Animation has only simplified Kick
-            if v == 35 and 35 not in animation.values():
+            # Animations have only simplified BD
+            if v == 35 and 35 not in animationValues:
                 animation[k] = v
 
-            # HH on crash
-            if v == 49 and 49 not in animation.values() and 42 in animation.values():
+            # Real open HH on pads CY
+            if v == 49 and 49 not in animationValues and 42 in animationValues:
                 expert[k] = 42
 
-            # Crash on HH
-            if v == 42 and 42 not in animation.values() and 49 in animation.values():
+            # Real double CY on pads CY + HH
+            # TODO: add "49 in expertValues"?
+            if v == 42 and 42 not in animationValues and 49 in animationValues:
                 expert[k] = 49
 
-            # Flam on tom
-            if v == 47 and 47 not in animation.values() and 38 in animation.values():
+            # Real flam on SD on pads TT + SD
+            if v == 47 and 47 not in animationValues and 38 in animationValues:
                 expert[k] = 38
 
         delAnim = []
         for k, v in animation.items():
-            # Remove fake kicks in annimation
-            if v == 35 and 35 not in expert.values():
+            # False positive BD in animation
+            if v == 35 and 35 not in expertValues:
                 delAnim.append(k)
 
-            # Anim ride is used for actual TT
-            if v == 49 and 49 not in expert.values() and 47 in expert.values():
+            # Real TT on RD because of issue? (converted to CY with 5 classes vocabulary)
+            if v == 49 and 49 not in expertValues and 47 in expertValues:
                 animation[k] = 47
-
         for k in delAnim:
             del animation[k]
 
         return animation, expert
 
-    def confusionMatrix(self, yTrueLabel="yTrue", yPredLabel="yPred"):
+    def _plotDebugMatrices(self):
         """
-        Plot yTrue against yPred
+        Plot expert and anim mismatches
         """
-        print("ratio of tracks with annimation", np.mean(PhaseShiftConverter.HAS_ANIM))
+        logging.debug("ratio of tracks with annimation", np.mean(PhaseShiftConverter.HAS_ANIM))
 
         difference = defaultdict(lambda: defaultdict(int))
         for i in range(len(PhaseShiftConverter.EXPERT)):
@@ -360,9 +346,8 @@ class PhaseShiftConverter(Converter):
         # df = df.div(df.sum(axis=1), axis=0)  # norm
         # df.sort_index(level=0, ascending=True, inplace=True)
         df = df.fillna(0)
-        print(
-            yTrueLabel + yPredLabel + "matching ratio",
-            len(PhaseShiftConverter.EXPERT) / (df._values.sum() + len(PhaseShiftConverter.EXPERT)),
+        logging.debug(
+            "Expert / Anim matching ratio", len(PhaseShiftConverter.EXPERT) / (df._values.sum() + len(PhaseShiftConverter.EXPERT)),
         )
         plt.ion()
         plt.show()
@@ -371,8 +356,8 @@ class PhaseShiftConverter(Converter):
 
         plt.yticks(np.arange(0.5, len(df.index), 1), df.index)
         plt.xticks(np.arange(0.5, len(df.columns), 1), df.columns, rotation=90)
-        plt.ylabel(yTrueLabel)
-        plt.xlabel(yPredLabel)
+        plt.ylabel("Expert")
+        plt.xlabel("Anim")
 
         # Change minor ticks for grid
         # plt.yticks(np.arange(0, len(df.index), 1), df.index, minor=True)

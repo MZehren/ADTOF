@@ -230,27 +230,20 @@ class Converter(object):
         """
         convert all tracks in the good format
         """
-        from adtof.converters.RVCRNNConverter import RVCRNNConverter
-        from adtof.converters.madmomBeatConverter import MadmomBeatConverter
-        from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
-        from adtof.converters.featuresExctractorConverter import FeaturesExtractorConverter
-        from adtof import config
-
         # debug
-        from adtof.io.midiProxy import PrettyMidiWrapper
-        from adtof.converters.phaseShiftConverter import PhaseShiftConverter
-
-        basePath = outputFolder + "/" + config.RAW_MIDI + "/"
-        psc = PhaseShiftConverter()
-        listOfPath = list(os.listdir(basePath))
-        shuffle(listOfPath)
-        for file in listOfPath[:200]:
-            start_time = time.time()
-            psc.name = file
-            midi = PrettyMidiWrapper(basePath + file)
-            psc.cleanMidi(midi)
-            print("--- %s seconds ---" % (time.time() - start_time))
-        return "test"
+        # from adtof.io.midiProxy import PrettyMidiWrapper
+        # from adtof.converters.phaseShiftConverter import PhaseShiftConverter
+        # basePath = outputFolder + "/" + config.RAW_MIDI + "/"
+        # psc = PhaseShiftConverter()
+        # listOfPath = list(os.listdir(basePath))
+        # shuffle(listOfPath)
+        # for file in listOfPath[:200]:
+        #     start_time = time.time()
+        #     psc.name = file
+        #     midi = PrettyMidiWrapper(basePath + file)
+        #     psc.cleanMidi(midi)
+        #     print("--- %s seconds ---" % (time.time() - start_time))
+        # return "test"
 
         # Get all possible convertible files
         candidates = Converter._getFileCandidates(inputFolder)

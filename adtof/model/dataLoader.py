@@ -153,8 +153,8 @@ class DataLoader(object):
                 row[index] = 1
 
             result.append(row)
-            if len(notes[key]) == 0:
-                logging.debug("Pitch %s is not represented in the track %s", key, filename)
+            # if len(notes[key]) == 0:
+            #     logging.debug("Pitch %s is not represented in the track %s", key, filename)
         return np.array(result).T
 
     def getSplit(self, nFolds=10, validationFold=0, tracksLimit=None, **kwargs):
