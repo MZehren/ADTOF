@@ -14,6 +14,13 @@ from adtof import config
 from adtof.converters.converter import Converter
 from adtof.model.dataLoader import DataLoader
 
+cwd = os.path.abspath(os.path.dirname(__file__))
+all_logs = os.path.join(cwd, "..", "logs/")
+tensorboardLogs = os.path.join(all_logs, "fit/")
+hparamsLogs = os.path.join(all_logs, "hparam/")
+Converter.checkPathExists(all_logs)
+logging.basicConfig(filename=os.path.join(all_logs, "buildDataset.log"), level=logging.DEBUG, filemode="w")
+
 
 def main():
     """

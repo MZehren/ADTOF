@@ -45,15 +45,14 @@ class PhaseShiftConverter(Converter):
         """
         # read the ini file
         delay = None
-        self.name = ""
+        self.name = self.getMetaInfo(inputFolder)["name"]
         try:
             metadata = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
             delay = float(metadata["delay"]) / 1000 if "delay" in metadata and metadata["delay"] != "" else 0.0  # Get the delay in s
-            self.name = metadata["name"]
             if "pro_drums" not in metadata or not metadata["pro_drums"] or metadata["pro_drums"] != "True":
                 warnings.warn("song.ini doesn't contain pro_drums = True " + self.name)
-        except:
-            warnings.warn("song.ini not found " + inputFolder)
+        except Exception as e:
+            warnings.warn("song.ini not found " + inputFolder + str(e))
 
         if not addDelay or not delay:
             delay = 0
@@ -67,7 +66,7 @@ class PhaseShiftConverter(Converter):
 
         # Write the resulting file
         if outputMidiPath:
-            trackName = self.getMetaInfo(inputFolder)["name"]
+
             _, audioFiles, _ = self.getConvertibleFiles(inputFolder)
 
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
@@ -328,6 +327,12 @@ class PhaseShiftConverter(Converter):
                 animation[k] = 47
         for k in delAnim:
             del animation[k]
+
+        # Outro of the track not annotated for gameplay but annotated for annimation
+        # TODO Correction not compatible with the "false positive BD"
+        RB = False
+        if RB and len(expert) == 0 and len(animation) > 0:
+            expert = animation
 
         return animation, expert
 

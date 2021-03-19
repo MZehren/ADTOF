@@ -33,7 +33,7 @@ class Converter(object):
     @staticmethod
     def checkPathExists(path):
         """ 
-        return if the path exists and generate the tree of folder if it doesn't
+        return if the path exists and generate the tree of folder if they doesn't
         """
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
@@ -43,7 +43,8 @@ class Converter(object):
     @staticmethod
     def checkAllPathsExist(*outputs):
         """
-        Check if all the path exist
+        Check if all the paths exist and generate the tree of folders if they doesn't
+        (see checkPathExists)
         """
         allPathsExist = True
         for output in outputs:
@@ -268,6 +269,7 @@ class Converter(object):
             for i, (trackName, candidate) in enumerate(list(candidates.items())):
                 results.append(Converter.runConvertors(candidate, outputFolder, trackName))
         logging.info(str(Counter(results)))
+        print(str(Counter(results)))
 
     @staticmethod
     def runConvertors(candidate, outputFolder, trackName):
@@ -284,8 +286,8 @@ class Converter(object):
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
 
-            # if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
-            delay = candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
+            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+                delay = candidate["convertor"].convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
 
             # Align the annotations by looking at the average beat estimation difference
             # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
@@ -294,7 +296,7 @@ class Converter(object):
             alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
-            if delay != 0 or not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
+            if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):  # delay != 0 or
                 mbc.convert(audioPath, convertedMidiPath, beatsEstimationsPath, beatsActivationPath)
             if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(

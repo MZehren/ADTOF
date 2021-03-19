@@ -151,6 +151,9 @@ class CorrectAlignmentConverter(Converter):
         intersection = set(np.round(correctedBeats, decimals=4)).intersection(np.round(correctedOnsets, decimals=4))
         beatsAct = [act[int(np.round(t * sampleRate))] for t in intersection if int(np.round(t * sampleRate)) < len(act)]
 
+        if len(beatsAct) == 0:
+            raise ValueError("no score at the position of the midi beats. there is an issue with the computation of the beat")
+
         return len([1 for ba in beatsAct if ba >= threshold]) / len(beatsAct)
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize):

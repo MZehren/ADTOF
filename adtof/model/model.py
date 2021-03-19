@@ -347,7 +347,7 @@ class Model(object):
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
         TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
-        TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 6 filters, then 32
+        TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 64 filters, then 32
         TODO: How to construct the GT since the trainingSequence is 400, but the output is 388/392 depending on the context.
 
         """
