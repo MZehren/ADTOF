@@ -328,6 +328,7 @@ class DataLoader(object):
                     else:  # Yield the full track split in overlapping chunks with context
                         # Returning a number of samples multiple of batch size to enable hardcoded batchSize in the model.
                         # used by the tf statefull RNN
+                        # TODO: correct valid padding alignment?
                         yield (track["x"], track["y"])
                         # totalSamples = len(track["x"]) - context
                         # usableSamples = totalSamples - totalSamples % batchSize

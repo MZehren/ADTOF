@@ -67,7 +67,7 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "crnn-YT-rad1-diff": {
+            "crnn-CClog70-rad1-diff": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -85,9 +85,9 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
+                # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
             },
-            "crnn-YT-rad0-diff": {
+            "crnn-CClog70-rad0-diff": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -349,8 +349,8 @@ class Model(object):
         TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
         TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 64 filters, then 32
         TODO: How to construct the GT since the trainingSequence is 400, but the output is 388/392 depending on the context.
-
         """
+        # Compte the input size
         xWindowSize = context + (trainingSequence - 1)
 
         tfModel = tf.keras.Sequential()
@@ -360,7 +360,8 @@ class Model(object):
                 64,
                 (3, 3),
                 # input shape is optional for the first layer, if ommited the model is built with the first call to training.
-                # The batch size is ommited
+                # Specifying it anyway for safe measure, the time axis is set to None because tracks have different length
+                # in the input_shape, the batch size is ommited
                 input_shape=(None, n_bins, 1,),
                 activation="relu",
                 strides=(1, 1),
