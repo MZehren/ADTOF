@@ -86,7 +86,7 @@ def test_enssemble_models(args):
     return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[0.3], **hparams)
 
 
-def train_test_model(hparams, args, fold, model):
+def train_test_model(hparams, args, fold, model: Model):
     """
     Train procedure for one model with one set of hparam for one fold.
     Learn the best peak threshold on the validation data

@@ -308,21 +308,21 @@ class Model(object):
         Richard Vogl model
         http://ifs.tuwien.ac.at/~vogl/
 
-        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>   (1, 64, 3, 3)
-        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>       (64)
-        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>   (64, 64, 3, 3)
-        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>       (64)
+        00:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x1031c1190>   (1, 64, 3, 3)   linear
+        01:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff4f0>       (64)            relu
+        02:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ff730>   (64, 64, 3, 3)  linear
+        03:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ff820>       (64)            relu
         04:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f6ff9a0>
-        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>   (64, 32, 3, 3)
-        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>       (32)
-        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>   (32, 32, 3, 3)
-        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>       (32)
+        05:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffa30>   (64, 32, 3, 3)  linear
+        06:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffb50>       (32)            relu
+        07:<madmom.ml.nn.layers.ConvolutionalLayer object at 0x14f6ffd30>   (32, 32, 3, 3)  linear
+        08:<madmom.ml.nn.layers.BatchNormLayer object at 0x14f6ffe20>       (32)            relu
         09:<madmom.ml.nn.layers.MaxPoolLayer object at 0x14f707040>
         10:<madmom.ml.nn.layers.StrideLayer object at 0x14f7070d0> Re-arrange (stride) the data in blocks of given size (5).
-        11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>   (1120, 60)
-        12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>   (120, 60)
-        13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>   (120, 60)
-        14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>     (120, 8)
+        11:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707100>   (1120, 60)      tanh (sigmoid for gate)
+        12:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f707280>   (120, 60)       tanh (sigmoid for gate)
+        13:<madmom.ml.nn.layers.BidirectionalLayer object at 0x14f7104c0>   (120, 60)       tanh (sigmoid for gate)
+        14:<madmom.ml.nn.layers.FeedForwardLayer object at 0x14f710640>     (120, 8)        sigmoid
 
         Shape of one track being analyzed
         ('0', '<madmom.ml.nn.layers.ConvolutionalLayer object at 0x129dcd9d0>', 'in ',  (31511, 79),        'out', (31509, 77, 64))
@@ -389,6 +389,7 @@ class Model(object):
         # This
         tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))
         # return the whole sequence for the next layers with return_sequence
+        # TODO check the activation function. There shouldn't be any, whereas by default in TF it's Tanh
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
@@ -449,8 +450,8 @@ class Model(object):
                 write_images=False,
             ),
             tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True,),
-            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=5),
-            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=20, verbose=1, restore_best_weights=True),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=4),
+            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=12, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
         self.model.fit(
@@ -474,6 +475,7 @@ class Model(object):
         else:
             if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised!
                 raise ValueError("The input array is too big")
+            # Put everyting in the first batch
             return np.array(self.model(np.array([x]), training=False)[0])
 
     @staticmethod
