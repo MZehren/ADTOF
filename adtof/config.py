@@ -90,7 +90,7 @@ def remapPitches(pitches, mappings, removeIfUnknown=True):
         mappings = [mappings]
 
     returnIterable = True
-    if not isinstance(pitches, Iterable):
+    if not isinstance(pitches, list):
         pitches = [pitches]
         returnIterable = False
 

@@ -44,7 +44,7 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()
 
-    for fold in range(3):
+    for fold in range(1):
         for model, hparams in Model.modelFactory(fold=fold):
             score = train_test_model(hparams, args, fold, model)
 

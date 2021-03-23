@@ -67,7 +67,7 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "crnn-CClog70-rad1-diff": {
+            "crnn-RBlog70-rad1-diff": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -85,9 +85,10 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
+                # "peakThreshold": 0.16000
                 # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
             },
-            "crnn-CClog70-rad0-diff": {
+            "crnn-RBlog70-rad0-diff": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,

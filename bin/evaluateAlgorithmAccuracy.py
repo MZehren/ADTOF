@@ -39,7 +39,7 @@ def main():
         "-d", "--dataset", type=str, default=None, help="specifies the dataset used for the evaluation to setup the good mapping"
     )
     args = parser.parse_args()
-    classes = config.LABELS_3
+    classes = config.LABELS_5
     if args.dataset == "RBMA":
         mappingDictionaries = [config.RBMA_MIDI_8, config.MIDI_REDUCED_5]
         sep = "\t"
@@ -348,14 +348,137 @@ def plotResults():
         "sum P 49": 0.6721311475409836,
         "sum R 49": 0.13381201044386423,
     }
+
     # Trained on CCLog70
-    MZ_ADTOF_CCLog70 = {
+    MZ_ADTOF_CCLog70_fold0 = {
         "sum F all": 0.70698,
         "sum F 35": 0.84282,
         "sum F 38": 0.76681,
         "sum F 47": 0.41445,
         "sum F 42": 0.67301,
         "sum F 49": 0.51137,
+    }
+    MZ_ADTOF_CCLog70_fold1 = {
+        "sum F all": 0.73212,
+        "sum F 35": 0.86235,
+        "sum F 38": 0.79119,
+        "sum F 47": 0.42968,
+        "sum F 42": 0.69679,
+        "sum F 49": 0.54307,
+    }
+    MZ_CCLog70_RBMA = {
+        "mean F all": 0.389084027985125,
+        "mean P all": 0.37401950901504505,
+        "mean R all": 0.7178835123027728,
+        "sum F all": 0.5721199971361065,
+        "sum P all": 0.4668505059475123,
+        "sum R all": 0.7386851057535867,
+        "mean F 35": 0.7500398928298642,
+        "mean P 35": 0.6543587091469685,
+        "mean R 35": 0.9624583330116844,
+        "sum F 35": 0.7440333507034914,
+        "sum P 35": 0.6038741329724243,
+        "sum R 35": 0.9689196525515744,
+        "mean F 38": 0.3460437395835728,
+        "mean P 38": 0.30605289214283954,
+        "mean R 38": 0.767359182702478,
+        "sum F 38": 0.5363941769316908,
+        "sum P 38": 0.42172917767212537,
+        "sum R 38": 0.7366964011073516,
+        "mean F 47": 0.18655666847758873,
+        "mean P 47": 0.2251196505370512,
+        "mean R 47": 0.4917934313395019,
+        "sum F 47": 0.26982468361778705,
+        "sum P 47": 0.21833897031191282,
+        "sum R 47": 0.35308416894560923,
+        "mean F 42": 0.5471539283548732,
+        "mean P 42": 0.4934885525505764,
+        "mean R 42": 0.7985463577660803,
+        "sum F 42": 0.5912276148455748,
+        "sum P 42": 0.49034063391271593,
+        "sum R 42": 0.7443836287884976,
+        "mean F 49": 0.11562591067972629,
+        "mean P 49": 0.19107774069778952,
+        "mean R 49": 0.5692602566941192,
+        "sum F 49": 0.14837576821773485,
+        "sum P 49": 0.1220216606498195,
+        "sum R 49": 0.18924972004479285,
+    }
+    MZ_CCLog70_MDB = {
+        "mean F all": 0.5252136502801041,
+        "mean P all": 0.5715850573418201,
+        "mean R all": 0.7782816628325353,
+        "sum F all": 0.6803952821166719,
+        "sum P all": 0.6875402654297127,
+        "sum R all": 0.6733972741039879,
+        "mean F 35": 0.7944250232577793,
+        "mean P 35": 0.7713145855717282,
+        "mean R 35": 0.8582764360881706,
+        "sum F 35": 0.7662994938969933,
+        "sum P 35": 0.7071428571428572,
+        "sum R 35": 0.8362573099415205,
+        "mean F 38": 0.7066810301925202,
+        "mean P 38": 0.8768000526246594,
+        "mean R 38": 0.6791899279558886,
+        "sum F 38": 0.6571566731141198,
+        "sum P 38": 0.917004048582996,
+        "sum R 38": 0.5120572720422004,
+        "mean F 47": 0.2422040812409473,
+        "mean P 47": 0.26122079572289947,
+        "mean R 47": 0.8634591149241433,
+        "sum F 47": 0.18003913894324852,
+        "sum P 47": 0.10926365795724466,
+        "sum R 47": 0.5111111111111111,
+        "mean F 42": 0.5727534859130108,
+        "mean P 42": 0.6251999511293609,
+        "mean R 42": 0.7782408768341418,
+        "sum F 42": 0.7761090971862592,
+        "sum P 42": 0.7127457197209892,
+        "sum R 42": 0.8518378173550587,
+        "mean F 49": 0.31000463079626334,
+        "mean P 49": 0.32338990166045184,
+        "mean R 49": 0.7122419583603324,
+        "sum F 49": 0.4199363732767763,
+        "sum P 49": 0.4479638009049774,
+        "sum R 49": 0.39520958083832336,
+    }
+    MZ_CCLog70_ENST_WET = {
+        "mean F all": 0.5931138875568629,
+        "mean P all": 0.6841634887811615,
+        "mean R all": 0.671099801839817,
+        "sum F all": 0.71035620959978,
+        "sum P all": 0.7274647887323944,
+        "sum R all": 0.6940338618650901,
+        "mean F 35": 0.8423576217679951,
+        "mean P 35": 0.9601678782379797,
+        "mean R 35": 0.8020235619820981,
+        "sum F 35": 0.8664249017830159,
+        "sum P 35": 0.9579017707985299,
+        "sum R 35": 0.790896551724138,
+        "mean F 38": 0.5947897175940463,
+        "mean P 38": 0.7858955623210752,
+        "mean R 38": 0.5507233937265306,
+        "sum F 38": 0.6163178647255081,
+        "sum P 38": 0.849853617733166,
+        "sum R 38": 0.4834641922436355,
+        "mean F 47": 0.37916883693241754,
+        "mean P 47": 0.588932375318471,
+        "mean R 47": 0.4268060709132137,
+        "sum F 47": 0.3108695652173913,
+        "sum P 47": 0.2972972972972973,
+        "sum R 47": 0.32574031890660593,
+        "mean F 42": 0.7588238460240796,
+        "mean P 42": 0.7193526048178925,
+        "mean R 42": 0.8467537131288879,
+        "sum F 42": 0.7903094093095,
+        "sum P 42": 0.7336590296495957,
+        "sum R 42": 0.856440511307768,
+        "mean F 49": 0.39042941546577575,
+        "mean P 49": 0.36646902321038893,
+        "mean R 49": 0.7291922694483545,
+        "sum F 49": 0.4746883744594251,
+        "sum P 49": 0.38891204668611923,
+        "sum R 49": 0.6090078328981723,
     }
 
     # VOGL
@@ -528,31 +651,36 @@ def plotResults():
     # )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
     # plt.show()
 
-    # newPlot(
-    #     {"Train on ADTOF": map(MZ_ADTOF_CC0), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True
-    # )
-    # newPlot(
-    #     {"Train on ADTOF": map(MZ_RBMA, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")},
-    #     "Test on RBMA",
-    #     legend=False,
-    # )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
-    # newPlot(
-    #     {"Train on ADTOF": map(MZ_MDB, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")},
-    #     "Test on MDB",
-    #     legend=False,
-    # )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
-    # newPlot(
-    #     {"Train on ADTOF": map(MZ_ENST_WET, add="*"), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")},
-    #     "Test on ENST",
-    #     legend=False,
-    # )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
-    # plt.show()
-
     newPlot(
-        {"Train on ADTOF_CC0": map(MZ_ADTOF_CC0), "Train on ADTOF_CCLog70": map(MZ_ADTOF_CCLog70)},
-        "Test on ADTOF_CC0 and Log70",
-        legend=True,
+        {"Train on ADTOF": map(MZ_ADTOF_CC0), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True
     )
+    newPlot(
+        {
+            "Train on ADTOF CC0": map(MZ_RBMA, add="*"),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*"),
+        },
+        "Test on RBMA",
+        legend=False,
+    )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
+    newPlot(
+        {
+            "Train on ADTOF CC0": map(MZ_MDB, add="*"),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*"),
+        },
+        "Test on MDB",
+        legend=False,
+    )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
+    newPlot(
+        {
+            "Train on ADTOF CC0": map(MZ_ENST_WET, add="*"),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENST_WET, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*"),
+        },
+        "Test on ENST",
+        legend=False,
+    )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
     plt.show()
 
 
@@ -574,7 +702,7 @@ def plotInstrumentClasses():
         "-d", "--dataset", type=str, default=None, help="specifies the dataset used for the evaluation to setup the good mapping"
     )
     args = parser.parse_args()
-    classes = config.LABELS_3
+    classes = config.LABELS_5
     if args.dataset == "RBMA":
         mappingDictionaries = [config.RBMA_MIDI_8]
         sep = "\t"

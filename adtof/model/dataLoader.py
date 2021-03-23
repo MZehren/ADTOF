@@ -50,7 +50,9 @@ class DataLoader(object):
             self.annotationPaths = self.annotationPaths[skipTracks:]
             self.featurePaths = self.featurePaths[skipTracks:]
         else:
-            self.audioPaths = [path for path in config.getFilesInFolder(self.folderPath) if path[-4:] == ".mp3" or path[-4:] == ".ogg"]
+            # TODO improve and encapsulat this code
+            allowedExtension = set([".mp3", ".ogg", ".wav"])
+            self.audioPaths = [path for path in config.getFilesInFolder(self.folderPath) if path[-4:] in allowedExtension]
 
     def readTrack(self, trackIdx, removeStart=True, yDense=True, labelOffset=0, sampleRate=100, **kwargs):
         """

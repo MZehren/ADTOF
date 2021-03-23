@@ -38,6 +38,7 @@ def main():
 
     # Get the model
     model, hparams = next(Model.modelFactory(fold=0))
+    assert "peakThreshold" in hparams
     ppp = peakPicking.getPPProcess(**hparams)
     # Get the data
     dl = DataLoader(args.inputPath, loadLabels=False)
