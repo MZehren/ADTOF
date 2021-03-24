@@ -281,7 +281,7 @@ class DataLoader(object):
             # sampleIdx = track["indexes"][cursor]
             raise NotImplementedError()
         """
-        cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
+        # cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
         if trackIndexes is None:
             trackIndexes = list(range(len(self.audioPaths)))
 
@@ -290,6 +290,7 @@ class DataLoader(object):
         yWindowSize = trainingSequence
 
         def gen():
+            cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
             cursors = {}  # The cursors dictionnary are stored in the gen to make it able to reinitialize
             while True:  # Infinite yield of samples
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
