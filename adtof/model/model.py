@@ -85,7 +85,7 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                # "peakThreshold": 0.16000
+                "peakThreshold": 0.2599999999999999
                 # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
             },
             "crnn-RBlog70-rad0-diff": {
