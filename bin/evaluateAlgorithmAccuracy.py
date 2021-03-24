@@ -150,7 +150,7 @@ def plotResults():
 
     # MZ
     # Trained on CC0
-    MZ_ADTOF_CC0 = {
+    MZ_CC0_CC0 = {
         "sum F all": 0.67680,
         "sum F 35": 0.82921,
         "sum F 38": 0.75134,
@@ -158,7 +158,7 @@ def plotResults():
         "sum F 42": 0.63277,
         "sum F 49": 0.43859,
     }
-    MZ_RBMA = {
+    MZ_CC0_RBMA = {
         "mean F all": 0.41724200722886723,
         "mean P all": 0.4789603867137693,
         "mean R all": 0.6553960804728254,
@@ -196,7 +196,7 @@ def plotResults():
         "sum P 49": 0.15325077399380804,
         "sum R 49": 0.11086226203807391,
     }
-    MZ_RBMA_3 = {
+    MZ_CC0_RBMA_3 = {
         "mean F all": 0.4400764804719079,
         "mean P all": 0.43370172930439743,
         "mean R all": 0.8629157613633572,
@@ -234,7 +234,7 @@ def plotResults():
         "sum P 49": 0.0,
         "sum R 49": 1.0,
     }
-    MZ_MDB = {
+    MZ_CC0_MDB = {
         "mean F all": 0.6205394267178704,
         "mean P all": 0.7551034093457771,
         "mean R all": 0.7085228534718282,
@@ -272,7 +272,7 @@ def plotResults():
         "sum P 49": 0.6055363321799307,
         "sum R 49": 0.17465069860279442,
     }
-    MZ_ENST_SUM = {
+    MZ_CC0_ENSTSUM = {
         "mean F all": 0.41937460483851,
         "mean P all": 0.7031660852442764,
         "mean R all": 0.3906405077619682,
@@ -310,7 +310,7 @@ def plotResults():
         "sum P 49": 0.3555219364599092,
         "sum R 49": 0.15339425587467362,
     }
-    MZ_ENST_WET = {
+    MZ_CC0_ENSTWET = {
         "mean F all": 0.5020027804384568,
         "mean P all": 0.7909520556324104,
         "mean R all": 0.4987024232900214,
@@ -350,7 +350,7 @@ def plotResults():
     }
 
     # Trained on CCLog70
-    MZ_ADTOF_CCLog70_fold0 = {
+    MZ_CCLog70_CCLog70_Fold0 = {
         "sum F all": 0.70698,
         "sum F 35": 0.84282,
         "sum F 38": 0.76681,
@@ -358,7 +358,7 @@ def plotResults():
         "sum F 42": 0.67301,
         "sum F 49": 0.51137,
     }
-    MZ_ADTOF_CCLog70_fold1 = {
+    MZ_CCLog70_CCLog70_Fold1 = {
         "sum F all": 0.73212,
         "sum F 35": 0.86235,
         "sum F 38": 0.79119,
@@ -442,7 +442,7 @@ def plotResults():
         "sum P 49": 0.4479638009049774,
         "sum R 49": 0.39520958083832336,
     }
-    MZ_CCLog70_ENST_WET = {
+    MZ_CCLog70_ENSTWET = {
         "mean F all": 0.5931138875568629,
         "mean P all": 0.6841634887811615,
         "mean R all": 0.671099801839817,
@@ -481,6 +481,130 @@ def plotResults():
         "sum R 49": 0.6090078328981723,
     }
 
+    # Trained on RBLog70
+    MZ_RBLog70_RBLog70_Fold0 = {
+        "sum F all": 0.78584,
+        "sum F 35": 0.89532,
+        "sum F 38": 0.85273,
+        "sum F 47": 0.41485,
+        "sum F 42": 0.76056,
+        "sum F 49": 0.67877,
+    }
+    MZ_RBLog70_RBMA = {
+        "mean F all": 0.362491645129928,
+        "mean P all": 0.4526536330008492,
+        "mean R all": 0.6266340798459303,
+        "sum F all": 0.5279091769157995,
+        "sum P all": 0.5103012734237499,
+        "sum R all": 0.546775624907558,
+        "mean F 35": 0.7873470792808488,
+        "mean P 35": 0.720558976494605,
+        "mean R 35": 0.928657433116183,
+        "sum F 35": 0.784385763490241,
+        "sum P 35": 0.6796657381615598,
+        "sum R 35": 0.9272529858849077,
+        "mean F 38": 0.389138246511222,
+        "mean P 38": 0.38644830157537674,
+        "mean R 38": 0.7136775445406704,
+        "sum F 38": 0.5608507286333202,
+        "sum P 38": 0.48923499770957396,
+        "sum R 38": 0.65702860658259,
+        "mean F 47": 0.15036101572931435,
+        "mean P 47": 0.16232578648210488,
+        "mean R 47": 0.5121305351575982,
+        "sum F 47": 0.28630363036303635,
+        "sum P 47": 0.21670569867291178,
+        "sum R 47": 0.42175630507444545,
+        "mean F 42": 0.40069859893513965,
+        "mean P 42": 0.5906285304789232,
+        "mean R 42": 0.4495399376073942,
+        "sum F 42": 0.44018553443090885,
+        "sum P 42": 0.5852534562211982,
+        "sum R 42": 0.35274895841842985,
+        "mean F 49": 0.0849132851931149,
+        "mean P 49": 0.4033065699732366,
+        "mean R 49": 0.529164948807806,
+        "sum F 49": 0.1354104254044338,
+        "sum P 49": 0.14561855670103094,
+        "sum R 49": 0.1265397536394177,
+    }
+    MZ_RBLog70_MDB = {
+        "mean F all": 0.5846350750697675,
+        "mean P all": 0.7152132703370354,
+        "mean R all": 0.7126497059879666,
+        "sum F all": 0.698762233736327,
+        "sum P all": 0.8129604822505023,
+        "sum R all": 0.6126956082786471,
+        "mean F 35": 0.8141293253882745,
+        "mean P 35": 0.8351107652528044,
+        "mean R 35": 0.8138881792550913,
+        "sum F 35": 0.8052459016393442,
+        "sum P 35": 0.8127068166776968,
+        "sum R 35": 0.7979207277452891,
+        "mean F 38": 0.6931204983559974,
+        "mean P 38": 0.9118477476449559,
+        "mean R 38": 0.6500778502887234,
+        "sum F 38": 0.6186546636659165,
+        "sum P 38": 0.9197026022304833,
+        "sum R 38": 0.4660889223813112,
+        "mean F 47": 0.3697863853550484,
+        "mean P 47": 0.4083496897242213,
+        "mean R 47": 0.8459478454752557,
+        "sum F 47": 0.19954648526077098,
+        "sum P 47": 0.12535612535612536,
+        "sum R 47": 0.4888888888888889,
+        "mean F 42": 0.590502054008424,
+        "mean P 42": 0.8206605785400758,
+        "mean R 42": 0.6393075477182084,
+        "sum F 42": 0.7961443806398687,
+        "sum P 42": 0.867679928475637,
+        "sum R 42": 0.7355058734369079,
+        "mean F 49": 0.45563711224109305,
+        "mean P 49": 0.6000975705231192,
+        "mean R 49": 0.6140271072025542,
+        "sum F 49": 0.5294117647058824,
+        "sum P 49": 0.7670454545454546,
+        "sum R 49": 0.4041916167664671,
+    }
+    MZ_RBLog70_ENSTWET = {
+        "mean F all": 0.5508239506913521,
+        "mean P all": 0.7041608957832477,
+        "mean R all": 0.5808873757894419,
+        "sum F all": 0.6904451554291582,
+        "sum P all": 0.8377264449343429,
+        "sum R all": 0.5872077398548777,
+        "mean F 35": 0.8028843344457467,
+        "mean P 35": 0.9798521904073877,
+        "mean R 35": 0.7561269948299613,
+        "sum F 35": 0.8474258970358816,
+        "sum P 35": 0.9752244165170556,
+        "sum R 35": 0.7492413793103448,
+        "mean F 38": 0.5838895386046511,
+        "mean P 38": 0.789808614552304,
+        "mean R 38": 0.5359374077236831,
+        "sum F 38": 0.5981250960504073,
+        "sum P 38": 0.8446180555555556,
+        "sum R 38": 0.46300261717820607,
+        "mean F 47": 0.2600140772110721,
+        "mean P 47": 0.2630045742088334,
+        "mean R 47": 0.5086219336219336,
+        "sum F 47": 0.2270947533281128,
+        "sum P 47": 0.1730310262529833,
+        "sum R 47": 0.33029612756264237,
+        "mean F 42": 0.6735261950759188,
+        "mean P 42": 0.916719583127259,
+        "mean R 42": 0.6082818831183332,
+        "sum F 42": 0.7487262621584068,
+        "sum P 42": 0.9104477611940298,
+        "sum R 42": 0.6357915437561455,
+        "mean F 49": 0.4338056081193722,
+        "mean P 49": 0.5714195166204549,
+        "mean R 49": 0.49546865965329834,
+        "sum F 49": 0.5629272215520708,
+        "sum P 49": 0.7329842931937173,
+        "sum R 49": 0.45691906005221933,
+    }
+
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
     # correlation found is:
@@ -503,7 +627,34 @@ def plotResults():
     # (midi_bal_m)
     # enst(rbma)
 
-    VOGL_ADTOF_ALLMIDI = {
+    # Values from the website
+    VOGL_ALLMIDI_RBMA = {
+        "sum F all": 0.52,
+        "sum F 35": 0.77,
+        "sum F 38": 0.49,
+        "sum F 47": 0.25,
+        "sum F 42": 0.58,
+        "sum F 49": np.mean([0.6, 0.03, 0.05]),
+    }
+    VOGL_ALLMIDI_MDB = {
+        "sum F all": 0.57,
+        "sum F 35": 0.64,
+        "sum F 38": 0.55,
+        "sum F 47": 0.25,
+        "sum F 42": 0.70,
+        "sum F 49": np.mean([0.11, 0.23, 0.00]),
+    }
+    VOGL_ALLMIDI_ENST = {
+        "sum F all": 0.62,
+        "sum F 35": 0.79,
+        "sum F 38": 0.53,
+        "sum F 47": 0.16,
+        "sum F 42": 0.75,
+        "sum F 49": np.mean([0.07, 0.21, 0.02]),
+    }
+
+    # Values from the pre-trained model
+    VOGL_ENSEMBLE_ADTOF = {
         "mean F all": 0.508802504159026,
         "mean P all": 0.588064022893335,
         "mean R all": 0.6081516499677526,
@@ -541,31 +692,9 @@ def plotResults():
         "sum P 49": 0.5687639198218263,
         "sum R 49": 0.26690182245737804,
     }
-    VOGL_RBMA_MIREX = {
-        "sum F all": 0.58,
-        "sum F 35": 0.85,
-        "sum F 38": 0.27,
-        "sum F 47": 0.13,
-        "sum F 42": 0.48,
-        "sum F 49": np.mean([0.64, 0.79, 0.82]),
-    }
-    VOGL_RBMA_ALLMIDI = {
-        "sum F all": 0.52,
-        "sum F 35": 0.77,
-        "sum F 38": 0.49,
-        "sum F 47": 0.25,
-        "sum F 42": 0.58,
-        "sum F 49": np.mean([0.6, 0.03, 0.05]),
-    }
-    VOGL_MDB_ALLMIDI = {
-        "sum F all": 0.57,
-        "sum F 35": 0.64,
-        "sum F 38": 0.55,
-        "sum F 47": 0.25,
-        "sum F 42": 0.70,
-        "sum F 49": np.mean([0.11, 0.23, 0.00]),
-    }
-    VOGL_MDB_MIREX = {
+
+    # Values from MIREX 2018 competition
+    VOGL_MIREX_MDB = {
         "sum F all": 0.60,
         "sum F 35": 0.72,
         "sum F 38": 0.63,
@@ -573,17 +702,17 @@ def plotResults():
         "sum F 42": 0.60,
         "sum F 49": np.mean([0.27, 0.66, 0.91]),
     }
-    VOGL_ENST_ALLMIDI = {
-        "sum F all": 0.62,
-        "sum F 35": 0.79,
-        "sum F 38": 0.53,
-        "sum F 47": 0.16,
-        "sum F 42": 0.75,
-        "sum F 49": np.mean([0.07, 0.21, 0.02]),
+    VOGL_MIREX_RBMA = {
+        "sum F all": 0.58,
+        "sum F 35": 0.85,
+        "sum F 38": 0.27,
+        "sum F 47": 0.13,
+        "sum F 42": 0.48,
+        "sum F 49": np.mean([0.64, 0.79, 0.82]),
     }
 
     # Approximative value from the plot TODO: double check, there was an error
-    VOGL_RBMA_PTMIDI = {
+    VOGL_PTMIDI_RBMA = {
         "sum F all": 0.56,
         "sum F 35": 0.80,
         "sum F 38": 0.55,
@@ -591,7 +720,7 @@ def plotResults():
         "sum F 42": 0.61,
         "sum F 49": np.mean([0.21, 0.07, 0.23]),
     }
-    VOGL_MDB_PTMIDI = {
+    VOGL_PTMIDI_MDB = {
         "sum F all": 0.68,
         "sum F 35": 0.7,
         "sum F 38": 0.61,
@@ -599,7 +728,7 @@ def plotResults():
         "sum F 42": 0.58,
         "sum F 49": np.mean([0.29, 0.55, 0.18]),
     }
-    VOGL_ENST_PTMIDI = {
+    VOGL_PTMIDI_ENST = {
         "sum F all": 0.68,
         "sum F 35": 0.79,
         "sum F 38": 0.58,
@@ -652,31 +781,41 @@ def plotResults():
     # plt.show()
 
     newPlot(
-        {"Train on ADTOF": map(MZ_ADTOF_CC0), "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True
+        {
+            "Train on ADTOF CC0": map(MZ_CC0_CC0),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
+            "Train on ADTOF RBLog70": map(MZ_RBLog70_RBLog70_Fold0),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENSEMBLE_ADTOF),
+        },
+        "Test on ADTOF CC0, ",
+        legend=True,
     )
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_RBMA, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_RBMA, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*"),
+            "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA, add="*"),
         },
         "Test on RBMA",
         legend=False,
     )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_MDB, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_MDB, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*"),
+            "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB, add="*"),
         },
         "Test on MDB",
         legend=False,
     )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_ENST_WET, add="*"),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENST_WET, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_ENSTWET, add="*"),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET, add="*"),
+            "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET, add="*"),
+            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENST, add="*"),
         },
         "Test on ENST",
         legend=False,

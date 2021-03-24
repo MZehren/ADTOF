@@ -67,7 +67,7 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "crnn-RBlog70-rad1-diff": {
+            "crnn-RBlog70-rad1-diff-val4": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -85,6 +85,7 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
+                "validation_epoch": 4,
                 "peakThreshold": 0.2599999999999999
                 # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
             },
@@ -106,45 +107,8 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
+                "validation_epoch": 1,
             },
-            # "crnn-CC3-rad1-noDiff": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "sampleRate": 100,
-            #     "diff": False,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            # },
-            # "crnn-CC3-rad1-diff-lowWeights": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 20,
-            #     "sampleRate": 100,
-            #     "diff": False,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            # },
         }
 
         for modelName, hparams in models.items():

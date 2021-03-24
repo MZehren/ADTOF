@@ -113,7 +113,7 @@ def train_test_model(hparams, args, fold, model: Model):
         if steps_per_epoch > maxStepPerEpoch:
             logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
             steps_per_epoch = maxStepPerEpoch
-        validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch)
+        validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch) * hparams["validation_epoch"]
         model.fit(dataset_train, dataset_val, tensorboardLogs, steps_per_epoch, validation_steps, **hparams)
         # TODO: need to call reset state?
     # If the model is already evaluated, skip the evaluation
