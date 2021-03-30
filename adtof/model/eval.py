@@ -5,7 +5,7 @@ from adtof import config
 import logging
 
 
-def runEvaluation(groundTruths, estimations, paths=[], distance=0.05, removeStart=True, classes=config.LABELS_5):
+def runEvaluation(groundTruths, estimations, paths=[], distanceThreshold=0.05, removeStart=True, classes=config.LABELS_5):
     """
     Evaluate predictions according to ground truth estimations. Uses the hit rate metric with a small window.
 
@@ -17,7 +17,7 @@ def runEvaluation(groundTruths, estimations, paths=[], distance=0.05, removeStar
         Expects a list of tracks, each track is a dictionary mapping the classes to the onsets {class: [positions]}. See textReader.getOnsets()
     paths : list[string], optional
         For debug logging when a track performs badly, by default []
-    distance : float, optional
+    distanceThreshold : float, optional
         Aka Window: Tolerance distance to match predict and annotated onsets (see mir_eval.util.match_events), 
         0.05 is similar to prior studies, 0.03 is similar to MIREX. By default 0.05
     removeStart : bool, optional
@@ -44,7 +44,7 @@ def runEvaluation(groundTruths, estimations, paths=[], distance=0.05, removeStar
             y_truth = np.array(groundTruth[pitch]) if pitch in groundTruth else np.array([])
             y_pred = np.array(estimation[pitch]) if pitch in estimation else np.array([])
 
-            matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, distance)]
+            matches = [(y_truth[i], y_pred[j]) for i, j in mir_eval.util.match_events(y_truth, y_pred, distanceThreshold)]
             tp = len(matches)
             fp = len(y_pred) - tp
             fn = len(y_truth) - tp
