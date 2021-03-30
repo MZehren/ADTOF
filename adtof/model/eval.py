@@ -5,9 +5,31 @@ from adtof import config
 import logging
 
 
-def runEvaluation(groundTruths, estimations, paths=[], distance=0.03, removeStart=True, classes=config.LABELS_5):
+def runEvaluation(groundTruths, estimations, paths=[], distance=0.05, removeStart=True, classes=config.LABELS_5):
     """
-    TODO
+    Evaluate predictions according to ground truth estimations. Uses the hit rate metric with a small window.
+
+    Parameters
+    ----------
+    groundTruths : list[Dict]
+        Expects a list of tracks, each track is a dictionary mapping the classes to the onsets {class: [positions]}. See textReader.getOnsets()
+    estimations : list[Dict]
+        Expects a list of tracks, each track is a dictionary mapping the classes to the onsets {class: [positions]}. See textReader.getOnsets()
+    paths : list[string], optional
+        For debug logging when a track performs badly, by default []
+    distance : float, optional
+        Aka Window: Tolerance distance to match predict and annotated onsets (see mir_eval.util.match_events), 
+        0.05 is similar to prior studies, 0.03 is similar to MIREX. By default 0.05
+    removeStart : bool, optional
+        If we discard the estimations before the first ground truth onset in each track. 
+        This is to prevent false positives due to "count-in" from charts which are not annotated, by default True
+    classes : [type], optional
+        On which classes to compute the results (ie. if the model predicted more classes), by default config.LABELS_5
+
+    Returns
+    -------
+    dict
+        return the sum and mean F,P,R scores per classes and for all classes.
     """
     assert len(groundTruths) == len(estimations)
 

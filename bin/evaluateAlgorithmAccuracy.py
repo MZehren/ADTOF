@@ -106,7 +106,7 @@ def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38",
     plt.ylim(0, 1)
 
 
-def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure"):
+def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure", text=True):
     """
     dictionary:
         {
@@ -142,6 +142,10 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure")
     plt.ylabel(ylabel)
     plt.xticks(rotation=0)
     plt.title(title)
+
+    if text:
+        for p in ax.patches:
+            ax.text(p._x0 + 0.01, p._y1, str(np.round(p._y1, decimals=2)))
 
     plt.savefig(title + ".pdf", dpi=600)
 
@@ -605,6 +609,130 @@ def plotResults():
         "sum R 49": 0.45691906005221933,
     }
 
+    # Trained on YTLog70
+    MZ_YTLog70_YTLog70_Fold0 = {
+        "sum F all": 0.83251,
+        "sum F 35": 0.96154,
+        "sum F 38": 0.88414,
+        "sum F 47": 0.64987,
+        "sum F 42": 0.59957,
+        "sum F 49": 0.68209,
+    }
+    MZ_YTLog70_RBMA = {
+        "mean F all": 0.3434484701568534,
+        "mean P all": 0.37982152389913804,
+        "mean R all": 0.6155783402979002,
+        "sum F all": 0.47776241696732646,
+        "sum P all": 0.43907654167957855,
+        "sum R all": 0.5239239757432332,
+        "mean F 35": 0.7543998121287548,
+        "mean P 35": 0.6930502177385811,
+        "mean R 35": 0.894594436577568,
+        "sum F 35": 0.7650715793075914,
+        "sum P 35": 0.6598130841121496,
+        "sum R 35": 0.9102877307274702,
+        "mean F 38": 0.31939845684884965,
+        "mean P 38": 0.3293555399691705,
+        "mean R 38": 0.6538042926782713,
+        "sum F 38": 0.5017596782302665,
+        "sum P 38": 0.42422954303931987,
+        "sum R 38": 0.6139649338665026,
+        "mean F 47": 0.15700795430839026,
+        "mean P 47": 0.19119099309571994,
+        "mean R 47": 0.4139728752015439,
+        "sum F 47": 0.2953076706940152,
+        "sum P 47": 0.2746276456754638,
+        "sum R 47": 0.3193558189000304,
+        "mean F 42": 0.3700165079221191,
+        "mean P 42": 0.542317039762662,
+        "mean R 42": 0.4420013572810321,
+        "sum F 42": 0.41707683539712964,
+        "sum P 42": 0.5701133144475921,
+        "sum R 42": 0.328813005473409,
+        "mean F 49": 0.11641961957615343,
+        "mean P 49": 0.1431938289295567,
+        "mean R 49": 0.6735187397510857,
+        "sum F 49": 0.10532001080205237,
+        "sum P 49": 0.059880239520958084,
+        "sum R 49": 0.43673012318029114,
+    }
+    MZ_YTLog70_MDB = {
+        "mean F all": 0.5262600259454832,
+        "mean P all": 0.6322947982505607,
+        "mean R all": 0.7161602098420154,
+        "sum F all": 0.6785738266299605,
+        "sum P all": 0.725068158989812,
+        "sum R all": 0.6376829883897022,
+        "mean F 35": 0.7134746947414591,
+        "mean P 35": 0.8336248702230507,
+        "mean R 35": 0.6653025047441973,
+        "sum F 35": 0.7625637290604516,
+        "sum P 35": 0.8674399337199669,
+        "sum R 35": 0.6803118908382066,
+        "mean F 38": 0.6826378451718385,
+        "mean P 38": 0.8320955207258026,
+        "mean R 38": 0.686146359260846,
+        "sum F 38": 0.6718676122931443,
+        "sum P 38": 0.9016497461928934,
+        "sum R 38": 0.5354182366239638,
+        "mean F 47": 0.40570603735565375,
+        "mean P 47": 0.4738724281058378,
+        "mean R 47": 0.8366426736464543,
+        "sum F 47": 0.26586102719033233,
+        "sum P 47": 0.1825726141078838,
+        "sum R 47": 0.4888888888888889,
+        "mean F 42": 0.590663936407466,
+        "mean P 42": 0.7619250408758486,
+        "mean R 42": 0.6759818026647035,
+        "sum F 42": 0.8258847320525784,
+        "sum P 42": 0.8855160450997398,
+        "sum R 42": 0.7737779461917393,
+        "mean F 49": 0.23881761605099835,
+        "mean P 49": 0.2599561313222628,
+        "mean R 49": 0.7167277088938766,
+        "sum F 49": 0.3778871639530481,
+        "sum P 49": 0.30445393532641857,
+        "sum R 49": 0.49800399201596807,
+    }
+    MZ_YTLog70_ENSTWET = {
+        "mean F all": 0.5963817630272593,
+        "mean P all": 0.7338586417508117,
+        "mean R all": 0.658025859913766,
+        "sum F all": 0.7020882157473154,
+        "sum P all": 0.7322874863188618,
+        "sum R all": 0.6742811072292395,
+        "mean F 35": 0.7921081806923658,
+        "mean P 35": 0.9278955450174998,
+        "mean R 35": 0.7730348585929521,
+        "sum F 35": 0.8285671054622484,
+        "sum P 35": 0.9175603217158177,
+        "sum R 35": 0.7553103448275862,
+        "mean F 38": 0.7082911957601177,
+        "mean P 38": 0.854322896589763,
+        "mean R 38": 0.6460925835227652,
+        "sum F 38": 0.7249033366747817,
+        "sum P 38": 0.910431654676259,
+        "sum R 38": 0.602188912681418,
+        "mean F 47": 0.40636412737521743,
+        "mean P 47": 0.7440391156462585,
+        "mean R 47": 0.38962378890950317,
+        "sum F 47": 0.36950146627565983,
+        "sum P 47": 0.5185185185185185,
+        "sum R 47": 0.2870159453302961,
+        "mean F 42": 0.7014682779351258,
+        "mean P 42": 0.8449568134703036,
+        "mean R 42": 0.6550536119900396,
+        "sum F 42": 0.7528324716752833,
+        "sum P 42": 0.854218671992012,
+        "sum R 42": 0.6729596853490659,
+        "mean F 49": 0.3736770333734696,
+        "mean P 49": 0.2980788380302335,
+        "mean R 49": 0.8263244565535703,
+        "sum F 49": 0.4666921898928024,
+        "sum P 49": 0.3301733477789816,
+        "sum R 49": 0.7956919060052219,
+    }
+
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
     # correlation found is:
@@ -785,6 +913,7 @@ def plotResults():
             "Train on ADTOF CC0": map(MZ_CC0_CC0),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
             "Train on ADTOF RBLog70": map(MZ_RBLog70_RBLog70_Fold0),
+            "Train on ADTOF YTLog70": map(MZ_YTLog70_YTLog70_Fold0),
             "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENSEMBLE_ADTOF),
         },
         "Test on ADTOF CC0, ",
@@ -795,6 +924,7 @@ def plotResults():
             "Train on ADTOF CC0": map(MZ_CC0_RBMA, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA, add="*"),
             "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA, add="*"),
+            "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA, add="*"),
             "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA, add="*"),
         },
         "Test on RBMA",
@@ -805,6 +935,7 @@ def plotResults():
             "Train on ADTOF CC0": map(MZ_CC0_MDB, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB, add="*"),
             "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB, add="*"),
+            "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB, add="*"),
             "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB, add="*"),
         },
         "Test on MDB",
@@ -815,6 +946,7 @@ def plotResults():
             "Train on ADTOF CC0": map(MZ_CC0_ENSTWET, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET, add="*"),
             "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET, add="*"),
+            "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET, add="*"),
             "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENST, add="*"),
         },
         "Test on ENST",
@@ -882,6 +1014,6 @@ def plotInstrumentClasses():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     plotResults()
     # plotInstrumentClasses()

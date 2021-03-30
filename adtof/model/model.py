@@ -67,28 +67,29 @@ class Model(object):
             #     "beat_targ": False,
             #     "tracksLimit": None,
             # },
-            "crnn-YTlog70-rad1-diff-": {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 1,
-                "trainingSequence": 400,
-                "batchSize": 8,
-                "context": 9,
-                "labelOffset": 1,
-                "labelRadiation": 1,
-                "learningRate": 0.0001,
-                "normalize": False,
-                "model": "CRNN",
-                "fmin": 20,
-                "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
-                "validation_epoch": 1,
-                # "peakThreshold": 0.2599999999999999
-                # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
-            },
+            # "crnn-YTlog70-rad1-diff-": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 10,
+            #     "sampleRate": 100,
+            #     "diff": True,
+            #     "samplePerTrack": 1,
+            #     "trainingSequence": 400,
+            #     "batchSize": 8,
+            #     "context": 9,
+            #     "labelOffset": 1,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.0001,
+            #     "normalize": False,
+            #     "model": "CRNN",
+            #     "fmin": 20,
+            #     "fmax": 20000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "validation_epoch": 1,
+            #     "peakThreshold": 0.21999999999999995
+            #     # "peakThreshold": 0.2599999999999999
+            #     # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
+            # },
             "crnn-YTlog70-rad0-diff": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
@@ -108,6 +109,7 @@ class Model(object):
                 "pad": False,
                 "beat_targ": False,
                 "validation_epoch": 1,
+                "peakThreshold": 0.19,
             },
         }
 
