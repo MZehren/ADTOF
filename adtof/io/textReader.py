@@ -38,7 +38,13 @@ class TextReader(object):
         return time, pitch
 
     def getOnsets(
-        self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True, sep="\t", removeIfClassUnknown=False
+        self,
+        txtFilePath,
+        mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
+        group=True,
+        sep="\t",
+        removeIfClassUnknown=False,
+        **kwargs
     ):
         """
             Parse the text file following Mirex encoding:

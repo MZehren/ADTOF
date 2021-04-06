@@ -27,7 +27,7 @@ cwd = os.path.abspath(os.path.dirname(__file__))
 CHECKPOINT_DIR = os.path.join(cwd, "..", "models")
 
 
-def getFilesInFolder(*path):
+def getFilesInFolder(*path, allowedExtension=set([".mp3", ".ogg", ".wav", ".mid", ".txt"])):
     """
     Get the files in the folder, or the file pointed by the path
     """
@@ -37,6 +37,7 @@ def getFilesInFolder(*path):
         return np.array([os.path.join(*path)])
     else:  # if it's a folder
         result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
+        result = [path for path in result if os.path.splitext(os.path.basename(path))[1] in allowedExtension]
         result.sort()
         return np.array(result)
 

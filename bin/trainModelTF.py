@@ -93,14 +93,8 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    dl = DataLoader(args.folderPath, **hparams)
-    trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
-    dataset_train = dl.getDataset(trainGen, **hparams)
-    dataset_val = dl.getDataset(valGen, **hparams)
-    dataset_train = dataset_train.batch(hparams["batchSize"]).repeat()
-    dataset_val = dataset_val.batch(hparams["batchSize"]).repeat()
-    dataset_train = dataset_train.prefetch(buffer_size=2)
-    dataset_val = dataset_val.prefetch(buffer_size=2)
+    dl = DataLoader.factoryPublicDatasets(args.folderPath, **hparams)
+    dataset_train, dataset_val, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
 
     # if model is not trained, do the fitting
     if not model.weightLoadedFlag:

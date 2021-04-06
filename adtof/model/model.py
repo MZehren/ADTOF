@@ -440,7 +440,7 @@ class Model(object):
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
-            if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised!
+            if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised! TODO: improve
                 raise ValueError("The input array is too big")
             # Put everyting in the first batch
             return np.array(self.model(np.array([x]), training=False)[0])
@@ -478,7 +478,6 @@ class Model(object):
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
         The dataset needs to be full tracks and not independant 
         """
-        gen = dataset()
         predictions = []
         Y = []
 
@@ -490,7 +489,7 @@ class Model(object):
             for i in range(0, totalSamples - batch, batch):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
-        for i, (x, y) in enumerate(gen):
+        for i, (x, y) in enumerate(dataset):
             try:
                 startTime = time.time()
                 if trainingSequence == 1:  # TODO put that into the predict method?

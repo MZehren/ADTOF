@@ -1,6 +1,7 @@
 import logging
 import os
 from collections import defaultdict
+from typing import List
 
 import librosa
 import matplotlib.pyplot as plt
@@ -14,73 +15,121 @@ import pandas as pd
 
 
 class DataLoader(object):
-    def __init__(self, folderPath, loadLabels=True, fmin=20, fmax=20000, skipTracks=0, **kwargs):
-        """
-        Class for the handling of the workflow while loading the dataset
+    @classmethod
+    def factoryADTOF(cls, folderPath: str, **kwargs):
+        """instantiate a DataLoader following ADTOF folder hierarchy
 
         Parameters
         ----------
-        folderPath : [str]
-            Path to the root folder containing the dataset
+        folderPath : path to the root folder of the ADTOF dataset
         """
-        self.folderPath = folderPath
-        self.loadLabels = loadLabels
-        if loadLabels:
-            # Getting the intersection of audio and annotations files
-            self.audioPaths = config.getFilesInFolder(self.folderPath, config.AUDIO)
-            self.annotationPaths = config.getFilesInFolder(self.folderPath, config.ALIGNED_DRUM)
-            self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
+        return cls(
+            os.path.join(folderPath, config.AUDIO),
+            os.path.join(folderPath, config.ALIGNED_DRUM),
+            os.path.join(folderPath, config.MANUAL_SUBSTRACTION),
+            os.path.join(folderPath, config.PROCESSED_AUDIO),
+            **kwargs,
+        )
 
-            # manual check
-            checkpath = os.path.join(self.folderPath, config.MANUAL_SUBSTRACTION)
-            if os.path.exists(checkpath):
-                toRemove = set(pd.read_csv(checkpath, sep="blablibsdf", header=None)[0])
-                self.audioPaths = [f for f in self.audioPaths if config.getFileBasename(f) not in toRemove]
+    @classmethod
+    def factoryPublicDatasets(cls, folderPath: str, **kwargs):
+        """instantiate a DataLoader following RBMA, ENST, and MDB folder hierarchies
+
+        Parameters
+        ----------
+        folderPath : path to the root folder containing the public datasets
+        """
+        rbma = cls(
+            os.path.join(folderPath, "rbma_13/audio"),
+            os.path.join(folderPath, "rbma_13/annotations/drums_m"),
+            None,
+            os.path.join(folderPath, "rbma_13/preprocess"),
+            folds=[[1, 7, 12, 21, 3, 10, 29, 24, 20], [11, 28, 18, 13, 23, 9, 4, 14, 26], [0, 2, 15, 17, 19, 8, 27, 22, 16]],
+            mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
+            sep="\t",
+            **kwargs,
+        )
+        return rbma
+
+    def __init__(
+        self,
+        audioFolder: str,
+        annotationFolder: str = None,
+        blockListPath: str = None,
+        cachePreprocessPath: str = None,
+        checkFilesNameMatch: bool = True,
+        folds: List = None,
+        fmin=20,
+        fmax=20000,
+        **kwargs,
+    ):
+        """
+        Class for the handling of building a dataset for training or infering
+        TODO
+        """
+        # Fetch audio paths
+        self.audioPaths = config.getFilesInFolder(audioFolder)
+        self.annotationPaths = None
+        self.preprocessPaths = None
+
+        # Fetch annotation paths
+        if annotationFolder is not None:
+            # Getting the intersection of audio and annotations files
+            self.annotationPaths = config.getFilesInFolder(annotationFolder)
+            if checkFilesNameMatch:
+                self.audioPaths, self.annotationPaths = config.getIntersectionOfPaths(self.audioPaths, self.annotationPaths)
+
+        # Remove track from the blocklist manually checked
+        if blockListPath is not None and os.path.exists(blockListPath):
+            toRemove = set(pd.read_csv(blockListPath, sep="No separator workaround", header=None)[0])
+            self.audioPaths = [f for f in self.audioPaths if config.getFileBasename(f) not in toRemove]
+            if annotationFolder is not None:
                 self.annotationPaths = [f for f in self.annotationPaths if config.getFileBasename(f) not in toRemove]
 
-            self.featurePaths = np.array(
+        # Set the cache paths to store pre processed audio
+        if cachePreprocessPath is not None:
+            self.preprocessPaths = np.array(
                 [
-                    os.path.join(folderPath, config.PROCESSED_AUDIO + str(fmin) + "-" + str(fmax), config.getFileBasename(track) + ".npy")
+                    os.path.join(cachePreprocessPath + str(fmin) + "-" + str(fmax), config.getFileBasename(track) + ".npy")
                     for track in self.audioPaths
                 ]
             )
 
-            # Debug tool to skip tracks in the evaluation
-            self.audioPaths = self.audioPaths[skipTracks:]
-            self.annotationPaths = self.annotationPaths[skipTracks:]
-            self.featurePaths = self.featurePaths[skipTracks:]
+        # split the data according to the specified folds or generate then
+        if folds == None:
+            self.folds = self._getFolds(**kwargs)
         else:
-            # TODO improve and encapsulat this code
-            allowedExtension = set([".mp3", ".ogg", ".wav"])
-            self.audioPaths = [path for path in config.getFilesInFolder(self.folderPath) if path[-4:] in allowedExtension]
+            self.folds = folds
 
-    def readTrack(self, trackIdx, removeStart=True, yDense=True, labelOffset=0, sampleRate=100, **kwargs):
+        # load in memory all the data to build the samples
+        self.data = [self.readTrack(i, **kwargs) for i in range(len(self.audioPaths))]
+
+    def readTrack(self, trackIdx, removeStart=True, labelOffset=0, sampleRate=100, **kwargs):
         """
         Read all the info of the track used for training and evaluation
         """
         name = self.audioPaths[trackIdx]
-        X = self.readAudio(trackIdx, sampleRate=sampleRate, **kwargs)
-        if self.loadLabels:
-            notes = self.readLabels(trackIdx, **kwargs)
+        x = self.readAudio(trackIdx, sampleRate=sampleRate, **kwargs)
+        if self.annotationPaths is not None:
+            y = self.readLabels(trackIdx, **kwargs)
             if labelOffset:
                 timeOffset = labelOffset / sampleRate
-                for k, v in notes.items():
-                    notes[k] = np.array(v) - timeOffset
+                for k, v in y.items():
+                    y[k] = np.array(v) - timeOffset
             if removeStart:
-                X, notes = self.removeStart(X, notes, sampleRate=sampleRate, **kwargs)
-            if yDense:
-                notes = self.getDenseEncoding(name, notes, sampleRate=sampleRate, **kwargs)
-            # indexes = self._balanceDistribution(X, Y) if balanceClassesDistribution else []
-            return {"x": X, "y": notes, "name": name}
+                x, y = self.removeStart(x, y, sampleRate=sampleRate, **kwargs)
+            # TODO Is it optimised to keep y in dense and sparse form?
+            yDense = self.getDenseEncoding(name, y, sampleRate=sampleRate, **kwargs)
+            return {"x": x, "y": y, "yDense": yDense, "name": name}
         else:
-            return {"x": X, "y": None, "name": name}
+            return {"x": x, "y": None, "name": name}
 
     def readAudio(self, i, sampleRate=100, **kwargs):
         """
         Read the track audio
         """
         mir = MIR(frameRate=sampleRate, **kwargs)
-        x = mir.open(self.audioPaths[i], cachePath=self.featurePaths[i] if self.loadLabels else None)
+        x = mir.open(self.audioPaths[i], cachePath=self.preprocessPaths[i] if self.preprocessPaths is not None else None)
         x = x.reshape(x.shape + (1,))  # Add the channel dimension
         return x
 
@@ -88,30 +137,30 @@ class DataLoader(object):
         """
         get the track annotations
         """
-        notes = TextReader().getOnsets(self.annotationPaths[i])
-        return notes
+        y = TextReader().getOnsets(self.annotationPaths[i], **kwargs)
+        return y
 
-    def removeStart(self, x, notes, sampleRate=100, context=25, **kwargs):
+    def removeStart(self, x, y, sampleRate=100, context=25, **kwargs):
         """
         Trim X to start and end on notes from notes
         Change the time of notes to start at 0
         """
         # Trim before the first note to remove count in
         # Move the trim by the offset amount to keep the first notation
-        firstNoteTime = np.min([v[0] for v in notes.values() if len(v)])
+        firstNoteTime = np.min([v[0] for v in y.values() if len(v)])
         firstNoteTime = max(0, firstNoteTime)
         firstNoteIdx = int(round(firstNoteTime * sampleRate))
 
         # Trim after the last note to remove all part of the track not annotated
         # Make sure the index doesn't exceed any boundaries
         # TODO is it necessary, or do we want to keep all the audio?
-        lastNoteTime = np.max([v[-1] for v in notes.values() if len(v)])
+        lastNoteTime = np.max([v[-1] for v in y.values() if len(v)])
         lastNoteIdx = min(int(lastNoteTime * sampleRate) + 1, len(x) - 1 - context)
 
         X = x[firstNoteIdx : lastNoteIdx + context]
-        for k, v in notes.items():
-            notes[k] = v - (firstNoteTime)
-        return (X, notes)
+        for k, v in y.items():
+            y[k] = v - (firstNoteTime)
+        return (X, y)
 
     def getDenseEncoding(self, filename, notes, length=None, sampleRate=100, labels=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs):
         """
@@ -159,7 +208,17 @@ class DataLoader(object):
             #     logging.debug("Pitch %s is not represented in the track %s", key, filename)
         return np.array(result).T
 
-    def getSplit(self, nFolds=10, validationFold=0, tracksLimit=None, **kwargs):
+    def _getFolds(self, nFolds=10, **kwargs):
+        """
+        Split the data in groups without band overlap between split
+        """
+        groups = [config.getBand(path) for path in self.audioPaths]
+        groupKFold = sklearn.model_selection.GroupKFold(n_splits=nFolds)
+        # realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
+
+        return [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
+
+    def getSplit(self, testFold=0, validationFold=0, **kwargs):
         """Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
         There are no group overlap between folds
 
@@ -180,17 +239,7 @@ class DataLoader(object):
         - Early stopping for the final model trained on the full training+validation fold wich overfit the test set
         - Multiple test set: Do the full hparam search on train+validation and then eval on test, change the split and start again.
         """
-
-        # Split the data in train, validation and test, without same band in each split
-        groups = [config.getBand(path) for path in self.audioPaths]
-        groupKFold = sklearn.model_selection.GroupKFold(n_splits=nFolds)
-        realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
-
-        # The data is split in train, val, test. Hence at least three groups are needed
-        assert realNFolds >= 3
-        assert validationFold < realNFolds - 1
-
-        folds = [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
+        folds = self.folds
         testIndexes = folds.pop()
         valIndexes = folds.pop(validationFold)
         trainIndexes = np.concatenate(folds)
@@ -202,14 +251,14 @@ class DataLoader(object):
 
         # Limit the number of files as it can be memory intensive
         # The limit is done after the split to ensure no test data leak in the train set with different values of limit.
-        if tracksLimit is not None:
-            trainIndexes = trainIndexes[:tracksLimit]
-            valIndexes = valIndexes[:tracksLimit]
-            testIndexes = testIndexes[:tracksLimit]
+        # if tracksLimit is not None:
+        #     trainIndexes = trainIndexes[:tracksLimit]
+        #     valIndexes = valIndexes[:tracksLimit]
+        #     testIndexes = testIndexes[:tracksLimit]
 
         return (trainIndexes, valIndexes, testIndexes)
 
-    def getDataset(self, gen, trainingSequence=1, labels=[1, 1, 1, 1, 1], **kwargs):
+    def _getDataset(self, gen, trainingSequence=1, labels=[1, 1, 1, 1, 1], **kwargs):
         """
         Get a tf.dataset from the generator.
         Fill the right size for each dim
@@ -224,23 +273,35 @@ class DataLoader(object):
             output_shapes=(tf.TensorShape(xShape), tf.TensorShape(yShape), tf.TensorShape(wShape)),
         )
 
-    def getTrainValTestGens(self, **kwargs):
-        """[summary]
-        TODO 
+    def getTrainValTestGens(self, batchSize=None, **kwargs):
+        """
+        Return 4 generators to perform training and validation:
+        trainGen : dataset for training 
+        valGen : dataset for validation 
+        valFullGen : Finit generator giving full tracks for fitting peak picking
+        testFullGen : Finit generator giving full tracks for computing final result
         """
         (trainIndexes, valIndexes, testIndexes) = self.getSplit(**kwargs)
 
         fullGenParams = {k: v for k, v in kwargs.items()}
         fullGenParams["repeat"] = False
         fullGenParams["samplePerTrack"] = None
-        fullGenParams["yDense"] = False
 
-        return (
+        trainGen, valGen, valFullGen, testFullGen = (
             self.getGen(trainIndexes, **kwargs),
             self.getGen(valIndexes, **kwargs),
             self.getGen(valIndexes, **fullGenParams),
             self.getGen(testIndexes, **fullGenParams),
         )
+
+        dataset_train = self._getDataset(trainGen, **kwargs)
+        dataset_val = self._getDataset(valGen, **kwargs)
+        dataset_train = dataset_train.batch(batchSize).repeat()
+        dataset_val = dataset_val.batch(batchSize).repeat()
+        dataset_train = dataset_train.prefetch(buffer_size=2)
+        dataset_val = dataset_val.prefetch(buffer_size=2)
+
+        return (dataset_train, dataset_val, valFullGen(), testFullGen())  # TODO should be datasets instead of gen?
 
     def getGen(
         self,
@@ -281,7 +342,6 @@ class DataLoader(object):
             # sampleIdx = track["indexes"][cursor]
             raise NotImplementedError()
         """
-        # cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
         if trackIndexes is None:
             trackIndexes = list(range(len(self.audioPaths)))
 
@@ -290,15 +350,10 @@ class DataLoader(object):
         yWindowSize = trainingSequence
 
         def gen():
-            cache = {}  # Cache dictionnary for lazy loading. Stored outside of the gen function to persist between dataset reset.
             cursors = {}  # The cursors dictionnary are stored in the gen to make it able to reinitialize
             while True:  # Infinite yield of samples
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
-                    # Get the current track in the buffer, or load it from disk if the buffer is empty
-                    if trackIdx not in cache:
-                        cache[trackIdx] = self.readTrack(trackIdx, **kwargs)
-                    track = cache[trackIdx]
-
+                    track = self.data[trackIdx]
                     # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                     if trackIdx not in cursors:
                         cursors[trackIdx] = (len(track["x"]) - xWindowSize) // 2
@@ -319,7 +374,7 @@ class DataLoader(object):
                                 cursors[trackIdx] = nextIdx
 
                             x = track["x"][sampleIdx : sampleIdx + xWindowSize]
-                            y = track["y"][sampleIdx] if yWindowSize == 1 else track["y"][sampleIdx : sampleIdx + yWindowSize]
+                            y = track["yDense"][sampleIdx] if yWindowSize == 1 else track["y"][sampleIdx : sampleIdx + yWindowSize]
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
                             sampleWeight = np.array([max(np.sum(y * classWeights), 1)])  # /yWindowSize
@@ -345,6 +400,7 @@ class DataLoader(object):
         """ 
         balance the distribution of the labels Y by removing the labels without events such as there is only half of them empty.
         """
+        raise NotImplementedError()
         nonEmptyIndexes = [i for i, row in enumerate(Y) if np.max(row) == 1]
         emptyIndexes = [(nonEmptyIndexes[i] + nonEmptyIndexes[i + 1]) // 2 for i in range(len(nonEmptyIndexes) - 1)]
         idxUsed = np.array(list(zip(nonEmptyIndexes, emptyIndexes))).flatten()
@@ -354,8 +410,8 @@ class DataLoader(object):
         """
         Approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights, adapted to compute class weights
         Compute the inverse estimated entropy of each label activity distribution
-
         """
+        raise NotImplementedError()
         tr = TextReader()
 
         tracks = config.getFilesInFolder(self.folderPath, config.AUDIO)
