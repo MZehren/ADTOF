@@ -93,7 +93,7 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    dl = DataLoader.factoryPublicDatasets(args.folderPath, **hparams)
+    dl = DataLoader.factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
     dataset_train, dataset_val, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
 
     # if model is not trained, do the fitting

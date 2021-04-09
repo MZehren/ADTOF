@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import List
+from typing import Iterable, List
 
 import librosa
 import matplotlib.pyplot as plt
@@ -32,7 +32,7 @@ class DataLoader(object):
         )
 
     @classmethod
-    def factoryPublicDatasets(cls, folderPath: str, **kwargs):
+    def factoryPublicDatasets(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
         """instantiate a DataLoader following RBMA, ENST, and MDB folder hierarchies
 
         Parameters
@@ -44,12 +44,60 @@ class DataLoader(object):
             os.path.join(folderPath, "rbma_13/annotations/drums_m"),
             None,
             os.path.join(folderPath, "rbma_13/preprocess"),
-            folds=[[1, 7, 12, 21, 3, 10, 29, 24, 20], [11, 28, 18, 13, 23, 9, 4, 14, 26], [0, 2, 15, 17, 19, 8, 27, 22, 16]],
+            folds=config.RBMA_SPLITS,
             mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
             sep="\t",
+            validationFold=validationRatio,
+            testFold=testFold,
             **kwargs,
         )
-        return rbma
+        mdb = cls(
+            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/full_mix"),
+            os.path.join(folderPath, "MDBDrums/MDB Drums/annotations/subclass"),
+            None,
+            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/preprocess"),
+            folds=config.MDB_SPLITS,
+            mappingDictionaries=[config.MDBS_MIDI, config.MIDI_REDUCED_5],
+            sep="\t",
+            validationFold=validationRatio,
+            testFold=testFold,
+            checkFilesNameMatch=False,
+            **kwargs,
+        )
+        enst = cls(
+            os.path.join(folderPath, "ENST-Drums-public/audio_sum"),
+            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            None,
+            os.path.join(folderPath, "ENST-Drums-public/preprocessSum"),
+            folds=config.ENST_SPLITS,
+            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
+            sep=" ",
+            validationFold=validationRatio,
+            testFold=testFold,
+            **kwargs,
+        )
+
+        def roundRobinGen(generators):
+            """
+            return an element of each generator until they are all exhausted
+            """
+            while True:  # loop until all generators are exhausted
+                allExhausted = True
+                for gen in generators:
+                    e = next(gen, -1)
+                    if e != -1:
+                        yield e
+                        allExhausted = False
+
+                if allExhausted:
+                    break
+
+        datasetsGenerators = [set.getTrainValTestGens(**kwargs) for set in [rbma, mdb, enst]]
+        trainGen, valGen, valFullGen, testFullGen = [
+            roundRobinGen([generators[i]() for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
+        ]
+        next(trainGen)
+        return trainGen, valGen, valFullGen, testFullGen
 
     def __init__(
         self,
@@ -58,13 +106,14 @@ class DataLoader(object):
         blockListPath: str = None,
         cachePreprocessPath: str = None,
         checkFilesNameMatch: bool = True,
+        crossValidation: bool = True,
         folds: List = None,
         fmin=20,
         fmax=20000,
         **kwargs,
     ):
         """
-        Class for the handling of building a dataset for training or infering
+        Class for the handling of building a dataset for training and infering
         TODO
         """
         # Fetch audio paths
@@ -95,11 +144,16 @@ class DataLoader(object):
                 ]
             )
 
-        # split the data according to the specified folds or generate then
-        if folds == None:
-            self.folds = self._getFolds(**kwargs)
-        else:
-            self.folds = folds
+        # Split the data according to the specified folds or generate then
+        if crossValidation:
+            if folds == None:
+                self.folds = self._getFolds(**kwargs)
+            else:
+                fileLookup = {config.getFileBasename(file): i for i, file in enumerate(self.audioPaths)}
+                self.folds = [[fileLookup[name] for name in fold] for fold in folds]
+            self.trainIndexes, self.valIndexes, self.testIndexes = self._getSplit(self.folds, **kwargs)
+        else:  # If there is no cross validation, put every tracks in the test split
+            self.testIndexes = list(range(len(self.audioPaths)))
 
         # load in memory all the data to build the samples
         self.data = [self.readTrack(i, **kwargs) for i in range(len(self.audioPaths))]
@@ -210,44 +264,57 @@ class DataLoader(object):
 
     def _getFolds(self, nFolds=10, **kwargs):
         """
-        Split the data in groups without band overlap between split
+         Split the data in groups without band overlap between split
+
+        Parameters
+        ----------
+        nFolds : int, optional
+            number of group to create, by default 10
+
+        Returns
+        -------
+        list of n group of indexes representing
         """
         groups = [config.getBand(path) for path in self.audioPaths]
         groupKFold = sklearn.model_selection.GroupKFold(n_splits=nFolds)
         # realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
-
         return [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
 
-    def getSplit(self, testFold=0, validationFold=0, **kwargs):
-        """Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
-        There are no group overlap between folds
+    def _getSplit(self, folds, testFold=0, validationFold=0, randomState=0, **kwargs):
+        """
+        Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
 
         Parameters
         ----------
-        trainNSplit : int, optional
-            Number of splits for the data, has to be >=3, by default 10. Keep it the same during training as changing it would shuffle the splits.
-        validationFold : int, optional
-            fold of the validation, has to be < trainNSplit -1 since one fold is saved for testing, by default 0
-        limit : int, optional
-            if present, limit the size of each split, by default None
-
+        folds :
+            See _getFolds() 
+        testFold : int, optional
+            index of the split saved for test
+            By default 0
+        validationFold : int/float, optional
+            if int, index of the remaining split saved for validation.
+            if float, ratio of training data saved for validation.
+            By default 0
+   
         Returns
         -------
         (trainIndexes, validationIndexes, testIndexes)
-
-        TODO: how to handle
-        - Early stopping for the final model trained on the full training+validation fold wich overfit the test set
-        - Multiple test set: Do the full hparam search on train+validation and then eval on test, change the split and start again.
         """
-        folds = self.folds
-        testIndexes = folds.pop()
-        valIndexes = folds.pop(validationFold)
-        trainIndexes = np.concatenate(folds)
+        testIndexes = folds.pop(testFold)
+        if isinstance(validationFold, int):  # save a split for validation
+            valIndexes = folds.pop(validationFold)
+            trainIndexes = np.concatenate(folds)
+        elif isinstance(validationFold, float):  # save some % of the training data for validation
+            trainData = np.concatenate(folds)
+            trainData = sklearn.utils.shuffle(trainData, random_state=randomState)
+            splitIndex = int(len(trainData) * validationFold)
+            valIndexes = trainData[:splitIndex]
+            trainIndexes = trainData[splitIndex:]
 
         # Shuffle indexes such as the tracks from the same band will not occur in sequence
-        trainIndexes = sklearn.utils.shuffle(trainIndexes, random_state=0)
-        valIndexes = sklearn.utils.shuffle(valIndexes, random_state=0)
-        testIndexes = sklearn.utils.shuffle(testIndexes, random_state=0)
+        trainIndexes = sklearn.utils.shuffle(trainIndexes, random_state=randomState)
+        valIndexes = sklearn.utils.shuffle(valIndexes, random_state=randomState)
+        testIndexes = sklearn.utils.shuffle(testIndexes, random_state=randomState)
 
         # Limit the number of files as it can be memory intensive
         # The limit is done after the split to ensure no test data leak in the train set with different values of limit.
@@ -281,27 +348,27 @@ class DataLoader(object):
         valFullGen : Finit generator giving full tracks for fitting peak picking
         testFullGen : Finit generator giving full tracks for computing final result
         """
-        (trainIndexes, valIndexes, testIndexes) = self.getSplit(**kwargs)
 
         fullGenParams = {k: v for k, v in kwargs.items()}
         fullGenParams["repeat"] = False
         fullGenParams["samplePerTrack"] = None
 
         trainGen, valGen, valFullGen, testFullGen = (
-            self.getGen(trainIndexes, **kwargs),
-            self.getGen(valIndexes, **kwargs),
-            self.getGen(valIndexes, **fullGenParams),
-            self.getGen(testIndexes, **fullGenParams),
+            self.getGen(self.trainIndexes, **kwargs),
+            self.getGen(self.valIndexes, **kwargs),
+            self.getGen(self.valIndexes, **fullGenParams),
+            self.getGen(self.testIndexes, **fullGenParams),
         )
 
-        dataset_train = self._getDataset(trainGen, **kwargs)
-        dataset_val = self._getDataset(valGen, **kwargs)
-        dataset_train = dataset_train.batch(batchSize).repeat()
-        dataset_val = dataset_val.batch(batchSize).repeat()
-        dataset_train = dataset_train.prefetch(buffer_size=2)
-        dataset_val = dataset_val.prefetch(buffer_size=2)
+        return trainGen, valGen, valFullGen, testFullGen
+        # dataset_train = self._getDataset(trainGen, **kwargs)
+        # dataset_val = self._getDataset(valGen, **kwargs)
+        # dataset_train = dataset_train.batch(batchSize).repeat()
+        # dataset_val = dataset_val.batch(batchSize).repeat()
+        # dataset_train = dataset_train.prefetch(buffer_size=2)
+        # dataset_val = dataset_val.prefetch(buffer_size=2)
 
-        return (dataset_train, dataset_val, valFullGen(), testFullGen())  # TODO should be datasets instead of gen?
+        # return (dataset_train, dataset_val, valFullGen(), testFullGen())  # TODO should be datasets instead of gen?
 
     def getGen(
         self,
@@ -374,7 +441,7 @@ class DataLoader(object):
                                 cursors[trackIdx] = nextIdx
 
                             x = track["x"][sampleIdx : sampleIdx + xWindowSize]
-                            y = track["yDense"][sampleIdx] if yWindowSize == 1 else track["y"][sampleIdx : sampleIdx + yWindowSize]
+                            y = track["yDense"][sampleIdx] if yWindowSize == 1 else track["yDense"][sampleIdx : sampleIdx + yWindowSize]
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
                             sampleWeight = np.array([max(np.sum(y * classWeights), 1)])  # /yWindowSize
