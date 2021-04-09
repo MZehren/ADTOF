@@ -6,6 +6,7 @@ from typing import Iterable, List
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.core.numeric import ones
 import sklearn
 import tensorflow as tf
 from adtof import config
@@ -330,10 +331,9 @@ class DataLoader(object):
         Get a tf.dataset from the generator.
         Fill the right size for each dim
         """
-        # time, feature, channel dimension
-        xShape = (None, None, 1)
+        xShape = (None, None, 1)  # time, feature, channel dimension
         yShape = (len(labels),) if trainingSequence == 1 else (trainingSequence, len(labels))
-        wShape = ((1),)
+        wShape = ((1),) if trainingSequence == 1 else (trainingSequence,)
         return tf.data.Dataset.from_generator(
             gen,
             (tf.float32, tf.float32, tf.float32),
@@ -371,14 +371,7 @@ class DataLoader(object):
         # return (dataset_train, dataset_val, valFullGen(), testFullGen())  # TODO should be datasets instead of gen?
 
     def getGen(
-        self,
-        trackIndexes=None,
-        samplePerTrack=100,
-        context=25,
-        trainingSequence=1,
-        classWeights=np.array([1, 1, 1, 1, 1]),
-        repeat=True,
-        **kwargs,
+        self, trackIndexes=None, samplePerTrack=100, context=25, trainingSequence=1, classWeights=None, repeat=True, **kwargs,
     ):
         """
         Return an infinite generator yielding samples
@@ -444,7 +437,8 @@ class DataLoader(object):
                             y = track["yDense"][sampleIdx] if yWindowSize == 1 else track["yDense"][sampleIdx : sampleIdx + yWindowSize]
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
-                            sampleWeight = np.array([max(np.sum(y * classWeights), 1)])  # /yWindowSize
+                            sampleWeight = np.maximum(np.sum(y * classWeights, axis=1), 1) if classWeights is not None else np.ones(1)
+                            # /yWindowSize
                             # sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
                             # sampleWeight = np.array([max(sampleWeight, 1)])
 
