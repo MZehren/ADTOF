@@ -29,68 +29,7 @@ class Model(object):
         Yield models with different hyperparameters to be trained
         """
         models = {
-            # "cnn-stride(1,3)-shuffledinput": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 2,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 20,
-            #     "batchSize": 100,
-            #     "context": 25,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "tracksLimit": None,
-            # },
-            # "TCN": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 2,
-            #     "sampleRate": 100,
-            #     "diff": False,
-            #     "samplePerTrack": 20,
-            #     "batchSize": 100,
-            #     "context": 8193,
-            #     "labelOffset": 8193 // 2,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "TCN",
-            #     "fmin": 30,
-            #     "fmax": 17000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "tracksLimit": None,
-            # },
-            # "crnn-YTlog70-rad1-diff-": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 1,
-            #     "peakThreshold": 0.21999999999999995
-            #     # "peakThreshold": 0.2599999999999999
-            #     # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
-            # },
-            "crnn-YTlog70-rad0-diff": {
+            "crnn-all-rad1": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "sampleRate": 100,
@@ -100,16 +39,17 @@ class Model(object):
                 "batchSize": 8,
                 "context": 9,
                 "labelOffset": 1,
-                "labelRadiation": 0,
-                "learningRate": 0.0001,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
                 "normalize": False,
                 "model": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                "validation_epoch": 1,
-                "peakThreshold": 0.19,
+                "validation_epoch": 10,
+                "training_epoch": 10,
+                "peakThreshold": 0.1,
             },
         }
 
@@ -403,7 +343,9 @@ class Model(object):
         )
         return tfModel
 
-    def fit(self, dataset_train, dataset_val, log_dir, steps_per_epoch, validation_steps, **kwargs):
+    def fit(
+        self, dataset_train, dataset_val, log_dir, steps_per_epoch, validation_steps, reduce_patience=5, stopping_patience=25, **kwargs
+    ):
         """
         Fits the model to the train dataset and validate on the val dataset to reduce LR on plateau and do an earlystopping. 
         """
@@ -417,8 +359,10 @@ class Model(object):
                 write_images=False,
             ),
             tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True,),
-            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=4),
-            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=12, verbose=1, restore_best_weights=True),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=reduce_patience),
+            tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss", min_delta=0.0001, patience=stopping_patience, verbose=1, restore_best_weights=True
+            ),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
         self.model.fit(

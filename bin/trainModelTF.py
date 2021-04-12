@@ -44,7 +44,7 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path.")
     args = parser.parse_args()
 
-    for fold in range(1):
+    for fold in range(3):
         for model, hparams in Model.modelFactory(fold=fold):
             score = train_test_model(hparams, args, fold, model)
 
@@ -57,34 +57,6 @@ def main():
                     for key, value in score.items():
                         tf.summary.scalar(key, value, step=fold)
 
-    # score = test_enssemble_models(args)
-    # logging.info(str(score))
-    # with tf.summary.create_file_writer(hparamsLogs + "ensemble model").as_default():
-    #     # hp.hparams(
-    #     #     {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()}, trial_id=model.name,
-    #     # )
-    #     for key, value in score.items():
-    #         tf.summary.scalar(key, value, step=0)
-
-
-def test_enssemble_models(args):
-    """
-    TODO factorise
-    Used to evaluate an ensemble of models
-    """
-    models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
-    hparams = list(Model.modelFactory(fold=0))[0][1]
-    dl = DataLoader(args.folderPath, **hparams)
-
-    trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
-    predictions = []
-    Y = []
-    for i, (x, y) in enumerate(testFullGen()):
-        predictions.append(Model.predictEnsemble(models, x))
-        Y.append(y)
-
-    return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[0.3], **hparams)
-
 
 def train_test_model(hparams, args, fold, model: Model):
     """
@@ -93,45 +65,66 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    dl = DataLoader.factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
-    dataset_train, dataset_val, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
+    (
+        dataset_train,
+        dataset_val,
+        valFullGen,
+        testFullGen,
+        trainTracksCount,
+        valTracksCount,
+        testFullNamedGen,
+    ) = DataLoader.factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
+    # dataset_train, dataset_val, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
 
-    # if model is not trained, do the fitting
-    if not model.weightLoadedFlag:
+    if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
-        # This is not really an epoch, since we do see all the tracks, but only a few sample of each tracks
-        # limit #steps just to make sure that it progresses
-        train, val, test = dl.getSplit(**hparams)
-        steps_per_epoch = len(train) * hparams["samplePerTrack"] / hparams["batchSize"]
-        maxStepPerEpoch = 300
-        if steps_per_epoch > maxStepPerEpoch:
-            logging.info("The step per epoch is set at %s, seing all tracks would really take %s steps", maxStepPerEpoch, steps_per_epoch)
-            steps_per_epoch = maxStepPerEpoch
-        validation_steps = min(len(val) * hparams["samplePerTrack"] / hparams["batchSize"], maxStepPerEpoch) * hparams["validation_epoch"]
+        # This is not really an epoch, since we do see all the tracks, but only a few sample of each track
+        steps_per_epoch = trainTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["training_epoch"]
+        validation_steps = valTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["validation_epoch"]
         model.fit(dataset_train, dataset_val, tensorboardLogs, steps_per_epoch, validation_steps, **hparams)
-        # TODO: need to call reset state?
-    # If the model is already evaluated, skip the evaluation
-    # Predict on validation data
-    if os.path.exists(hparamsLogs + model.name):
+
+    if os.path.exists(hparamsLogs + model.name):  # If the model is already evaluated, skip the evaluation
         logging.info("Skipping evaluation of model %s", model.name)
         return None
     else:
         logging.info("Evaluating model %s", model.name)
         # model.vizPredictions(dataset_train, **hparams)
-        scoreVal = None
-        if "peakThreshold" not in hparams:
-            scoreVal = model.evaluate(valFullGen, **hparams)
+
+        results = {}
+        if "peakThreshold" not in hparams:  # Predict "peakThreshold" on validation data
+            scoreVal = model.evaluate(valFullGen(), **hparams)
             logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
             hparams["peakThreshold"] = scoreVal["peakThreshold"]
-
-        scoreTest = model.evaluate(testFullGen, **hparams)
-
-        # Merge the validation results for Hparam selection
-        if scoreVal is not None:
             for k, v in scoreVal.items():
-                scoreTest["validation_" + k] = v
-        return scoreTest
+                results["validation_" + k] = v
 
+        # scoreTest = model.evaluate(testFullGen(), **hparams)
+        for dataset, gen in testFullNamedGen.items():
+            scoreTest = model.evaluate(gen(), **hparams)
+            for k, v in scoreTest.items():
+                results[dataset + "_" + k] = v
+
+        logging.info(str(results))
+        return results
+
+
+# def test_enssemble_models(args):
+#     """
+#     TODO factorise
+#     Used to evaluate an ensemble of models
+#     """
+#     models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
+#     hparams = list(Model.modelFactory(fold=0))[0][1]
+#     dl = DataLoader(args.folderPath, **hparams)
+
+#     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
+#     predictions = []
+#     Y = []
+#     for i, (x, y) in enumerate(testFullGen()):
+#         predictions.append(Model.predictEnsemble(models, x))
+#         Y.append(y)
+
+#     return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[0.3], **hparams)
 
 if __name__ == "__main__":
     main()

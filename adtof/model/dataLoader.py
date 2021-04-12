@@ -1,18 +1,19 @@
 import logging
 import os
+import random
 from collections import defaultdict
 from typing import Iterable, List
 
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.core.numeric import ones
+import pandas as pd
 import sklearn
 import tensorflow as tf
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
-import pandas as pd
+from numpy.core.numeric import ones
 
 
 class DataLoader(object):
@@ -40,6 +41,7 @@ class DataLoader(object):
         ----------
         folderPath : path to the root folder containing the public datasets
         """
+        # Load the data
         rbma = cls(
             os.path.join(folderPath, "rbma_13/audio"),
             os.path.join(folderPath, "rbma_13/annotations/drums_m"),
@@ -65,7 +67,7 @@ class DataLoader(object):
             checkFilesNameMatch=False,
             **kwargs,
         )
-        enst = cls(
+        enst_sum = cls(
             os.path.join(folderPath, "ENST-Drums-public/audio_sum"),
             os.path.join(folderPath, "ENST-Drums-public/annotations"),
             None,
@@ -77,15 +79,56 @@ class DataLoader(object):
             testFold=testFold,
             **kwargs,
         )
+        enst_wet = cls(
+            os.path.join(folderPath, "ENST-Drums-public/audio_wet"),
+            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            None,
+            os.path.join(folderPath, "ENST-Drums-public/preprocessWet"),
+            folds=config.ENST_SPLITS,
+            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
+            sep=" ",
+            validationFold=validationRatio,
+            testFold=testFold,
+            **kwargs,
+        )
 
-        def roundRobinGen(generators):
-            """
-            return an element of each generator until they are all exhausted
-            """
+        # Split the data in train, test and val sets
+        datasetsGenerators = [set.getTrainValTestGens(**kwargs) for set in [rbma, mdb, enst_sum, enst_wet]]
+        # Build generators to access samples from each dataset one at a time
+        # trainGen, valGen, valFullGen, testFullGen = [
+        #     cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
+        # ]
+        trainGen, valGen, valFullGen, testFullGen = [
+            cls._mixingGen([generators[i] for generators in datasetsGenerators], pickProbability=[1.72, 0.35, 0.51, 0.51])
+            for i in range(len(datasetsGenerators[0]))
+        ]
+        # Create dataset from the generators for compatibility with tf.model.fit
+        train_dataset = cls._getDataset(trainGen, **kwargs)
+        val_dataset = cls._getDataset(valGen, **kwargs)
+        # Count the number of tracks to set the epoch size
+        trainTracksCount = np.sum([len(dataLoader.trainIndexes) for dataLoader in (rbma, enst_sum, enst_wet, mdb)])
+        valTracksCount = np.sum([len(dataLoader.valIndexes) for dataLoader in (rbma, enst_sum, enst_wet, mdb)])
+        # build a dict of test data for evaluation
+        testFullNamedGen = {
+            "rbma": datasetsGenerators[0][3],
+            "mdb": datasetsGenerators[1][3],
+            "enst_sum": datasetsGenerators[2][3],
+            "enst_wet": datasetsGenerators[3][3],
+        }
+        return (train_dataset, val_dataset, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen)
+
+    @classmethod
+    def _roundRobinGen(cls, generators):
+        """
+        return an element of each generator until they are all exhausted
+        """
+
+        def gen():
+            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at th beginning
             while True:  # loop until all generators are exhausted
                 allExhausted = True
-                for gen in generators:
-                    e = next(gen, -1)
+                for pickedGen in instantiatedGen:
+                    e = next(pickedGen, -1)
                     if e != -1:
                         yield e
                         allExhausted = False
@@ -93,12 +136,42 @@ class DataLoader(object):
                 if allExhausted:
                     break
 
-        datasetsGenerators = [set.getTrainValTestGens(**kwargs) for set in [rbma, mdb, enst]]
-        trainGen, valGen, valFullGen, testFullGen = [
-            roundRobinGen([generators[i]() for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
-        ]
-        next(trainGen)
-        return trainGen, valGen, valFullGen, testFullGen
+        return gen
+
+    @classmethod
+    def _mixingGen(cls, generators, pickProbability=None):
+        """
+        return elements from generator with a weighted probability
+        """
+
+        def gen():
+            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at th beginning
+            while True:
+                pickedGen = random.choices(instantiatedGen, weights=pickProbability, k=1)[0]
+                yield next(pickedGen)
+
+        return gen
+
+    @classmethod
+    def _getDataset(cls, gen, trainingSequence=1, labels=[1, 1, 1, 1, 1], batchSize=8, prefetch=2, **kwargs):
+        """
+        Get a tf.dataset from the generator.
+        Fill the right size for each dim
+        """
+        xShape = (None, None, 1)  # time, feature, channel dimension
+        yShape = (len(labels),) if trainingSequence == 1 else (trainingSequence, len(labels))
+        wShape = ((1),) if trainingSequence == 1 else (trainingSequence,)
+
+        dataset = tf.data.Dataset.from_generator(
+            gen, output_signature=(tf.TensorSpec(xShape, tf.float32), tf.TensorSpec(yShape, tf.float32), tf.TensorSpec(wShape, tf.float32))
+        )
+
+        if batchSize != None:
+            dataset = dataset.batch(batchSize).repeat()
+        if prefetch != None:
+            dataset = dataset.prefetch(buffer_size=prefetch)
+
+        return dataset
 
     def __init__(
         self,
@@ -152,7 +225,7 @@ class DataLoader(object):
             else:
                 fileLookup = {config.getFileBasename(file): i for i, file in enumerate(self.audioPaths)}
                 self.folds = [[fileLookup[name] for name in fold] for fold in folds]
-            self.trainIndexes, self.valIndexes, self.testIndexes = self._getSplit(self.folds, **kwargs)
+            self.trainIndexes, self.valIndexes, self.testIndexes = self._getSubsetsFromFolds(self.folds, **kwargs)
         else:  # If there is no cross validation, put every tracks in the test split
             self.testIndexes = list(range(len(self.audioPaths)))
 
@@ -173,7 +246,7 @@ class DataLoader(object):
                     y[k] = np.array(v) - timeOffset
             if removeStart:
                 x, y = self.removeStart(x, y, sampleRate=sampleRate, **kwargs)
-            # TODO Is it optimised to keep y in dense and sparse form?
+            # TODO Is it optimised to keep y both in dense and sparse form?
             yDense = self.getDenseEncoding(name, y, sampleRate=sampleRate, **kwargs)
             return {"x": x, "y": y, "yDense": yDense, "name": name}
         else:
@@ -281,14 +354,14 @@ class DataLoader(object):
         # realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
         return [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
 
-    def _getSplit(self, folds, testFold=0, validationFold=0, randomState=0, **kwargs):
+    def _getSubsetsFromFolds(self, folds, testFold=0, validationFold=0, randomState=0, **kwargs):
         """
         Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
 
         Parameters
         ----------
         folds :
-            See _getFolds() 
+            list of indexes returned by _getFolds(), or config.DB_SPLITS given at dataLoader.__init__ 
         testFold : int, optional
             index of the split saved for test
             By default 0
@@ -326,20 +399,6 @@ class DataLoader(object):
 
         return (trainIndexes, valIndexes, testIndexes)
 
-    def _getDataset(self, gen, trainingSequence=1, labels=[1, 1, 1, 1, 1], **kwargs):
-        """
-        Get a tf.dataset from the generator.
-        Fill the right size for each dim
-        """
-        xShape = (None, None, 1)  # time, feature, channel dimension
-        yShape = (len(labels),) if trainingSequence == 1 else (trainingSequence, len(labels))
-        wShape = ((1),) if trainingSequence == 1 else (trainingSequence,)
-        return tf.data.Dataset.from_generator(
-            gen,
-            (tf.float32, tf.float32, tf.float32),
-            output_shapes=(tf.TensorShape(xShape), tf.TensorShape(yShape), tf.TensorShape(wShape)),
-        )
-
     def getTrainValTestGens(self, batchSize=None, **kwargs):
         """
         Return 4 generators to perform training and validation:
@@ -361,14 +420,6 @@ class DataLoader(object):
         )
 
         return trainGen, valGen, valFullGen, testFullGen
-        # dataset_train = self._getDataset(trainGen, **kwargs)
-        # dataset_val = self._getDataset(valGen, **kwargs)
-        # dataset_train = dataset_train.batch(batchSize).repeat()
-        # dataset_val = dataset_val.batch(batchSize).repeat()
-        # dataset_train = dataset_train.prefetch(buffer_size=2)
-        # dataset_val = dataset_val.prefetch(buffer_size=2)
-
-        # return (dataset_train, dataset_val, valFullGen(), testFullGen())  # TODO should be datasets instead of gen?
 
     def getGen(
         self, trackIndexes=None, samplePerTrack=100, context=25, trainingSequence=1, classWeights=None, repeat=True, **kwargs,
