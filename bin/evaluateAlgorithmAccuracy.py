@@ -733,6 +733,43 @@ def plotResults():
         "sum R 49": 0.8022193211488251,
     }
 
+    # Trained on all
+    MZ_All_ENSTSUM = {
+        "sum F 35": np.mean([0.48145, 0.88883, 0.89134]),
+        "sum F 38": np.mean([0.51427, 0.63337, 0.58313]),
+        "sum F 42": np.mean([0.75783, 0.74634, 0.76273]),
+        "sum F 47": np.mean([0.079646, 0.099792, 0.041176]),
+        "sum F 49": np.mean([0.18781, 0.40146, 0.33707]),
+        "sum F all": np.mean([0.58237, 0.67458, 0.64888]),
+    }
+
+    MZ_ALL_ENSTWET = {
+        "sum F 35": np.mean([0.72552, 0.86706, 0.94400]),
+        "sum F 38": np.mean([0.62189, 0.80939, 0.77926]),
+        "sum F 42": np.mean([0.76624, 0.75939, 0.86471]),
+        "sum F 47": np.mean([0.11842, 0.11494, 0.18617]),
+        "sum F 49": np.mean([0.097149, 0.39800, 0.43856]),
+        "sum F all": np.mean([0.66195, 0.71654, 0.77032]),
+    }
+
+    MZ_ALL_MDB = {
+        "sum F 35": np.mean([0.72744, 0.49153, 0.64407]),
+        "sum F 38": np.mean([0.59672, 0.58068, 0.68506]),
+        "sum F 42": np.mean([0.82405, 0.49786, 0.61980]),
+        "sum F 47": np.mean([0.0000, 0.056180, 0.19231]),
+        "sum F 49": np.mean([0.074074, 0.33849, 0.58707]),
+        "sum F all": np.mean([0.71766, 0.48382, 0.62356]),
+    }
+
+    MZ_ALL_RBMA = {
+        "sum F 35": np.mean([0.68778, 0.59864, 0.62517]),
+        "sum F 38": np.mean([0.41213, 0.14032, 0.25509]),
+        "sum F 42": np.mean([0.46014, 0.51216, 0.61412]),
+        "sum F 47": np.mean([0.35810, 0.38914, 0.019429]),
+        "sum F 49": np.mean([0.016997, 0.063872, 0.14724]),
+        "sum F all": np.mean([0.51217, 0.43499, 0.50053]),
+    }
+
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
     # correlation found is:
@@ -772,13 +809,37 @@ def plotResults():
         "sum F 42": 0.70,
         "sum F 49": np.mean([0.11, 0.23, 0.00]),
     }
-    VOGL_ALLMIDI_ENST = {
+    VOGL_ALLMIDI_ENSTWET = {
         "sum F all": 0.62,
         "sum F 35": 0.79,
         "sum F 38": 0.53,
         "sum F 47": 0.16,
         "sum F 42": 0.75,
         "sum F 49": np.mean([0.07, 0.21, 0.02]),
+    }
+    VOGL_ALL_RBMA = {
+        "sum F all": 0.52,
+        "sum F 35": 0.79,
+        "sum F 38": 0.51,
+        "sum F 47": 0.24,
+        "sum F 42": 0.59,
+        "sum F 49": np.mean([0.06, 0.05, 0.05]),
+    }
+    VOGL_ALL_MDB = {
+        "sum F all": 0.64,
+        "sum F 35": 0.68,
+        "sum F 38": 0.60,
+        "sum F 47": 0.20,
+        "sum F 42": 0.76,
+        "sum F 49": np.mean([0.16, 0.46, 0.10]),
+    }
+    VOGL_ALL_ENSTWET = {
+        "sum F all": 0.64,
+        "sum F 35": 0.79,
+        "sum F 38": 0.58,
+        "sum F 47": 0.23,
+        "sum F 42": 0.77,
+        "sum F 49": np.mean([0.17, 0.33, 0.13]),
     }
 
     # Values from the pre-trained model
@@ -839,7 +900,8 @@ def plotResults():
         "sum F 49": np.mean([0.64, 0.79, 0.82]),
     }
 
-    # Approximative value from the plot TODO: double check, there was an error
+    # Approximative value from the plot, just to get an idea of the performance
+    # No values are reported in text
     VOGL_PTMIDI_RBMA = {
         "sum F all": 0.56,
         "sum F 35": 0.80,
@@ -853,16 +915,16 @@ def plotResults():
         "sum F 35": 0.7,
         "sum F 38": 0.61,
         "sum F 47": 0.33,
-        "sum F 42": 0.58,
-        "sum F 49": np.mean([0.29, 0.55, 0.18]),
+        "sum F 42": 0.79,
+        "sum F 49": np.mean([0.39, 0.55, 0.18]),
     }
-    VOGL_PTMIDI_ENST = {
+    VOGL_PTMIDI_ENSTWET = {
         "sum F all": 0.68,
         "sum F 35": 0.79,
         "sum F 38": 0.58,
         "sum F 47": 0.29,
         "sum F 42": 0.80,
-        "sum F 49": np.mean([0.21, 0.5, 0.13]),
+        "sum F 49": np.mean([0.24, 0.5, 0.16]),
     }
 
     def map(dict, add=""):
@@ -912,31 +974,37 @@ def plotResults():
         {
             "Train on ADTOF CC0": map(MZ_CC0_CC0),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
-            "Train on ADTOF RBLog70": map(MZ_RBLog70_RBLog70_Fold0),
-            "Train on ADTOF YTLog70": map(MZ_YTLog70_YTLog70_Fold0),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENSEMBLE_ADTOF),
+            #         "Train on ADTOF RBLog70": map(MZ_RBLog70_RBLog70_Fold0),
+            #         "Train on ADTOF YTLog70": map(MZ_YTLog70_YTLog70_Fold0),
+            #         "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENSEMBLE_ADTOF),
         },
-        "Test on ADTOF CC0, ",
+        "Test on ADTOF",
         legend=True,
     )
     newPlot(
         {
             "Train on ADTOF CC0": map(MZ_CC0_RBMA, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA, add="*"),
-            "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA, add="*"),
-            "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA, add="*"),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA, add="*"),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA, add="*"),
+            "Train on all MZ": map(MZ_ALL_RBMA, add="*"),
+            "Train on all Vogl": map(VOGL_ALL_RBMA, add="*"),
+            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA, add="*"),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA, add="*"),
         },
         "Test on RBMA",
-        legend=False,
+        legend=True,
     )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     newPlot(
         {
             "Train on ADTOF CC0": map(MZ_CC0_MDB, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB, add="*"),
-            "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB, add="*"),
-            "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB, add="*"),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB, add="*"),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB, add="*"),
+            "Train on all MZ": map(MZ_ALL_MDB, add="*"),
+            "Train on all Vogl": map(VOGL_ALL_MDB, add="*"),
+            "Train on pt pt MIDI Vogl": map(VOGL_PTMIDI_MDB, add="*"),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB, add="*"),
         },
         "Test on MDB",
         legend=False,
@@ -945,9 +1013,12 @@ def plotResults():
         {
             "Train on ADTOF CC0": map(MZ_CC0_ENSTWET, add="*"),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET, add="*"),
-            "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET, add="*"),
-            "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET, add="*"),
-            "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENST, add="*"),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET, add="*"),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET, add="*"),
+            "Train on all MZ": map(MZ_ALL_ENSTWET, add="*"),
+            "Train on all Vogl": map(VOGL_ALL_ENSTWET, add="*"),
+            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET, add="*"),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET, add="*"),
         },
         "Test on ENST",
         legend=False,

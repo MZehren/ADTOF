@@ -98,10 +98,11 @@ class DataLoader(object):
         # trainGen, valGen, valFullGen, testFullGen = [
         #     cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
         # ]
-        trainGen, valGen, valFullGen, testFullGen = [
-            cls._mixingGen([generators[i] for generators in datasetsGenerators], pickProbability=[1.72, 0.35, 0.51, 0.51])
-            for i in range(len(datasetsGenerators[0]))
+        trainGen, valGen = [
+            cls._mixingGen([generators[i] for generators in datasetsGenerators], pickProbability=[1.72, 0.35, 0.51, 0.51]) for i in [0, 1]
         ]
+        valFullGen, testFullGen = [cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in [2, 3]]
+
         # Create dataset from the generators for compatibility with tf.model.fit
         train_dataset = cls._getDataset(trainGen, **kwargs)
         val_dataset = cls._getDataset(valGen, **kwargs)
@@ -422,7 +423,15 @@ class DataLoader(object):
         return trainGen, valGen, valFullGen, testFullGen
 
     def getGen(
-        self, trackIndexes=None, samplePerTrack=100, context=25, trainingSequence=1, classWeights=None, repeat=True, **kwargs,
+        self,
+        trackIndexes=None,
+        samplePerTrack=100,
+        context=25,
+        trainingSequence=1,
+        classWeights=None,
+        emptyWeight=1,
+        repeat=True,
+        **kwargs,
     ):
         """
         Return an infinite generator yielding samples
@@ -488,7 +497,9 @@ class DataLoader(object):
                             y = track["yDense"][sampleIdx] if yWindowSize == 1 else track["yDense"][sampleIdx : sampleIdx + yWindowSize]
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
-                            sampleWeight = np.maximum(np.sum(y * classWeights, axis=1), 1) if classWeights is not None else np.ones(1)
+                            sampleWeight = (
+                                np.maximum(np.sum(y * classWeights, axis=1), emptyWeight) if classWeights is not None else np.ones(1)
+                            )
                             # /yWindowSize
                             # sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
                             # sampleWeight = np.array([max(sampleWeight, 1)])
