@@ -10,6 +10,7 @@ import os
 import shutil
 
 import pandas as pd
+from tensorflow.python.util.lazy_loader import LazyLoader
 from adtof import config
 from adtof.converters.converter import Converter
 from adtof.model.dataLoader import DataLoader
@@ -34,8 +35,8 @@ def main():
     parser.add_argument("-p", "--parallel", action="store_true", help="Set if the conversion is ran in parallel")
     args = parser.parse_args()
 
-    Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
-    # genSplits(args.outputFolder)
+    # Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
+    genSplits(args.outputFolder)
 
     print("Done!")
 
@@ -43,9 +44,8 @@ def main():
 def genSplits(outputFolder, nFolds=10):
 
     # Get split
-    dl = DataLoader(outputFolder)
-    trainIndexes, valIndexes, testIndexes = dl.getSplit(nFolds=nFolds)
-    tracks = [dl.audioPaths[i] for i in testIndexes]
+    dl = DataLoader.factoryADTOF(outputFolder, lazyLoading=True)
+    tracks = [dl.audioPaths[i] for i in dl.testIndexes]
 
     # text
     path = os.path.join(outputFolder, config.SPLIT, str(nFolds) + "cv_test_split")

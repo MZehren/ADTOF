@@ -41,9 +41,9 @@ def main():
     assert "peakThreshold" in hparams
     ppp = peakPicking.getPPProcess(**hparams)
     # Get the data
-    dl = DataLoader(args.inputPath, loadLabels=False)
+    dl = DataLoader(args.inputPath, crossValidation=False, lazyLoading=True)
     hparams["samplePerTrack"] = None
-    tracks = dl.getGen(repeat=False, yDense=False, **hparams)
+    tracks = dl.getGen(repeat=False, **hparams)
 
     # Predict the file and write the output
     for (x, _), track in zip(tracks(), dl.audioPaths):

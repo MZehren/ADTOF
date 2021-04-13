@@ -50,31 +50,8 @@ class Model(object):
                 "beat_targ": False,
                 "validation_epoch": 10,
                 "training_epoch": 10,
-                # "peakThreshold": 0.1,
-            },
-            "crnn-all-rad0": {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
-                "emptyWeight": 1,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 1,
-                "trainingSequence": 400,
-                "batchSize": 8,
-                "context": 9,
-                "labelOffset": 1,
-                "labelRadiation": 0,
-                "learningRate": 0.001,
-                "normalize": False,
-                "model": "CRNN",
-                "fmin": 20,
-                "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
-                "validation_epoch": 10,
-                "training_epoch": 10,
-                # "peakThreshold": 0.1,
-            },
+                "peakThreshold": 0.15,
+            }
         }
 
         for modelName, hparams in models.items():

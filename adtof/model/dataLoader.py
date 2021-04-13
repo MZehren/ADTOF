@@ -185,6 +185,7 @@ class DataLoader(object):
         folds: List = None,
         fmin=20,
         fmax=20000,
+        lazyLoading=False,
         **kwargs,
     ):
         """
@@ -231,7 +232,9 @@ class DataLoader(object):
             self.testIndexes = list(range(len(self.audioPaths)))
 
         # load in memory all the data to build the samples
-        self.data = [self.readTrack(i, **kwargs) for i in range(len(self.audioPaths))]
+        self.lazyLoading = lazyLoading
+        if lazyLoading == False:
+            self.data = [self.readTrack(i, **kwargs) for i in range(len(self.audioPaths))]
 
     def readTrack(self, trackIdx, removeStart=True, labelOffset=0, sampleRate=100, **kwargs):
         """
@@ -355,7 +358,7 @@ class DataLoader(object):
         # realNFolds = groupKFold.get_n_splits(self.audioPaths, self.annotationPaths, groups)
         return [fold for _, fold in groupKFold.split(self.audioPaths, self.annotationPaths, groups)]
 
-    def _getSubsetsFromFolds(self, folds, testFold=0, validationFold=0, randomState=0, **kwargs):
+    def _getSubsetsFromFolds(self, folds, testFold=-1, validationFold=0, randomState=0, **kwargs):
         """
         Return indexes of tracks for the train, validation and test splits from a k-fold scheme.
 
@@ -473,7 +476,8 @@ class DataLoader(object):
             cursors = {}  # The cursors dictionnary are stored in the gen to make it able to reinitialize
             while True:  # Infinite yield of samples
                 for trackIdx in trackIndexes:  # go once each track in the split before restarting
-                    track = self.data[trackIdx]
+                    track = self.readTrack(trackIdx, **kwargs) if self.lazyLoading else self.data[trackIdx]
+
                     # Set the cursor in the middle of the track if it has not been read since the last reinitialisation
                     if trackIdx not in cursors:
                         cursors[trackIdx] = (len(track["x"]) - xWindowSize) // 2
