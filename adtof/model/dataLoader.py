@@ -18,20 +18,28 @@ from numpy.core.numeric import ones
 
 class DataLoader(object):
     @classmethod
-    def factoryADTOF(cls, folderPath: str, **kwargs):
+    def factoryADTOF(cls, folderPath: str, testFold=0, validationFold=0, **kwargs):
         """instantiate a DataLoader following ADTOF folder hierarchy
 
         Parameters
         ----------
         folderPath : path to the root folder of the ADTOF dataset
         """
-        return cls(
+        adtof = cls(
             os.path.join(folderPath, config.AUDIO),
             os.path.join(folderPath, config.ALIGNED_DRUM),
             os.path.join(folderPath, config.MANUAL_SUBSTRACTION),
             os.path.join(folderPath, config.PROCESSED_AUDIO),
+            testFold=testFold,
+            validationFold=validationFold,
+            lazyLoading=True,
             **kwargs,
         )
+
+        trainGen, valGen, valFullGen, testFullGen = adtof.getTrainValTestGens(**kwargs)
+        train_dataset = cls._getDataset(trainGen, **kwargs)
+        val_dataset = cls._getDataset(valGen, **kwargs)
+        return train_dataset, val_dataset, valFullGen, testFullGen, len(adtof.trainIndexes), len(adtof.valIndexes), {"adtof": testFullGen}
 
     @classmethod
     def factoryTMIDT(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):

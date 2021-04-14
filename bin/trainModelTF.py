@@ -65,7 +65,7 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    (dataset_train, dataset_val, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryTMIDT(
+    (dataset_train, dataset_val, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryADTOF(
         args.folderPath, testFold=fold, **hparams
     )  # factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
 
