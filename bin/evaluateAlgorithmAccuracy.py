@@ -55,7 +55,7 @@ def main():
 
     # Get the paths
     groundTruthsPaths = config.getFilesInFolder(args.groundTruthPath)
-    estimationsPaths = [path for path in config.getFilesInFolder(args.estimationsPath) if os.path.splitext(path)[1] == ".txt"]
+    estimationsPaths = config.getFilesInFolder(args.estimationsPath, allowedExtension=[".txt"])
     if args.dataset != "MDB":  # MDB doesn't have the same file name. but the order checks out
         groundTruthsPaths, estimationsPaths = config.getIntersectionOfPaths(groundTruthsPaths, estimationsPaths)
 
@@ -734,6 +734,44 @@ def plotResults():
     }
 
     # Trained on all
+    MZ_All_CCLog70 = {
+        "mean F all": 0.392398195063965,
+        "mean P all": 0.5891009158881002,
+        "mean R all": 0.4655871898611807,
+        "sum F all": 0.5433482039248048,
+        "sum P all": 0.6466666155156408,
+        "sum R all": 0.46849621176326717,
+        "mean F 35": 0.6192618897399833,
+        "mean P 35": 0.7688964557602093,
+        "mean R 35": 0.587078313927906,
+        "sum F 35": 0.6584904696203178,
+        "sum P 35": 0.7980182690819012,
+        "sum R 35": 0.5604923772862704,
+        "mean F 38": 0.6142011533516701,
+        "mean P 38": 0.6353954777267268,
+        "mean R 38": 0.6647722660050283,
+        "sum F 38": 0.6311995027967682,
+        "sum P 38": 0.643762677484787,
+        "sum R 38": 0.6191172884662277,
+        "mean F 47": 0.1903619567600459,
+        "mean P 47": 0.4101312300581168,
+        "mean R 47": 0.40725672722802286,
+        "sum F 47": 0.17394848386044995,
+        "sum P 47": 0.42442322991249004,
+        "sum R 47": 0.10939101906909986,
+        "mean F 42": 0.464346194739601,
+        "mean P 42": 0.5415020565843117,
+        "mean R 42": 0.5565537472597777,
+        "sum F 42": 0.5385587466543175,
+        "sum P 42": 0.5793633369923161,
+        "sum R 42": 0.5031237167830117,
+        "mean F 49": 0.07381978072852445,
+        "mean P 49": 0.5895793593111361,
+        "mean R 49": 0.11227489488516865,
+        "sum F 49": 0.028672032193158958,
+        "sum P 49": 0.3505535055350554,
+        "sum R 49": 0.014947291131273929,
+    }
     MZ_All_ENSTSUM = {
         "sum F 35": np.mean([0.48145, 0.88883, 0.89134]),
         "sum F 38": np.mean([0.51427, 0.63337, 0.58313]),
@@ -742,7 +780,6 @@ def plotResults():
         "sum F 49": np.mean([0.18781, 0.40146, 0.33707]),
         "sum F all": np.mean([0.58237, 0.67458, 0.64888]),
     }
-
     MZ_ALL_ENSTWET = {
         "sum F 35": np.mean([0.72552, 0.86706, 0.94400]),
         "sum F 38": np.mean([0.62189, 0.80939, 0.77926]),
@@ -751,7 +788,6 @@ def plotResults():
         "sum F 49": np.mean([0.097149, 0.39800, 0.43856]),
         "sum F all": np.mean([0.66195, 0.71654, 0.77032]),
     }
-
     MZ_ALL_MDB = {
         "sum F 35": np.mean([0.72744, 0.49153, 0.64407]),
         "sum F 38": np.mean([0.59672, 0.58068, 0.68506]),
@@ -760,7 +796,6 @@ def plotResults():
         "sum F 49": np.mean([0.074074, 0.33849, 0.58707]),
         "sum F all": np.mean([0.71766, 0.48382, 0.62356]),
     }
-
     MZ_ALL_RBMA = {
         "sum F 35": np.mean([0.68778, 0.59864, 0.62517]),
         "sum F 38": np.mean([0.41213, 0.14032, 0.25509]),
@@ -843,7 +878,7 @@ def plotResults():
     }
 
     # Values from the pre-trained model
-    VOGL_ENSEMBLE_ADTOF = {
+    VOGL_ENSEMBLE_CC0 = {
         "mean F all": 0.508802504159026,
         "mean P all": 0.588064022893335,
         "mean R all": 0.6081516499677526,
@@ -880,6 +915,44 @@ def plotResults():
         "sum F 49": 0.3633130307206687,
         "sum P 49": 0.5687639198218263,
         "sum R 49": 0.26690182245737804,
+    }
+    VOGL_ENSEMBLE_CCLog70 = {
+        "mean F all": 0.4835573579227426,
+        "mean P all": 0.5772585073439122,
+        "mean R all": 0.612169729098965,
+        "sum F all": 0.6353351898704862,
+        "sum P all": 0.6628751955637976,
+        "sum R all": 0.6099922734423204,
+        "mean F 35": 0.7742571981005972,
+        "mean P 35": 0.8405772247597515,
+        "mean R 35": 0.7880573943045629,
+        "sum F 35": 0.8180421446915407,
+        "sum P 35": 0.8444938408817264,
+        "sum R 35": 0.793197190143755,
+        "mean F 38": 0.7287393604411647,
+        "mean P 38": 0.7792499000278864,
+        "mean R 38": 0.7518049896084068,
+        "sum F 38": 0.7411163174910629,
+        "sum P 38": 0.7812274801825606,
+        "sum R 38": 0.704922918529356,
+        "mean F 47": 0.17658785560610887,
+        "mean P 47": 0.15248053142326345,
+        "mean R 47": 0.6681185238365472,
+        "sum F 47": 0.27186581534407617,
+        "sum P 47": 0.1805546207175069,
+        "sum R 47": 0.5500307566126718,
+        "mean F 42": 0.4968396292680449,
+        "mean P 42": 0.6533048261120569,
+        "mean R 42": 0.5423565402959439,
+        "sum F 42": 0.6336857691891757,
+        "sum P 42": 0.7321377083213194,
+        "sum R 42": 0.5585733560157212,
+        "mean F 49": 0.24136274619779724,
+        "mean P 49": 0.46068005439660303,
+        "mean R 49": 0.31051119744936495,
+        "sum F 49": 0.2875876444949782,
+        "sum P 49": 0.5184476632959825,
+        "sum R 49": 0.19898253527036242,
     }
 
     # Values from MIREX 2018 competition
@@ -971,14 +1044,16 @@ def plotResults():
     # plt.show()
 
     newPlot(
+        {"Train on ADTOF CC0": map(MZ_CC0_CC0), "Ensemble": map(VOGL_ENSEMBLE_CC0),}, "Test on ADTOF CC0", legend=True,
+    )
+    newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_CC0),
             "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
-            #         "Train on ADTOF RBLog70": map(MZ_RBLog70_RBLog70_Fold0),
-            #         "Train on ADTOF YTLog70": map(MZ_YTLog70_YTLog70_Fold0),
-            #         "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENSEMBLE_ADTOF),
+            "Train on ADTOF CCLog70 fold 1": map(MZ_CCLog70_CCLog70_Fold1),
+            "Train on all MZ": map(MZ_All_CCLog70),
+            "Ensemble": map(VOGL_ENSEMBLE_CCLog70),
         },
-        "Test on ADTOF",
+        "Test on ADTOF CCLog70",
         legend=True,
     )
     newPlot(

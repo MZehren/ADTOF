@@ -65,16 +65,9 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    (
-        dataset_train,
-        dataset_val,
-        valFullGen,
-        testFullGen,
-        trainTracksCount,
-        valTracksCount,
-        testFullNamedGen,
-    ) = DataLoader.factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
-    # dataset_train, dataset_val, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=fold, **hparams)
+    (dataset_train, dataset_val, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryTMIDT(
+        args.folderPath, testFold=fold, **hparams
+    )  # factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
 
     if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth

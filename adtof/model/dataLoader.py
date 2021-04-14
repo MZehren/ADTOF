@@ -34,6 +34,38 @@ class DataLoader(object):
         )
 
     @classmethod
+    def factoryTMIDT(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
+        """instantiate a DataLoader following ADTOF folder hierarchy
+
+        Parameters
+        ----------
+        folderPath : path to the root folder of the ADTOF dataset
+        """
+        tmidt = cls(
+            os.path.join(folderPath, "TMIDT/mp3"),
+            os.path.join(folderPath, "TMIDT/annotations/drums_m"),
+            None,
+            os.path.join(folderPath, "TMIDT/preprocess"),
+            folds=[
+                list(pd.read_csv(os.path.join(folderPath, path), sep="no separator hack", header=None)[0])
+                for path in ["TMIDT/splits/3-fold_cv_acc_0.txt", "TMIDT/splits/3-fold_cv_acc_1.txt", "TMIDT/splits/3-fold_cv_acc_2.txt"]
+            ],
+            mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
+            sep="\t",
+            validationFold=validationRatio,
+            testFold=testFold,
+            lazyLoading=True,
+            **kwargs,
+        )
+
+        trainGen, valGen, valFullGen, testFullGen = tmidt.getTrainValTestGens(**kwargs)
+
+        train_dataset = cls._getDataset(trainGen, **kwargs)
+        val_dataset = cls._getDataset(valGen, **kwargs)
+
+        return train_dataset, val_dataset, valFullGen, testFullGen, len(tmidt.trainIndexes), len(tmidt.valIndexes), {"tmidt": testFullGen}
+
+    @classmethod
     def factoryPublicDatasets(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
         """instantiate a DataLoader following RBMA, ENST, and MDB folder hierarchies
 
@@ -125,7 +157,7 @@ class DataLoader(object):
         """
 
         def gen():
-            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at th beginning
+            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at the beginning
             while True:  # loop until all generators are exhausted
                 allExhausted = True
                 for pickedGen in instantiatedGen:
@@ -146,7 +178,7 @@ class DataLoader(object):
         """
 
         def gen():
-            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at th beginning
+            instantiatedGen = [gen() for gen in generators]  # invoke the generators when invoked to reset the iteration at the beginning
             while True:
                 pickedGen = random.choices(instantiatedGen, weights=pickProbability, k=1)[0]
                 yield next(pickedGen)
@@ -251,7 +283,7 @@ class DataLoader(object):
             if removeStart:
                 x, y = self.removeStart(x, y, sampleRate=sampleRate, **kwargs)
             # TODO Is it optimised to keep y both in dense and sparse form?
-            yDense = self.getDenseEncoding(name, y, sampleRate=sampleRate, **kwargs)
+            yDense = self.getDenseEncoding(name, y, sampleRate=sampleRate, length=len(x) + 1, **kwargs)
             return {"x": x, "y": y, "yDense": yDense, "name": name}
         else:
             return {"x": x, "y": None, "name": name}
@@ -279,14 +311,16 @@ class DataLoader(object):
         """
         # Trim before the first note to remove count in
         # Move the trim by the offset amount to keep the first notation
-        firstNoteTime = np.min([v[0] for v in y.values() if len(v)])
+        firstOnsetPerClass = [v[0] for v in y.values() if len(v)]
+        firstNoteTime = np.min(firstOnsetPerClass) if len(firstOnsetPerClass) else 0
         firstNoteTime = max(0, firstNoteTime)
         firstNoteIdx = int(round(firstNoteTime * sampleRate))
 
         # Trim after the last note to remove all part of the track not annotated
         # Make sure the index doesn't exceed any boundaries
         # TODO is it necessary, or do we want to keep all the audio?
-        lastNoteTime = np.max([v[-1] for v in y.values() if len(v)])
+        lasOnsetPerClass = [v[-1] for v in y.values() if len(v)]
+        lastNoteTime = np.max(lasOnsetPerClass) if len(lasOnsetPerClass) else len(x)
         lastNoteIdx = min(int(lastNoteTime * sampleRate) + 1, len(x) - 1 - context)
 
         X = x[firstNoteIdx : lastNoteIdx + context]
@@ -306,7 +340,7 @@ class DataLoader(object):
         """
         # if length not specified, make it big enough to store all the notes
         if length == None:
-            lastNoteTime = np.max([values[-1] for values in notes.values()])
+            lastNoteTime = np.max([values[-1] for values in notes.values()])  # TODO: break if there is no note
             length = int(np.round((lastNoteTime) * sampleRate)) + 1
 
         result = []

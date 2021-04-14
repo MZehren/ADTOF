@@ -29,7 +29,30 @@ class Model(object):
         Yield models with different hyperparameters to be trained
         """
         models = {
-            "crnn-all-rad1": {
+            # "crnn-all-rad1": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 10,
+            #     "emptyWeight": 1,
+            #     "sampleRate": 100,
+            #     "diff": True,
+            #     "samplePerTrack": 1,
+            #     "trainingSequence": 400,
+            #     "batchSize": 8,
+            #     "context": 9,
+            #     "labelOffset": 1,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.001,
+            #     "normalize": False,
+            #     "model": "CRNN",
+            #     "fmin": 20,
+            #     "fmax": 20000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "validation_epoch": 10,
+            #     "training_epoch": 10,
+            #     "peakThreshold": 0.15,
+            # },
+            "crnn-TMIDT": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -48,10 +71,11 @@ class Model(object):
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
-                "validation_epoch": 10,
-                "training_epoch": 10,
-                "peakThreshold": 0.15,
-            }
+                "validation_epoch": 0.5,
+                "training_epoch": 0.5,
+                "reduce_patience"=5, 
+                "stopping_patience"=10
+            },
         }
 
         for modelName, hparams in models.items():
@@ -375,7 +399,7 @@ class Model(object):
             # class_weight=classWeight
         )
 
-    def predict(self, x, trainingSequence=1, **kwargs):
+    def predict(self, x, trainingSequence=1, limitInputSize=60000, **kwargs):
         """
         Call model.predict if possible
         If the model is a CRNN and can't utilize the batch parallelisation, call directly the model 
@@ -383,7 +407,7 @@ class Model(object):
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
-            if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised! TODO: improve
+            if len(x) > limitInputSize:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised! TODO: improve
                 raise ValueError("The input array is too big")
             # Put everyting in the first batch
             return np.array(self.model(np.array([x]), training=False)[0])
