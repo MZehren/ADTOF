@@ -64,8 +64,8 @@ class TextReader(object):
             for line in f:
                 try:
                     time, pitch = self.decode(line, sep)
-                except:
-                    print("Line couldn't be decoded, passing.", line)
+                except Exception as e:
+                    print("Line couldn't be decoded, passing.", line, str(e))
                     continue
 
                 pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=removeIfClassUnknown)
