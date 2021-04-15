@@ -60,10 +60,10 @@ class DataLoader(object):
             **kwargs,
         )
         enst_sum = cls(
-            os.path.join(folderPath, "ENST-Drums-public/audio_sum"),
-            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            os.path.join(folderPath, "ENST-drums-public/audio_sum"),
+            os.path.join(folderPath, "ENST-drums-public/annotations"),
             None,
-            os.path.join(folderPath, "ENST-Drums-public/preprocessSum"),
+            os.path.join(folderPath, "ENST-drums-public/preprocessSum"),
             folds=config.ENST_SPLITS,
             mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
             sep=" ",
@@ -73,10 +73,10 @@ class DataLoader(object):
             **kwargs,
         )
         enst_wet = cls(
-            os.path.join(folderPath, "ENST-Drums-public/audio_wet"),
-            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            os.path.join(folderPath, "ENST-drums-public/audio_wet"),
+            os.path.join(folderPath, "ENST-drums-public/annotations"),
             None,
-            os.path.join(folderPath, "ENST-Drums-public/preprocessWet"),
+            os.path.join(folderPath, "ENST-drums-public/preprocessWet"),
             folds=config.ENST_SPLITS,
             mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
             sep=" ",
@@ -305,7 +305,6 @@ class DataLoader(object):
                 self.folds = self._getFolds(**kwargs)
             else:
                 fileLookup = {config.getFileBasename(file): i for i, file in enumerate(self.audioPaths)}
-                print(fileLookup)
                 self.folds = [[fileLookup[name] for name in fold] for fold in folds]
             self.trainIndexes, self.valIndexes, self.testIndexes = self._getSubsetsFromFolds(self.folds, **kwargs)
         else:  # If there is no cross validation, put every tracks in the test split
