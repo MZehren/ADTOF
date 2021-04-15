@@ -24,7 +24,7 @@ class Model(object):
         Yield models with different hyperparameters to be trained
         """
         models = {
-            "crnn-all-rad1": {
+            "crnn-all": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
