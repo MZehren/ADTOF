@@ -76,7 +76,7 @@ class Model(object):
             #     "reduce_patience": 5,
             #     "stopping_patience": 10,
             # },
-            "crnn-CCLog70-goodWeights": {
+            "crnn-CCLog70-morePatience-goodSave": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -97,8 +97,8 @@ class Model(object):
                 "beat_targ": False,
                 "validation_epoch": 1,
                 "training_epoch": 1,
-                "reduce_patience": 3,
-                "stopping_patience": 6,
+                "reduce_patience": 5,
+                "stopping_patience": 15,
             },
         }
 
@@ -399,39 +399,34 @@ class Model(object):
         logging.info("Training model %s", self.name)
 
         callbacks = [
-            tf.keras.callbacks.TensorBoard(
-                log_dir=log_dir + self.name + datetime.datetime.now().strftime("%d-%m-%H:%M"),
-                histogram_freq=0,
-                write_graph=False,
-                write_images=False,
-            ),
-            tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True,),
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir + self.name + datetime.datetime.now().strftime("%d-%m-%H:%M")),
+            tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True, save_best_only=True),
             tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=reduce_patience),
-            tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", min_delta=0.0001, patience=stopping_patience, verbose=1, restore_best_weights=True
-            ),
+            tf.keras.callbacks.EarlyStopping(min_delta=0.0001, patience=stopping_patience, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
         self.model.fit(
             dataset_train,
             epochs=1000,  # Very high number of epoch to stop only with ealy stopping
-            initial_epoch=0,
             steps_per_epoch=steps_per_epoch,
             callbacks=callbacks,
             validation_data=dataset_val,
-            validation_steps=validation_steps
-            # class_weight=classWeight
+            validation_steps=validation_steps,
         )
 
     def predict(self, x, trainingSequence=1, limitInputSize=60000, **kwargs):
         """
         Call model.predict if possible
         If the model is a CRNN and can't utilize the batch parallelisation, call directly the model 
+
+        limitInputSize:
+            Set a limit to 10 minutes otherwise a segmentation Fault might be raised! 
+            TODO: could split the input in two to prevent that
         """
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
-            if len(x) > limitInputSize:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised! TODO: improve
+            if len(x) > limitInputSize:
                 raise ValueError("The input array is too big")
             # Put everyting in the first batch
             return np.array(self.model(np.array([x]), training=False)[0])
