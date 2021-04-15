@@ -73,7 +73,7 @@ def train_test_model(hparams, args, fold, model: Model):
         args.folderPath, testFold=fold, **hparams
     )
 
-    if not model.weightLoadedFlag:  # if model is not trained, do the fitting
+    if True:  # not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each track
         steps_per_epoch = trainTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["training_epoch"]
@@ -88,12 +88,12 @@ def train_test_model(hparams, args, fold, model: Model):
         # model.vizPredictions(dataset_train, **hparams)
 
         results = {}
-        if "peakThreshold" not in hparams:  # Predict "peakThreshold" on validation data
-            scoreVal = model.evaluate(valFullGen(), **hparams)
-            logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
-            hparams["peakThreshold"] = scoreVal["peakThreshold"]
-            for k, v in scoreVal.items():
-                results["validation_" + k] = v
+        # if "peakThreshold" not in hparams:  # Predict "peakThreshold" on validation data
+        scoreVal = model.evaluate(valFullGen(), **hparams)
+        logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
+        hparams["peakThreshold"] = scoreVal["peakThreshold"]
+        for k, v in scoreVal.items():
+            results["validation_" + k] = v
 
         # scoreTest = model.evaluate(testFullGen(), **hparams)
         for dataset, gen in testFullNamedGen.items():
