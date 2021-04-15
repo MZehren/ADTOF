@@ -162,7 +162,7 @@ class DataLoader(object):
         folderPath : path to the root folder containing the public datasets
         """
         # Load the data
-        datasets = cls.factoryAll(folderPath, testFold)
+        datasets = cls.factoryAll(folderPath, testFold, **kwargs)
         # Split the data in train, test and val sets
         datasetsGenerators = [
             set.getTrainValTestGens(**kwargs) for set in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])
@@ -372,7 +372,7 @@ class DataLoader(object):
 
         X = x[firstNoteIdx : lastNoteIdx + context]
         for k, v in y.items():
-            y[k] = v - (firstNoteTime)
+            y[k] = np.array(v) - (firstNoteTime)
         return (X, y)
 
     def getDenseEncoding(self, filename, notes, length=None, sampleRate=100, labels=[36, 40, 41, 46, 49], labelRadiation=1, **kwargs):
