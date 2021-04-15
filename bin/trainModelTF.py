@@ -41,7 +41,7 @@ def main():
     Entry point of the program
     """
     parser = argparse.ArgumentParser(description="todo")
-    parser.add_argument("folderPath", type=str, help="Path.")
+    parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
     args = parser.parse_args()
 
     for fold in range(3):
@@ -65,9 +65,13 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    (dataset_train, dataset_val, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryADTOF(
+    # (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryADTOF(
+    #     args.folderPath, testFold=fold, **hparams
+    # )
+
+    (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryPublicDatasets(
         args.folderPath, testFold=fold, **hparams
-    )  # factoryPublicDatasets(args.folderPath, testFold=fold, **hparams)
+    )
 
     if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
@@ -78,7 +82,7 @@ def train_test_model(hparams, args, fold, model: Model):
 
     if os.path.exists(hparamsLogs + model.name):  # If the model is already evaluated, skip the evaluation
         logging.info("Skipping evaluation of model %s", model.name)
-        return None
+        results = None
     else:
         logging.info("Evaluating model %s", model.name)
         # model.vizPredictions(dataset_train, **hparams)
@@ -98,26 +102,7 @@ def train_test_model(hparams, args, fold, model: Model):
                 results[dataset + "_" + k] = v
 
         logging.info(str(results))
-        return results
 
-
-# def test_enssemble_models(args):
-#     """
-#     TODO factorise
-#     Used to evaluate an ensemble of models
-#     """
-#     models = [list(Model.modelFactory(fold=fold))[0][0] for fold in range(2)]
-#     hparams = list(Model.modelFactory(fold=0))[0][1]
-#     dl = DataLoader(args.folderPath, **hparams)
-
-#     trainGen, valGen, valFullGen, testFullGen = dl.getTrainValTestGens(validationFold=0, **hparams)
-#     predictions = []
-#     Y = []
-#     for i, (x, y) in enumerate(testFullGen()):
-#         predictions.append(Model.predictEnsemble(models, x))
-#         Y.append(y)
-
-#     return peakPicking.fitPeakPicking(predictions, Y, peakPickingSteps=[0.3], **hparams)
 
 if __name__ == "__main__":
     main()

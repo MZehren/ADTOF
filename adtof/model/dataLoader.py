@@ -18,6 +18,77 @@ from numpy.core.numeric import ones
 
 class DataLoader(object):
     @classmethod
+    def factoryAll(cls, folderPath, testFold=0, validationRatio=0.15, **kwargs):
+        """
+        Build a dataset for all the known datasets
+        """
+        adtof = cls(
+            os.path.join(folderPath, "adtofParsedCC/" + config.AUDIO),
+            os.path.join(folderPath, "adtofParsedCC/" + config.ALIGNED_DRUM),
+            os.path.join(folderPath, "adtofParsedCC/" + config.MANUAL_SUBSTRACTION),
+            os.path.join(folderPath, "adtofParsedCC/" + config.PROCESSED_AUDIO),
+            testFold=testFold,
+            validationFold=0,  # Validation set is not 15% of training, but a separated split without leaked bands
+            lazyLoading=True,
+            **kwargs,
+        )
+        rbma = cls(
+            os.path.join(folderPath, "rbma_13/audio"),
+            os.path.join(folderPath, "rbma_13/annotations/drums_m"),
+            None,
+            os.path.join(folderPath, "rbma_13/preprocess"),
+            folds=config.RBMA_SPLITS,
+            mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
+            sep="\t",
+            validationFold=validationRatio,
+            testFold=testFold,
+            lazyLoading=True,
+            **kwargs,
+        )
+        mdb = cls(
+            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/full_mix"),
+            os.path.join(folderPath, "MDBDrums/MDB Drums/annotations/subclass"),
+            None,
+            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/preprocess"),
+            folds=config.MDB_SPLITS,
+            mappingDictionaries=[config.MDBS_MIDI, config.MIDI_REDUCED_5],
+            sep="\t",
+            validationFold=validationRatio,
+            testFold=testFold,
+            checkFilesNameMatch=False,
+            lazyLoading=True,
+            **kwargs,
+        )
+        enst_sum = cls(
+            os.path.join(folderPath, "ENST-Drums-public/audio_sum"),
+            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            None,
+            os.path.join(folderPath, "ENST-Drums-public/preprocessSum"),
+            folds=config.ENST_SPLITS,
+            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
+            sep=" ",
+            validationFold=validationRatio,
+            testFold=testFold,
+            lazyLoading=True,
+            **kwargs,
+        )
+        enst_wet = cls(
+            os.path.join(folderPath, "ENST-Drums-public/audio_wet"),
+            os.path.join(folderPath, "ENST-Drums-public/annotations"),
+            None,
+            os.path.join(folderPath, "ENST-Drums-public/preprocessWet"),
+            folds=config.ENST_SPLITS,
+            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
+            sep=" ",
+            validationFold=validationRatio,
+            testFold=testFold,
+            lazyLoading=True,
+            **kwargs,
+        )
+
+        return {"adtof": adtof, "rbma": rbma, "enst_wet": enst_wet, "enst_sum": enst_sum, "mdb": mdb}
+
+    @classmethod
     def factoryADTOF(cls, folderPath: str, testFold=0, validationFold=0, **kwargs):
         """instantiate a DataLoader following ADTOF folder hierarchy
 
@@ -25,21 +96,30 @@ class DataLoader(object):
         ----------
         folderPath : path to the root folder of the ADTOF dataset
         """
-        adtof = cls(
-            os.path.join(folderPath, config.AUDIO),
-            os.path.join(folderPath, config.ALIGNED_DRUM),
-            os.path.join(folderPath, config.MANUAL_SUBSTRACTION),
-            os.path.join(folderPath, config.PROCESSED_AUDIO),
-            testFold=testFold,
-            validationFold=validationFold,
-            lazyLoading=True,
-            **kwargs,
-        )
+        # Get the data
+        datasets = cls.factoryAll(folderPath, testFold, **kwargs)
 
-        trainGen, valGen, valFullGen, testFullGen = adtof.getTrainValTestGens(**kwargs)
+        # Build tf datasets and generators
+        trainGen, valGen, valFullGen, testFullGen = datasets["adtof"].getTrainValTestGens(**kwargs)
         train_dataset = cls._getDataset(trainGen, **kwargs)
         val_dataset = cls._getDataset(valGen, **kwargs)
-        return train_dataset, val_dataset, valFullGen, testFullGen, len(adtof.trainIndexes), len(adtof.valIndexes), {"adtof": testFullGen}
+
+        # Hacky technique to evaluate on the public datasets
+        fullGenParams = {k: v for k, v in kwargs.items()}
+        fullGenParams["repeat"] = False
+        fullGenParams["samplePerTrack"] = None
+        namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items()}
+        namedTestGen["adtof"] = testFullGen
+
+        # return all the datasets for training and evaluation
+        return (
+            train_dataset,
+            val_dataset,
+            valFullGen,
+            len(datasets["adtof"].trainIndexes),
+            len(datasets["adtof"].valIndexes),
+            namedTestGen,
+        )
 
     @classmethod
     def factoryTMIDT(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
@@ -82,58 +162,12 @@ class DataLoader(object):
         folderPath : path to the root folder containing the public datasets
         """
         # Load the data
-        rbma = cls(
-            os.path.join(folderPath, "rbma_13/audio"),
-            os.path.join(folderPath, "rbma_13/annotations/drums_m"),
-            None,
-            os.path.join(folderPath, "rbma_13/preprocess"),
-            folds=config.RBMA_SPLITS,
-            mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
-            sep="\t",
-            validationFold=validationRatio,
-            testFold=testFold,
-            **kwargs,
-        )
-        mdb = cls(
-            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/full_mix"),
-            os.path.join(folderPath, "MDBDrums/MDB Drums/annotations/subclass"),
-            None,
-            os.path.join(folderPath, "MDBDrums/MDB Drums/audio/preprocess"),
-            folds=config.MDB_SPLITS,
-            mappingDictionaries=[config.MDBS_MIDI, config.MIDI_REDUCED_5],
-            sep="\t",
-            validationFold=validationRatio,
-            testFold=testFold,
-            checkFilesNameMatch=False,
-            **kwargs,
-        )
-        enst_sum = cls(
-            os.path.join(folderPath, "ENST-Drums-public/audio_sum"),
-            os.path.join(folderPath, "ENST-Drums-public/annotations"),
-            None,
-            os.path.join(folderPath, "ENST-Drums-public/preprocessSum"),
-            folds=config.ENST_SPLITS,
-            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
-            sep=" ",
-            validationFold=validationRatio,
-            testFold=testFold,
-            **kwargs,
-        )
-        enst_wet = cls(
-            os.path.join(folderPath, "ENST-Drums-public/audio_wet"),
-            os.path.join(folderPath, "ENST-Drums-public/annotations"),
-            None,
-            os.path.join(folderPath, "ENST-Drums-public/preprocessWet"),
-            folds=config.ENST_SPLITS,
-            mappingDictionaries=[config.ENST_MIDI, config.MIDI_REDUCED_5],
-            sep=" ",
-            validationFold=validationRatio,
-            testFold=testFold,
-            **kwargs,
-        )
-
+        datasets = cls.factoryAll(folderPath, testFold)
         # Split the data in train, test and val sets
-        datasetsGenerators = [set.getTrainValTestGens(**kwargs) for set in [rbma, mdb, enst_sum, enst_wet]]
+        datasetsGenerators = [
+            set.getTrainValTestGens(**kwargs) for set in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])
+        ]
+
         # Build generators to access samples from each dataset one at a time
         # trainGen, valGen, valFullGen, testFullGen = [
         #     cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
@@ -147,16 +181,21 @@ class DataLoader(object):
         train_dataset = cls._getDataset(trainGen, **kwargs)
         val_dataset = cls._getDataset(valGen, **kwargs)
         # Count the number of tracks to set the epoch size
-        trainTracksCount = np.sum([len(dataLoader.trainIndexes) for dataLoader in (rbma, enst_sum, enst_wet, mdb)])
-        valTracksCount = np.sum([len(dataLoader.valIndexes) for dataLoader in (rbma, enst_sum, enst_wet, mdb)])
+        trainTracksCount = np.sum(
+            [len(dataLoader.trainIndexes) for dataLoader in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])]
+        )
+        valTracksCount = np.sum(
+            [len(dataLoader.valIndexes) for dataLoader in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])]
+        )
         # build a dict of test data for evaluation
         testFullNamedGen = {
             "rbma": datasetsGenerators[0][3],
             "mdb": datasetsGenerators[1][3],
             "enst_sum": datasetsGenerators[2][3],
             "enst_wet": datasetsGenerators[3][3],
+            "adtof": datasets["adtof"].getTrainValTestGens(**kwargs)[3],
         }
-        return (train_dataset, val_dataset, valFullGen, testFullGen, trainTracksCount, valTracksCount, testFullNamedGen)
+        return (train_dataset, val_dataset, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen)
 
     @classmethod
     def _roundRobinGen(cls, generators):
@@ -450,8 +489,8 @@ class DataLoader(object):
         Return 4 generators to perform training and validation:
         trainGen : dataset for training 
         valGen : dataset for validation 
-        valFullGen : Finit generator giving full tracks for fitting peak picking
-        testFullGen : Finit generator giving full tracks for computing final result
+        valFullGen : Finite generator giving full tracks for fitting peak picking
+        testFullGen : Finite generator giving full tracks for computing final result
         """
 
         fullGenParams = {k: v for k, v in kwargs.items()}

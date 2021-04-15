@@ -1,25 +1,20 @@
+import datetime
 import logging
+import os
 import time
 from collections import defaultdict
 from os import stat
-import os
-import datetime
-from madmom.audio.signal import energy
-import pandas as pd
 
-import madmom
-from markdown.test_tools import Kwargs
-import matplotlib.pyplot as plt
+
 import numpy as np
+import pandas as pd
+import pretty_midi
 import tensorflow as tf
-from numpy.core.defchararray import mod
-from tensorflow.keras import layers
-from tensorflow.python.eager.monitoring import Sampler
-
 from adtof import config
-from adtof.model import eval
-from adtof.model import peakPicking
 from adtof.io.mir import MIR
+from adtof.io.textReader import TextReader
+from adtof.model import eval, peakPicking
+from adtof.model.dataLoader import DataLoader
 
 
 class Model(object):
@@ -29,29 +24,31 @@ class Model(object):
         Yield models with different hyperparameters to be trained
         """
         models = {
-            # "crnn-all-rad1": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "emptyWeight": 1,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 10,
-            #     "training_epoch": 10,
-            #     "peakThreshold": 0.15,
-            # },
+            "crnn-all-rad1": {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5 / 10,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
+                "normalize": False,
+                "model": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
+                "pad": False,
+                "beat_targ": False,
+                "validation_epoch": 10,
+                "training_epoch": 10,
+                "peakThreshold": 0.15,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
+            },
             # "crnn-TMIDT": {
             #     "labels": config.LABELS_5,
             #     "classWeights": config.WEIGHTS_5 / 10,
@@ -76,30 +73,30 @@ class Model(object):
             #     "reduce_patience": 5,
             #     "stopping_patience": 10,
             # },
-            "crnn-CCLog70-morePatience-goodSave": {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
-                "emptyWeight": 1,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 1,
-                "trainingSequence": 400,
-                "batchSize": 8,
-                "context": 9,
-                "labelOffset": 1,
-                "labelRadiation": 1,
-                "learningRate": 0.001,
-                "normalize": False,
-                "model": "CRNN",
-                "fmin": 20,
-                "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
-                "validation_epoch": 1,
-                "training_epoch": 1,
-                "reduce_patience": 5,
-                "stopping_patience": 15,
-            },
+            # "crnn-CCLog70-morePatience-goodSave": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 10,
+            #     "emptyWeight": 1,
+            #     "sampleRate": 100,
+            #     "diff": True,
+            #     "samplePerTrack": 1,
+            #     "trainingSequence": 400,
+            #     "batchSize": 8,
+            #     "context": 9,
+            #     "labelOffset": 1,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.001,
+            #     "normalize": False,
+            #     "model": "CRNN",
+            #     "fmin": 20,
+            #     "fmax": 20000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "validation_epoch": 1,
+            #     "training_epoch": 1,
+            #     "reduce_patience": 5,
+            #     "stopping_patience": 15,
+            # },
         }
 
         for modelName, hparams in models.items():
@@ -438,26 +435,62 @@ class Model(object):
         """
         return aggregation([model.predict(x) for model in models], axis=0)
 
-    # def predictMultiple(self, X, trainingSequence):
-    #     """
-    #     call in parallel a predict for each input in X
-    #     (useful for BRNN where a batch parallelisation is not feasible)
-    #     """
-    #     import concurrent.futures
+    def predictFolder(self, inputFolder, outputFolder, writeMidi=True, **kwargs):
+        """
+        Run the model prediction followed by the peak picking procedure on all the tracks from the folder.
+        Write a text file with the prediction in the output folder. 
+        If writeMidi=True, write also a midi file containing the predictions
 
-    #     futures = []
-    #     result = -1
-    #     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-    #         # result = executor.map(self.predict, X, [trainingSequence for x in X])
-    #         futures = [executor.submit(self.predict, x, trainingSequence) for x in X]
-    #         concurrent.futures.wait(futures)
+        Parameters
+        ----------
+        inputFolder : 
+            Path to a folder containing music or one specific music
+        outputFolder : 
+            Path to the location where to store the output
+        writeMidi : bool, optional
+           if a midi file for the prediction should be written as well, by default True
+        """
+        logging.info("prediction folder " + str(inputFolder))
+        ppp = peakPicking.getPPProcess(**kwargs)
+        dl = DataLoader(inputFolder, crossValidation=False, lazyLoading=True)
 
-    #     return [f.result() for f in futures]
-    #     return result
+        predictParam = {k: v for k, v in kwargs.items()}
+        predictParam["repeat"] = False
+        predictParam["samplePerTrack"] = None
+        tracks = dl.getGen(**predictParam)
 
-    # def evaluateDebug(self, x, y, peakThreshold=None, **kwargs):
-    #     predictions = self.predict(x, **kwargs)
-    #     return peakPicking.fitPeakPicking([predictions], [y], peakPickingSteps=[peakThreshold], **kwargs)
+        # Predict the file and write the output
+        for (x, _), track in zip(tracks(), dl.audioPaths):
+            try:
+                if not os.path.exists(outputFolder):
+                    os.makedirs(outputFolder)
+                outputTrackPath = os.path.join(outputFolder, config.getFileBasename(track) + ".txt")
+                if os.path.exists(outputTrackPath):
+                    continue
+
+                Y = self.predict(x, **kwargs)
+                sparseResultIdx = peakPicking.peakPicking(
+                    Y, ppProcess=ppp, timeOffset=kwargs["labelOffset"] / kwargs["sampleRate"], **kwargs
+                )
+
+                # write text
+                formatedOutput = [(time, pitch) for pitch, times in sparseResultIdx.items() for time in times]
+                formatedOutput.sort(key=lambda x: x[0])
+                TextReader().writteBeats(outputTrackPath, formatedOutput)
+
+                #  write midi
+                if writeMidi:
+                    midi = pretty_midi.PrettyMIDI()
+                    instrument = pretty_midi.Instrument(program=1, is_drum=True)
+                    midi.instruments.append(instrument)
+                    for pitch, notes in sparseResultIdx.items():
+                        for i in notes:
+                            note = pretty_midi.Note(velocity=100, pitch=pitch, start=i, end=i)
+                            instrument.notes.append(note)
+                    midi.write(os.path.join(outputFolder, config.getFileBasename(track) + ".mid"))
+
+            except Exception as e:
+                logging.error(str(e))
 
     def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """

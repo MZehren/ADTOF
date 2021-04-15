@@ -35,7 +35,7 @@ def main():
     parser.add_argument("-p", "--parallel", action="store_true", help="Set if the conversion is ran in parallel")
     args = parser.parse_args()
 
-    # Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
+    Converter.convertAll(args.inputFolder, args.outputFolder, parallelProcess=args.parallel)
     genSplits(args.outputFolder)
 
     print("Done!")
