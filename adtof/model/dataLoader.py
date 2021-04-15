@@ -39,10 +39,10 @@ class DataLoader(object):
             os.path.join(folderPath, "rbma_13/preprocess"),
             folds=config.RBMA_SPLITS,
             mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
-            sep="\t",
+            sep="\t",  # TODO sep doesn't work with lazyLoading because it is not added to kwargs
             validationFold=validationRatio,
             testFold=testFold,
-            lazyLoading=True,
+            lazyLoading=False,
             **kwargs,
         )
         mdb = cls(
@@ -56,7 +56,7 @@ class DataLoader(object):
             validationFold=validationRatio,
             testFold=testFold,
             checkFilesNameMatch=False,
-            lazyLoading=True,
+            lazyLoading=False,
             **kwargs,
         )
         enst_sum = cls(
@@ -69,7 +69,7 @@ class DataLoader(object):
             sep=" ",
             validationFold=validationRatio,
             testFold=testFold,
-            lazyLoading=True,
+            lazyLoading=False,
             **kwargs,
         )
         enst_wet = cls(
@@ -82,7 +82,7 @@ class DataLoader(object):
             sep=" ",
             validationFold=validationRatio,
             testFold=testFold,
-            lazyLoading=True,
+            lazyLoading=False,
             **kwargs,
         )
 

@@ -35,7 +35,7 @@ class TextReader(object):
         time = float(time)
         pitch = self.castInt(pitch)
 
-        return time, pitch
+        return (time, pitch)
 
     def getOnsets(
         self,

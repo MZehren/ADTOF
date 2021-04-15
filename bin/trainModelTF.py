@@ -72,9 +72,6 @@ def train_test_model(hparams, args, fold, model: Model):
     (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryPublicDatasets(
         args.folderPath, testFold=fold, **hparams
     )
-    next(testFullNamedGen["enst_sum"]())
-    next(valFullGen())
-    next(valFullGen())
 
     if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
