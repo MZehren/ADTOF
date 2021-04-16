@@ -3,20 +3,20 @@
 """
 TODO
 """
-from adtof.io.textReader import TextReader
 import argparse
 import datetime
+import json
 import logging
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 import mir_eval
-
+import numpy as np
+import pandas as pd
 from adtof import config
-
 from adtof.converters.converter import Converter
 from adtof.io.mir import MIR
+from adtof.io.textReader import TextReader
 from adtof.model import eval
 
 
@@ -804,6 +804,13 @@ def plotResults():
         "sum F 49": np.mean([0.016997, 0.063872, 0.14724]),
         "sum F all": np.mean([0.51217, 0.43499, 0.50053]),
     }
+    with open("crnn-all") as f:
+        crnnAllJSON = json.load(f)
+    crnnAll = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
+
+    with open("crnn-ptTMIDT") as f:
+        crnnPtJSON = json.load(f)
+    crnnPt = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
 
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
@@ -1000,7 +1007,8 @@ def plotResults():
         "sum F 49": np.mean([0.24, 0.5, 0.16]),
     }
 
-    def map(dict, add=""):
+    def map(dict, add="", keyPrefix=""):
+
         mapping = {
             "sum F all": "SUM" + add,
             "sum F 35": "BD",
@@ -1009,7 +1017,7 @@ def plotResults():
             "sum F 42": "HH",
             "sum F 49": "CY + RD" + add,
         }
-        return {v: dict[k] for k, v in mapping.items()}
+        return {v: dict[keyPrefix + k] for k, v in mapping.items()}
 
     # results = {
     #     "ADTOF": {"ADTOF": map(MZ_ADTOF), "All+MIDI": map(VOGL_ADTOF)},
@@ -1021,10 +1029,10 @@ def plotResults():
 
     # newPlot(
     #     {
-    #         "Test on ADTOF": map(VOGL_ADTOF_ALLMIDI, add="*"),
-    #         "Test on RBMA": map(VOGL_RBMA_ALLMIDI, add="*"),
-    #         "Test on MDB": map(VOGL_MDB_ALLMIDI, add="*"),
-    #         "Test on ENST": map(VOGL_ENST_ALLMIDI, add="*"),
+    #         "Test on ADTOF": map(VOGL_ADTOF_ALLMIDI),
+    #         "Test on RBMA": map(VOGL_RBMA_ALLMIDI),
+    #         "Test on MDB": map(VOGL_MDB_ALLMIDI),
+    #         "Test on ENST": map(VOGL_ENST_ALLMIDI),
     #     },
     #     "",
     #     legend=True,
@@ -1033,24 +1041,26 @@ def plotResults():
     # Plot only one bar
     # newPlot({"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ADTOF_ALLMIDI)}, "Test on ADTOF", legend=True)
     # newPlot(
-    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI, add="*")}, "Test on RBMA", legend=False,
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_RBMA_ALLMIDI)}, "Test on RBMA", legend=False,
     # )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     # newPlot(
-    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI, add="*")}, "Test on MDB", legend=False,
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_MDB_ALLMIDI)}, "Test on MDB", legend=False,
     # )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
     # newPlot(
-    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI, add="*")}, "Test on ENST", legend=False,
+    #     {"Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ENST_ALLMIDI)}, "Test on ENST", legend=False,
     # )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
     # plt.show()
 
-    newPlot(
-        {"Train on ADTOF CC0": map(MZ_CC0_CC0), "Ensemble": map(VOGL_ENSEMBLE_CC0),}, "Test on ADTOF CC0", legend=True,
-    )
+    # newPlot(
+    #     {"Train on ADTOF CC0": map(MZ_CC0_CC0), "Ensemble": map(VOGL_ENSEMBLE_CC0),}, "Test on ADTOF CC0", legend=True,
+    # )
     newPlot(
         {
             "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
             "Train on ADTOF CCLog70 fold 1": map(MZ_CCLog70_CCLog70_Fold1),
             "Train on all MZ": map(MZ_All_CCLog70),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="adtof_"),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="adtof_"),
             "Ensemble": map(VOGL_ENSEMBLE_CCLog70),
         },
         "Test on ADTOF CCLog70",
@@ -1058,42 +1068,48 @@ def plotResults():
     )
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_RBMA, add="*"),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA, add="*"),
-            # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA, add="*"),
-            # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA, add="*"),
-            "Train on all MZ": map(MZ_ALL_RBMA, add="*"),
-            "Train on all Vogl": map(VOGL_ALL_RBMA, add="*"),
-            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA, add="*"),
-            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_RBMA),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA),
+            "Train on all MZ": map(MZ_ALL_RBMA),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="rbma_"),
+            "Train on all Vogl": map(VOGL_ALL_RBMA),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="rbma_"),
+            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA),
         },
         "Test on RBMA",
         legend=True,
     )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_MDB, add="*"),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB, add="*"),
-            # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB, add="*"),
-            # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB, add="*"),
-            "Train on all MZ": map(MZ_ALL_MDB, add="*"),
-            "Train on all Vogl": map(VOGL_ALL_MDB, add="*"),
-            "Train on pt pt MIDI Vogl": map(VOGL_PTMIDI_MDB, add="*"),
-            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_MDB),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB),
+            "Train on all MZ": map(MZ_ALL_MDB),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="mdb_"),
+            "Train on all Vogl": map(VOGL_ALL_MDB),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="mdb_"),
+            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB),
         },
         "Test on MDB",
         legend=False,
     )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_ENSTWET, add="*"),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET, add="*"),
-            # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET, add="*"),
-            # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET, add="*"),
-            "Train on all MZ": map(MZ_ALL_ENSTWET, add="*"),
-            "Train on all Vogl": map(VOGL_ALL_ENSTWET, add="*"),
-            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET, add="*"),
-            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET, add="*"),
+            "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
+            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
+            "Train on all MZ": map(MZ_ALL_ENSTWET),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="enst_wet_"),
+            "Train on all Vogl": map(VOGL_ALL_ENSTWET),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_wet_"),
+            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
         },
         "Test on ENST",
         legend=False,

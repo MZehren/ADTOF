@@ -24,7 +24,32 @@ class Model(object):
         Yield models with different hyperparameters to be trained
         """
         models = {
-            "crnn-all": {
+            # "crnn-all": {
+            #     "labels": config.LABELS_5,
+            #     "classWeights": config.WEIGHTS_5 / 10,
+            #     "emptyWeight": 1,
+            #     "sampleRate": 100,
+            #     "diff": True,
+            #     "samplePerTrack": 1,
+            #     "trainingSequence": 400,
+            #     "batchSize": 8,
+            #     "context": 9,
+            #     "labelOffset": 1,
+            #     "labelRadiation": 1,
+            #     "learningRate": 0.001,
+            #     "normalize": False,
+            #     "model": "CRNN",
+            #     "fmin": 20,
+            #     "fmax": 20000,
+            #     "pad": False,
+            #     "beat_targ": False,
+            #     "validation_epoch": 10,
+            #     "training_epoch": 10,
+            #     "peakThreshold": 0.15,
+            #     "reduce_patience": 10,
+            #     "stopping_patience": 25,
+            # },
+            "crnn-ptTMIDT": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -45,7 +70,6 @@ class Model(object):
                 "beat_targ": False,
                 "validation_epoch": 10,
                 "training_epoch": 10,
-                "peakThreshold": 0.15,
                 "reduce_patience": 10,
                 "stopping_patience": 25,
             },
