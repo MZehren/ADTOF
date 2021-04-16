@@ -27,7 +27,7 @@ class DataLoader(object):
             os.path.join(folderPath, "adtofParsedCC/" + config.ALIGNED_DRUM),
             os.path.join(folderPath, "adtofParsedCC/" + config.MANUAL_SUBSTRACTION),
             os.path.join(folderPath, "adtofParsedCC/" + config.PROCESSED_AUDIO),
-            testFold=testFold,
+            testFold=0,  # because this set is larger, the test set is always the same
             validationFold=0,  # Validation set is not 15% of training, but a separated split without leaked bands
             lazyLoading=True,
             **kwargs,
@@ -39,7 +39,7 @@ class DataLoader(object):
             os.path.join(folderPath, "rbma_13/preprocess"),
             folds=config.RBMA_SPLITS,
             mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
-            sep="\t",  # TODO sep doesn't work with lazyLoading because it is not added to kwargs
+            sep="\t",  # TODO sep doesn't work with lazyLoading because "sep" arg is not added to kwargs
             validationFold=validationRatio,
             testFold=testFold,
             lazyLoading=False,
