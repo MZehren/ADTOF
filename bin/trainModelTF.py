@@ -88,7 +88,8 @@ def train_test_model(hparams, args, fold, model: Model):
         # model.vizPredictions(dataset_train, **hparams)
 
         results = {}
-        # if "peakThreshold" not in hparams:  # Predict "peakThreshold" on validation data
+        if "peakThreshold" in hparams:  # Predict "peakThreshold" on validation data
+            del hparams["peakThreshold"]
         scoreVal = model.evaluate(valFullGen(), **hparams)
         logging.info("Best PeakThreshold is " + str(scoreVal["peakThreshold"]))
         hparams["peakThreshold"] = scoreVal["peakThreshold"]
@@ -102,6 +103,8 @@ def train_test_model(hparams, args, fold, model: Model):
                 results[dataset + "_" + k] = v
 
         logging.info(str(results))
+
+    # return results
 
 
 if __name__ == "__main__":
