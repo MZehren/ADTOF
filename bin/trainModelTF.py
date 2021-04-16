@@ -44,7 +44,7 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
     args = parser.parse_args()
 
-    for fold in [1, 2]:
+    for fold in [0, 1, 2]:
         for model, hparams in Model.modelFactory(fold=fold):
             score = train_test_model(hparams, args, fold, model)
 
@@ -73,7 +73,7 @@ def train_test_model(hparams, args, fold, model: Model):
         args.folderPath, testFold=fold, **hparams
     )
 
-    if True:  # not model.weightLoadedFlag:  # if model is not trained, do the fitting
+    if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each track
         steps_per_epoch = trainTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["training_epoch"]
