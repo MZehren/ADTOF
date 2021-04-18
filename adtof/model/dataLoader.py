@@ -108,7 +108,7 @@ class DataLoader(object):
         fullGenParams = {k: v for k, v in kwargs.items()}
         fullGenParams["repeat"] = False
         fullGenParams["samplePerTrack"] = None
-        namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items()}
+        namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items() if name != "adtof"}
         namedTestGen["adtof"] = testFullGen
 
         # return all the datasets for training and evaluation

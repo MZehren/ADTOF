@@ -44,7 +44,7 @@ def main():
     parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
     args = parser.parse_args()
 
-    for fold in [0, 1, 2]:
+    for fold in [0]:
         for model, hparams in Model.modelFactory(fold=fold):
             score = train_test_model(hparams, args, fold, model)
 
@@ -69,7 +69,7 @@ def train_test_model(hparams, args, fold, model: Model):
     #     args.folderPath, testFold=fold, **hparams
     # )
 
-    (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryPublicDatasets(
+    (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryADTOF(
         args.folderPath, testFold=fold, **hparams
     )
 
