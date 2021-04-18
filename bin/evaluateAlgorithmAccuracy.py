@@ -804,11 +804,11 @@ def plotResults():
         "sum F 49": np.mean([0.016997, 0.063872, 0.14724]),
         "sum F all": np.mean([0.51217, 0.43499, 0.50053]),
     }
-    with open("crnn-all") as f:
+    with open("crnn-all.json") as f:
         crnnAllJSON = json.load(f)
     crnnAll = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
 
-    with open("crnn-ptTMIDT") as f:
+    with open("crnn-ptTMIDT.json") as f:
         crnnPtJSON = json.load(f)
     crnnPt = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
 
