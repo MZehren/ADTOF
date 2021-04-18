@@ -23,10 +23,10 @@ class DataLoader(object):
         Build a dataset for all the known datasets
         """
         adtof = cls(
-            os.path.join(folderPath, "adtofParsedCC/" + config.AUDIO),
-            os.path.join(folderPath, "adtofParsedCC/" + config.ALIGNED_DRUM),
-            os.path.join(folderPath, "adtofParsedCC/" + config.MANUAL_SUBSTRACTION),
-            os.path.join(folderPath, "adtofParsedCC/" + config.PROCESSED_AUDIO),
+            os.path.join(folderPath, "adtofParsedRB/" + config.AUDIO),
+            os.path.join(folderPath, "adtofParsedRB/" + config.ALIGNED_DRUM),
+            os.path.join(folderPath, "adtofParsedRB/" + config.MANUAL_SUBSTRACTION),
+            os.path.join(folderPath, "adtofParsedRB/" + config.PROCESSED_AUDIO),
             testFold=0,  # because this set is larger, the test set is always the same
             validationFold=0,  # Validation set is not 15% of training, but a separated split without leaked bands
             lazyLoading=True,

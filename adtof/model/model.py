@@ -97,7 +97,7 @@ class Model(object):
             #     "reduce_patience": 5,
             #     "stopping_patience": 10,
             # },
-            "crnn-ADTOFCC-last": {
+            "crnn-ADTOFRB-last": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
