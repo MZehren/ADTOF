@@ -97,7 +97,7 @@ class Model(object):
             #     "reduce_patience": 5,
             #     "stopping_patience": 10,
             # },
-            "crnn-ADTOFRB-last": {
+            "crnn-ADTOFCC-lastest": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -118,8 +118,8 @@ class Model(object):
                 "beat_targ": False,
                 "validation_epoch": 1,
                 "training_epoch": 1,
-                "reduce_patience": 5,
-                "stopping_patience": 15,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
             },
         }
 

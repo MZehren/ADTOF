@@ -812,6 +812,14 @@ def plotResults():
         crnnPtJSON = json.load(f)
     crnnPt = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
 
+    with open("crnn-ADTOFCC.json") as f:
+        crnnADTOFCCJSON = json.load(f)
+    crnnADTOFCC = {key: np.mean([values[key] for values in crnnADTOFCCJSON.values()]) for key in crnnADTOFCCJSON["crnn-CC_Fold0"].keys()}
+
+    with open("crnn-ADTOFRB.json") as f:
+        crnnADTOFRBJSON = json.load(f)
+    crnnADTOFRB = {key: np.mean([values[key] for values in crnnADTOFRBJSON.values()]) for key in crnnADTOFRBJSON["crnn-RB_Fold0"].keys()}
+
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
     # correlation found is:
@@ -1056,9 +1064,9 @@ def plotResults():
     # )
     newPlot(
         {
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
-            "Train on ADTOF CCLog70 fold 1": map(MZ_CCLog70_CCLog70_Fold1),
-            "Train on all MZ": map(MZ_All_CCLog70),
+            # "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
+            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="adtof_"),
+            # "Train on all MZ": map(MZ_All_CCLog70),
             "Train on all MZ good save": map(crnnAll, keyPrefix="adtof_"),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="adtof_"),
             "Ensemble": map(VOGL_ENSEMBLE_CCLog70),
@@ -1068,31 +1076,35 @@ def plotResults():
     )
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_RBMA),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA),
+            # "Train on ADTOF CC0": map(MZ_CC0_RBMA),
+            # "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA),
+            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="rbma_"),
+            # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="rbma_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA),
-            "Train on all MZ": map(MZ_ALL_RBMA),
+            # "Train on all MZ": map(MZ_ALL_RBMA),
             "Train on all MZ good save": map(crnnAll, keyPrefix="rbma_"),
-            "Train on all Vogl": map(VOGL_ALL_RBMA),
+            # "Train on all Vogl": map(VOGL_ALL_RBMA),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="rbma_"),
-            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
+            # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA),
         },
         "Test on RBMA",
-        legend=True,
+        legend=False,
     )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_MDB),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB),
+            # "Train on ADTOF CC0": map(MZ_CC0_MDB),
+            # "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB),
+            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="mdb_"),
+            # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="mdb_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB),
-            "Train on all MZ": map(MZ_ALL_MDB),
+            # "Train on all MZ": map(MZ_ALL_MDB),
             "Train on all MZ good save": map(crnnAll, keyPrefix="mdb_"),
-            "Train on all Vogl": map(VOGL_ALL_MDB),
+            # "Train on all Vogl": map(VOGL_ALL_MDB),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="mdb_"),
-            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
+            # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB),
         },
         "Test on MDB",
@@ -1100,15 +1112,17 @@ def plotResults():
     )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
     newPlot(
         {
-            "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
-            "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+            # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
+            # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_wet_"),
+            # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
-            "Train on all MZ": map(MZ_ALL_ENSTWET),
+            # "Train on all MZ": map(MZ_ALL_ENSTWET),
             "Train on all MZ good save": map(crnnAll, keyPrefix="enst_wet_"),
-            "Train on all Vogl": map(VOGL_ALL_ENSTWET),
+            # "Train on all Vogl": map(VOGL_ALL_ENSTWET),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_wet_"),
-            "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
+            # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
         },
         "Test on ENST",

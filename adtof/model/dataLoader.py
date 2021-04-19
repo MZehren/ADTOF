@@ -18,16 +18,16 @@ from numpy.core.numeric import ones
 
 class DataLoader(object):
     @classmethod
-    def factoryAll(cls, folderPath, testFold=0, validationRatio=0.15, **kwargs):
+    def getAllDatasets(cls, folderPath, testFold=0, validationRatio=0.15, **kwargs):
         """
         Build a dataset for all the known datasets
         """
         adtof = cls(
-            os.path.join(folderPath, "adtofParsedRB/" + config.AUDIO),
-            os.path.join(folderPath, "adtofParsedRB/" + config.ALIGNED_DRUM),
-            os.path.join(folderPath, "adtofParsedRB/" + config.MANUAL_SUBSTRACTION),
-            os.path.join(folderPath, "adtofParsedRB/" + config.PROCESSED_AUDIO),
-            testFold=0,  # because this set is larger, the test set is always the same
+            os.path.join(folderPath, "adtofParsedCC/" + config.AUDIO),
+            os.path.join(folderPath, "adtofParsedCC/" + config.ALIGNED_DRUM),
+            os.path.join(folderPath, "adtofParsedCC/" + config.MANUAL_SUBSTRACTION),
+            os.path.join(folderPath, "adtofParsedCC/" + config.PROCESSED_AUDIO),
+            testFold=testFold,
             validationFold=0,  # Validation set is not 15% of training, but a separated split without leaked bands
             lazyLoading=True,
             **kwargs,
@@ -88,38 +88,38 @@ class DataLoader(object):
 
         return {"adtof": adtof, "rbma": rbma, "enst_wet": enst_wet, "enst_sum": enst_sum, "mdb": mdb}
 
-    @classmethod
-    def factoryADTOF(cls, folderPath: str, testFold=0, validationFold=0, **kwargs):
-        """instantiate a DataLoader following ADTOF folder hierarchy
+    # @classmethod
+    # def factoryADTOF(cls, folderPath: str, testFold=0, validationFold=0, **kwargs):
+    #     """instantiate a DataLoader following ADTOF folder hierarchy
 
-        Parameters
-        ----------
-        folderPath : path to the root folder of the ADTOF dataset
-        """
-        # Get the data
-        datasets = cls.factoryAll(folderPath, testFold, **kwargs)
+    #     Parameters
+    #     ----------
+    #     folderPath : path to the root folder of the ADTOF dataset
+    #     """
+    #     # Get the data
+    #     datasets = cls.factoryAll(folderPath, testFold, **kwargs)
 
-        # Build tf datasets and generators
-        trainGen, valGen, valFullGen, testFullGen = datasets["adtof"].getTrainValTestGens(**kwargs)
-        train_dataset = cls._getDataset(trainGen, **kwargs)
-        val_dataset = cls._getDataset(valGen, **kwargs)
+    #     # Build tf datasets and generators
+    #     trainGen, valGen, valFullGen, testFullGen = datasets["adtof"].getTrainValTestGens(**kwargs)
+    #     train_dataset = cls._getDataset(trainGen, **kwargs)
+    #     val_dataset = cls._getDataset(valGen, **kwargs)
 
-        # Hacky technique to evaluate on the public datasets
-        fullGenParams = {k: v for k, v in kwargs.items()}
-        fullGenParams["repeat"] = False
-        fullGenParams["samplePerTrack"] = None
-        namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items() if name != "adtof"}
-        namedTestGen["adtof"] = testFullGen
+    #     # Hacky technique to evaluate on the public datasets
+    #     fullGenParams = {k: v for k, v in kwargs.items()}
+    #     fullGenParams["repeat"] = False
+    #     fullGenParams["samplePerTrack"] = None
+    #     namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items() if name != "adtof"}
+    #     namedTestGen["adtof"] = testFullGen
 
-        # return all the datasets for training and evaluation
-        return (
-            train_dataset,
-            val_dataset,
-            valFullGen,
-            len(datasets["adtof"].trainIndexes),
-            len(datasets["adtof"].valIndexes),
-            namedTestGen,
-        )
+    #     # return all the datasets for training and evaluation
+    #     return (
+    #         train_dataset,
+    #         val_dataset,
+    #         valFullGen,
+    #         len(datasets["adtof"].trainIndexes),
+    #         len(datasets["adtof"].valIndexes),
+    #         namedTestGen,
+    #     )
 
     @classmethod
     def factoryTMIDT(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
@@ -154,30 +154,34 @@ class DataLoader(object):
         return train_dataset, val_dataset, valFullGen, testFullGen, len(tmidt.trainIndexes), len(tmidt.valIndexes), {"tmidt": testFullGen}
 
     @classmethod
-    def factoryPublicDatasets(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
+    def factoryAllDatasets(cls, folderPath: str, testFold=0, trainPublic=False, **kwargs):
         """instantiate a DataLoader following RBMA, ENST, and MDB folder hierarchies
 
         Parameters
         ----------
         folderPath : path to the root folder containing the public datasets
         """
-        # Load the data
-        datasets = cls.factoryAll(folderPath, testFold, **kwargs)
-        # Split the data in train, test and val sets
-        datasetsGenerators = [
-            set.getTrainValTestGens(**kwargs) for set in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])
-        ]
+        # Load the different datasets
+        datasets = cls.getAllDatasets(folderPath, testFold, **kwargs)
 
-        # Build generators to access samples from each dataset one at a time
-        # trainGen, valGen, valFullGen, testFullGen = [
-        #     cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in range(len(datasetsGenerators[0]))
-        # ]
-        trainGen, valGen = [
-            cls._mixingGen([generators[i] for generators in datasetsGenerators], pickProbability=[1.72, 0.35, 0.51, 0.51]) for i in [0, 1]
-        ]
-        valFullGen, testFullGen = [cls._roundRobinGen([generators[i] for generators in datasetsGenerators]) for i in [2, 3]]
+        # Split the data in train, test and val sets with generators
+        datasetsGenerators = {setName: set.getTrainValTestGens(**kwargs) for setName, set in datasets.items()}
+        if trainPublic:  # The public training data is generated by mixing the corresponding folds together
+            # The pick probability is equal to the length of the dataset to reproduce merging them equally
+            # (ENST appears twice, so we reduce the probability by half)
+            trainGen, valGen = [
+                cls._mixingGen(
+                    [datasetsGenerators[name][i] for name in ["rbma", "mdb", "enst_sum", "enst_wet"]],
+                    pickProbability=[1.72, 0.35, 0.51, 0.51,],
+                )
+                for i in [0, 1]
+            ]
+            # Also create a validation generator giving full tracks to compute the peak picking parameters
+            valFullGen = cls._roundRobinGen([datasetsGenerators[name][2] for name in ["rbma", "mdb", "enst_sum", "enst_wet"]])
+        else:  # For ADTOF there is no mixing
+            trainGen, valGen, valFullGen, _ = datasetsGenerators["adtof"]
 
-        # Create dataset from the generators for compatibility with tf.model.fit
+        # Create a dataset from the generators for compatibility with tf.model.fit
         train_dataset = cls._getDataset(trainGen, **kwargs)
         val_dataset = cls._getDataset(valGen, **kwargs)
         # Count the number of tracks to set the epoch size
@@ -189,11 +193,11 @@ class DataLoader(object):
         )
         # build a dict of test data for evaluation
         testFullNamedGen = {
-            "rbma": datasetsGenerators[0][3],
-            "mdb": datasetsGenerators[1][3],
-            "enst_sum": datasetsGenerators[2][3],
-            "enst_wet": datasetsGenerators[3][3],
-            "adtof": datasets["adtof"].getTrainValTestGens(**kwargs)[3],
+            "rbma": datasetsGenerators["rbma"][3],
+            "mdb": datasetsGenerators["mdb"][3],
+            "enst_sum": datasetsGenerators["enst_sum"][3],
+            "enst_wet": datasetsGenerators["enst_wet"][3],
+            "adtof": datasetsGenerators["adtof"][3],
         }
         return (train_dataset, val_dataset, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen)
 

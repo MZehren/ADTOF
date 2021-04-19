@@ -65,12 +65,8 @@ def train_test_model(hparams, args, fold, model: Model):
     Compute the score on the test data 
     """
     # Get the data
-    # (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen) = DataLoader.factoryADTOF(
-    #     args.folderPath, testFold=fold, **hparams
-    # )
-
-    (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryADTOF(
-        args.folderPath, testFold=fold, **hparams
+    (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryAllDatasets(
+        args.folderPath, testFold=fold, trainPublic=False, **hparams
     )
 
     if not model.weightLoadedFlag:  # if model is not trained, do the fitting
