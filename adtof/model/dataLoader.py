@@ -178,19 +178,20 @@ class DataLoader(object):
             ]
             # Also create a validation generator giving full tracks to compute the peak picking parameters
             valFullGen = cls._roundRobinGen([datasetsGenerators[name][2] for name in ["rbma", "mdb", "enst_sum", "enst_wet"]])
+
+            # Count the number of tracks to set the epoch size
+            trainTracksCount = np.sum([len(datasets[name].trainIndexes) for name in ["rbma", "mdb", "enst_sum", "enst_wet"]])
+            valTracksCount = np.sum([len(datasets[name].valIndexes) for name in ["rbma", "mdb", "enst_sum", "enst_wet"]])
+
         else:  # For ADTOF there is no mixing
             trainGen, valGen, valFullGen, _ = datasetsGenerators["adtof"]
+            trainTracksCount = (len(datasets["adtof"].trainIndexes),)
+            valTracksCount = (len(datasets["adtof"].valIndexes),)
 
         # Create a dataset from the generators for compatibility with tf.model.fit
         train_dataset = cls._getDataset(trainGen, **kwargs)
         val_dataset = cls._getDataset(valGen, **kwargs)
-        # Count the number of tracks to set the epoch size
-        trainTracksCount = np.sum(
-            [len(dataLoader.trainIndexes) for dataLoader in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])]
-        )
-        valTracksCount = np.sum(
-            [len(dataLoader.valIndexes) for dataLoader in (datasets["rbma"], datasets["mdb"], datasets["enst_sum"], datasets["enst_wet"])]
-        )
+
         # build a dict of test data for evaluation
         testFullNamedGen = {
             "rbma": datasetsGenerators["rbma"][3],
