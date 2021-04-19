@@ -108,32 +108,29 @@ def plot(result, prefix="mean", bars=["F", "P", "R"], groups=["all", "35", "38",
 
 def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure", text=True):
     """
-    dictionary:
-        {
-            RBMA:{  # plot
-                MZ:{  # group
-                    All: value  # bar 
-                    KD: value
-                    ...
-                }
-                Vogl:{
-                    All: value
-                    KD: value
-                    ...
-                }
-            }
-            ENST:{ ... }
-        }
+    TODO
     """
     import pandas as pd
 
     df = pd.DataFrame(dict)
     if sort:
         df = df.sort_values("", ascending=False)
-    ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(10, 2))
+
+    cm = 1 / 2.54  # centimeters in inches
+    fullpageWidth = 17.2 * cm
+    oneColumn = fullpageWidth / 2
+    height = fullpageWidth / 5
+    ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(9, 9 / 5))
 
     # for i, patch in enumerate(ax.patches):
     #     patch.set_alpha(0.25 if i < 6 else 1)
+
+    # Set correct size for the font
+    # plt.rc("font", family="serif")
+    # plt.rc("ytick", labelsize="x-small")
+
+    if legend:
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
 
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
@@ -145,9 +142,19 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure",
 
     if text:
         for p in ax.patches:
-            ax.text(p._x0 + 0.01, p._y1 + 0.03, "%.2f" % round(p._y1, 2), rotation="vertical")
+            sizeLimit = 0.75
+            ax.text(
+                p._x0 + p._width / 2 + 0.0096,
+                p._y1 + 0.03 if p._y1 < sizeLimit else p._y1 - 0.03,
+                "%.2f" % round(p._y1, 2),
+                rotation="vertical",
+                horizontalalignment="center",
+                verticalalignment="bottom" if p._y1 < sizeLimit else "top",
+            )
 
-    plt.savefig(title + ".pdf", dpi=600)
+    plt.savefig(title + ".pdf", dpi=600, bbox_inches="tight")
+    # plt.savefig(title + ".png", dpi=600, bbox_inches="tight")
+    # plt.show()
 
 
 def plotResults():
@@ -1065,13 +1072,13 @@ def plotResults():
     newPlot(
         {
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
-            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="adtof_"),
+            "Train on ADTOF": map(crnnADTOFCC, keyPrefix="adtof_"),
             # "Train on all MZ": map(MZ_All_CCLog70),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="adtof_"),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="adtof_"),
-            "Ensemble": map(VOGL_ENSEMBLE_CCLog70),
+            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefix="adtof_"),
+            "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefix="adtof_"),
+            "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
         },
-        "Test on ADTOF CCLog70",
+        "Test on ADTOF",
         legend=True,
     )
     newPlot(
