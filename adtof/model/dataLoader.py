@@ -185,8 +185,8 @@ class DataLoader(object):
 
         else:  # For ADTOF there is no mixing
             trainGen, valGen, valFullGen, _ = datasetsGenerators["adtof"]
-            trainTracksCount = (len(datasets["adtof"].trainIndexes),)
-            valTracksCount = (len(datasets["adtof"].valIndexes),)
+            trainTracksCount = len(datasets["adtof"].trainIndexes)
+            valTracksCount = len(datasets["adtof"].valIndexes)
 
         # Create a dataset from the generators for compatibility with tf.model.fit
         train_dataset = cls._getDataset(trainGen, **kwargs)
