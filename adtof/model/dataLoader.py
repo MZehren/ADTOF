@@ -28,7 +28,7 @@ class DataLoader(object):
             os.path.join(folderPath, "adtofParsedCC/" + config.MANUAL_SUBSTRACTION),
             os.path.join(folderPath, "adtofParsedCC/" + config.PROCESSED_AUDIO),
             testFold=testFold,
-            validationFold=0,  # Validation set is not 15% of training, but a separated split without leaked bands
+            validationFold=testFold + 1,  # Validation set is not 15% of training, but a separated split without leaked bands
             lazyLoading=True,
             **kwargs,
         )
