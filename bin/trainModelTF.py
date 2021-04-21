@@ -42,20 +42,21 @@ def main():
     """
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
+    parser.add_argument("model", type=str, help="name of the nodel to train", default="crnn-ADTOF")
     args = parser.parse_args()
 
     for fold in [0, 1, 2]:
-        for model, hparams in Model.modelFactory(fold=fold):
-            score = train_test_model(hparams, args, fold, model)
+        model, hparams = Model.modelFactory(modelName="crnn-ADTOF", fold=fold)
+        score = train_test_model(hparams, args, fold, model)
 
-            if score is not None:
-                with tf.summary.create_file_writer(hparamsLogs + model.name).as_default():
-                    hp.hparams(
-                        {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()},
-                        trial_id=model.name,
-                    )
-                    for key, value in score.items():
-                        tf.summary.scalar(key, value, step=fold)
+        if score is not None:
+            with tf.summary.create_file_writer(hparamsLogs + model.name).as_default():
+                hp.hparams(
+                    {k: v if isinstance(v, (bool, float, int, six.string_types)) else str(v) for k, v in hparams.items()},
+                    trial_id=model.name,
+                )
+                for key, value in score.items():
+                    tf.summary.scalar(key, value, step=fold)
 
 
 def train_test_model(hparams, args, fold, model: Model):

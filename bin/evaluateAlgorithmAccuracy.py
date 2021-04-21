@@ -120,7 +120,8 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure",
     fullpageWidth = 17.2 * cm
     oneColumn = fullpageWidth / 2
     height = fullpageWidth / 5
-    ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(9, 9 / 5))
+    width = fullpageWidth
+    ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(width, width / 5))
 
     # for i, patch in enumerate(ax.patches):
     #     patch.set_alpha(0.25 if i < 6 else 1)
@@ -130,26 +131,28 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure",
     # plt.rc("ytick", labelsize="x-small")
 
     if legend:
-        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=1)
 
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
     if ylim:
         plt.ylim(0, 1)
     plt.ylabel(ylabel)
+    plt.yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
     plt.xticks(rotation=0)
     plt.title(title)
 
     if text:
         for p in ax.patches:
-            sizeLimit = 0.75
+            sizeLimit = 0.25
             ax.text(
-                p._x0 + p._width / 2 + 0.0096,
-                p._y1 + 0.03 if p._y1 < sizeLimit else p._y1 - 0.03,
-                "%.2f" % round(p._y1, 2),
+                p.get_x() + p.get_width() / 2,
+                p.get_height() + 0.03 if p.get_height() < sizeLimit else p.get_height() - 0.03,
+                "%.2f" % round(p.get_height(), 2),
                 rotation="vertical",
                 horizontalalignment="center",
-                verticalalignment="bottom" if p._y1 < sizeLimit else "top",
+                verticalalignment="bottom" if p.get_height() < sizeLimit else "top",
+                color="black" if p.get_height() < sizeLimit else "w",
             )
 
     plt.savefig(title + ".pdf", dpi=600, bbox_inches="tight")
@@ -823,9 +826,6 @@ def plotResults():
         crnnADTOFCCJSON = json.load(f)
     crnnADTOFCC = {key: np.mean([values[key] for values in crnnADTOFCCJSON.values()]) for key in crnnADTOFCCJSON["crnn-CC_Fold0"].keys()}
 
-    with open("crnn-ADTOFRB.json") as f:
-        crnnADTOFRBJSON = json.load(f)
-    crnnADTOFRB = {key: np.mean([values[key] for values in crnnADTOFRBJSON.values()]) for key in crnnADTOFRBJSON["crnn-RB_Fold0"].keys()}
 
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
@@ -1072,6 +1072,7 @@ def plotResults():
     newPlot(
         {
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
+            "Train on ADTOF3": map(crnnADTOFCC3, keyPrefix="adtof_"),
             "Train on ADTOF": map(crnnADTOFCC, keyPrefix="adtof_"),
             # "Train on all MZ": map(MZ_All_CCLog70),
             "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefix="adtof_"),
@@ -1085,6 +1086,7 @@ def plotResults():
         {
             # "Train on ADTOF CC0": map(MZ_CC0_RBMA),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA),
+            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="rbma_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="rbma_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="rbma_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA),
@@ -1098,11 +1100,12 @@ def plotResults():
         },
         "Test on RBMA",
         legend=False,
-    )  # "pt MIDI": map(VOGL_RBMA_PTMIDI)
+    )
     newPlot(
         {
             # "Train on ADTOF CC0": map(MZ_CC0_MDB),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB),
+            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="mdb_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="mdb_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="mdb_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB),
@@ -1116,11 +1119,12 @@ def plotResults():
         },
         "Test on MDB",
         legend=False,
-    )  # , "pt MIDI": map(VOGL_MDB_PTMIDI)
+    )
     newPlot(
         {
             # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="enst_wet_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_wet_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
@@ -1132,9 +1136,28 @@ def plotResults():
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
         },
-        "Test on ENST",
+        "Test on ENST wet",
         legend=False,
-    )  # , "pt MIDI": map(VOGL_ENST_PTMIDI)
+    )
+    newPlot(
+        {
+            # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
+            # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="enst_sum_"),
+            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_sum_"),
+            # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
+            # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
+            # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
+            # "Train on all MZ": map(MZ_ALL_ENSTWET),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="enst_sum_"),
+            # "Train on all Vogl": map(VOGL_ALL_ENSTWET),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_sum_"),
+            # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
+            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
+        },
+        "Test on ENST sum",
+        legend=False,
+    ) 
     plt.show()
 
 

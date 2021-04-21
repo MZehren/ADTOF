@@ -19,85 +19,12 @@ from adtof.model.dataLoader import DataLoader
 
 class Model(object):
     @staticmethod
-    def modelFactory(fold=0):
+    def modelFactory(modelName="crnn-ADTOF", fold=0):
         """
-        Yield models with different hyperparameters to be trained
+        Instantiate and return a model with its hyperparameters.
         """
         models = {
-            # "crnn-all": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "emptyWeight": 1,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 10,
-            #     "training_epoch": 10,
-            #     "peakThreshold": 0.15,
-            #     "reduce_patience": 10,
-            #     "stopping_patience": 25,
-            # },
-            # "crnn-ptTMIDT": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "emptyWeight": 1,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 10,
-            #     "training_epoch": 10,
-            #     "reduce_patience": 10,
-            #     "stopping_patience": 25,
-            # },
-            # "crnn-TMIDT": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "emptyWeight": 1,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 0.5,
-            #     "training_epoch": 0.5,
-            #     "reduce_patience": 5,
-            #     "stopping_patience": 10,
-            # },
-            "crnn-ADTOFCC-moreVal": {
+            "crnn-all": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -111,21 +38,92 @@ class Model(object):
                 "labelRadiation": 1,
                 "learningRate": 0.001,
                 "normalize": False,
-                "model": "CRNN",
+                "architecture": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
                 "pad": False,
                 "beat_targ": False,
                 "validation_epoch": 10,
+                "training_epoch": 10,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
+            },
+            "crnn-ptTMIDT": {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5 / 10,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
+                "normalize": False,
+                "architecture": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
+                "pad": False,
+                "beat_targ": False,
+                "validation_epoch": 10,
+                "training_epoch": 10,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
+            },
+            "crnn-TMIDT": {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5 / 10,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
+                "normalize": False,
+                "architecture": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
+                "pad": False,
+                "beat_targ": False,
+                "validation_epoch": 0.5,
+                "training_epoch": 0.5,
+                "reduce_patience": 5,
+                "stopping_patience": 10,
+            },
+            "crnn-ADTOF": {
+                "labels": config.LABELS_5,
+                # "classWeights": config.WEIGHTS_5 / 10,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
+                "normalize": False,
+                "architecture": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
+                "pad": False,
+                "beat_targ": False,
+                "validation_epoch": 1,
                 "training_epoch": 1,
                 "reduce_patience": 10,
                 "stopping_patience": 25,
             },
         }
 
-        for modelName, hparams in models.items():
-            modelName += "_Fold" + str(fold)
-            yield (Model(modelName, **hparams), hparams)
+        hparams = models[modelName]
+        return (Model(modelName + "_Fold" + str(fold), **hparams), hparams)
 
     def __init__(self, name, **kwargs):
         """
@@ -376,7 +374,7 @@ class Model(object):
         return tfModel
 
     def _createModel(
-        self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, trainingSequence=100, **kwargs
+        self, architecture="CRNN", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, trainingSequence=100, **kwargs
     ):
         """Return a tf model based 
         
@@ -394,14 +392,14 @@ class Model(object):
         # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
         # Between each miniBatch the recurent units lose their state by default,
         # Prevent that if we feed the same track across multiple mini-batches
-        if model == "CNN":
+        if architecture == "CNN":
             tfModel = self._getCNN(context, n_bins, output)
-        elif model == "CRNN":
+        elif architecture == "CRNN":
             tfModel = self._getCRNN(context, n_bins, output, batchSize, trainingSequence)
-        elif model == "TCN":
+        elif architecture == "TCN":
             tfModel = self._getTCNSequential(context, n_bins, output)
         else:
-            raise ValueError("%s not known", model)
+            raise ValueError("%s not known", architecture)
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
