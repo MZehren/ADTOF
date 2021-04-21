@@ -588,7 +588,9 @@ class DataLoader(object):
 
                             # TODO Could be faster by caching the results since the weight or target is not changing.
                             sampleWeight = (
-                                np.maximum(np.sum(y * classWeights, axis=1), emptyWeight) if classWeights is not None else np.ones(1)
+                                np.maximum(np.sum(y * classWeights, axis=1), emptyWeight)
+                                if classWeights is not None
+                                else np.ones(yWindowSize)
                             )
                             # /yWindowSize
                             # sampleWeight = sum([act * classWeights[i] for i, act in enumerate(y) if act > 0])
