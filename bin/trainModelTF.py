@@ -46,7 +46,7 @@ def main():
     args = parser.parse_args()
 
     for fold in [0, 1, 2]:
-        model, hparams = Model.modelFactory(modelName="crnn-ADTOF", fold=fold)
+        model, hparams = Model.modelFactory(modelName=args.model, fold=fold)
         score = train_test_model(hparams, args, fold, model)
 
         if score is not None:
