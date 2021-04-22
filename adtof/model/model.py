@@ -96,9 +96,9 @@ class Model(object):
                 "reduce_patience": 5,
                 "stopping_patience": 10,
             },
-            "crnn-ADTOF": {
+            "crnn-ADTOF-lowLR": {
                 "labels": config.LABELS_5,
-                # "classWeights": config.WEIGHTS_5 / 10,
+                "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
                 "sampleRate": 100,
                 "diff": True,
@@ -108,7 +108,7 @@ class Model(object):
                 "context": 9,
                 "labelOffset": 1,
                 "labelRadiation": 1,
-                "learningRate": 0.001,
+                "learningRate": 0.0005,
                 "normalize": False,
                 "architecture": "CRNN",
                 "fmin": 20,

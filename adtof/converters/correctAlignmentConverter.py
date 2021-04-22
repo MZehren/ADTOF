@@ -183,7 +183,7 @@ class CorrectAlignmentConverter(Converter):
             x = [o["time"] for o in offset]
             y = [o["diff"] for o in offset]
             interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
-            # self.plot(offset, interp1d(x, y, kind="linear", fill_value="extrapolate"))
+            # self.plotCorrection(offset, interp1d(x, y, kind="linear", fill_value="extrapolate"))
         except Exception as e:
             raise ValueError("Interpolation of the annotation offset failed")
 
@@ -265,14 +265,16 @@ class CorrectAlignmentConverter(Converter):
         correction = [e for e in correction if e["time"] <= 10]
         interValues = np.arange(0, 10, 0.05)
 
-        plt.figure(figsize=(10, 4))
+        cm = 1 / 2.54  # centimeters in inches
+        width = 17.2 * cm
+        plt.figure(figsize=(width, width * 0.4))
         plt.plot([t["time"] for t in correction], [t["diff"] for t in correction], "+", zorder=5, label="Beats deviation")
         plt.plot(interValues, interp(interValues), "--", label="Interpolation")
         plt.legend()
         plt.ylabel("Deviation (s)")
         plt.xlabel("Position (s)")
-        plt.savefig("alignment.png", dpi=600)
-        # plt.show()
+        plt.savefig("alignment.pdf", dpi=600, bbox_inches="tight")
+        plt.show()
 
     def plotActivation(self, audioPath, beatAct):
         """

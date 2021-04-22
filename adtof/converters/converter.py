@@ -115,13 +115,15 @@ class Converter(object):
         # # Plot
         # values = [[k, len(v)] for k, v in genres.items()]
         # values.sort(key=lambda e: -e[1])
-        # plt.figure(figsize=(10, 4))
+        # cm = 1 / 2.54  # centimeters in inches
+        # width = 17.2 * cm
+        # plt.figure(figsize=(width, width * 0.4))
         # plt.bar(range(len(values)), [v[1] for v in values], edgecolor="black")
         # plt.grid(axis="y", linestyle="--")
         # plt.xticks(range(len(values)), [v[0] for v in values], rotation=90)
         # plt.ylabel("Count")
-        # plt.gcf().subplots_adjust(bottom=0.4)
-        # plt.savefig("Genre distribution.png", dpi=600)
+        # # plt.gcf().subplots_adjust(bottom=0.4)
+        # plt.savefig("Genre distribution.pdf", dpi=600, bbox_inches="tight")
         return results
 
     @staticmethod

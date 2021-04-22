@@ -144,7 +144,7 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure",
 
     if text:
         for p in ax.patches:
-            sizeLimit = 0.25
+            sizeLimit = 0.35
             ax.text(
                 p.get_x() + p.get_width() / 2,
                 p.get_height() + 0.03 if p.get_height() < sizeLimit else p.get_height() - 0.03,
@@ -826,7 +826,11 @@ def plotResults():
         crnnADTOFCCJSON = json.load(f)
     crnnADTOFCC = {key: np.mean([values[key] for values in crnnADTOFCCJSON.values()]) for key in crnnADTOFCCJSON["crnn-CC_Fold0"].keys()}
 
-
+    with open("crnn-ADTOFCC_noClassWeigts.json") as f:
+        crnnADTOFCCJSONNW = json.load(f)
+    crnnADTOFCCNW = {
+        key: np.mean([values[key] for values in crnnADTOFCCJSONNW.values()]) for key in crnnADTOFCCJSONNW["crnn-CC_Fold0"].keys()
+    }
     # VOGL
     # From the website: http://ifs.tuwien.ac.at/~vogl/dafx2018/
     # correlation found is:
@@ -1072,12 +1076,12 @@ def plotResults():
     newPlot(
         {
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_CCLog70_Fold0),
-            "Train on ADTOF3": map(crnnADTOFCC3, keyPrefix="adtof_"),
             "Train on ADTOF": map(crnnADTOFCC, keyPrefix="adtof_"),
+            "Train on ADTOF NW": map(crnnADTOFCCNW, keyPrefix="adtof_"),
             # "Train on all MZ": map(MZ_All_CCLog70),
             "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefix="adtof_"),
             "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefix="adtof_"),
-            "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
+            # "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
         },
         "Test on ADTOF",
         legend=True,
@@ -1086,8 +1090,8 @@ def plotResults():
         {
             # "Train on ADTOF CC0": map(MZ_CC0_RBMA),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_RBMA),
-            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="rbma_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="rbma_"),
+            "Train on ADTOF CCLog70 NW goodsave": map(crnnADTOFCCNW, keyPrefix="rbma_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="rbma_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA),
@@ -1105,8 +1109,8 @@ def plotResults():
         {
             # "Train on ADTOF CC0": map(MZ_CC0_MDB),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_MDB),
-            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="mdb_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="mdb_"),
+            "Train on ADTOF CCLog70 NW goodsave": map(crnnADTOFCCNW, keyPrefix="mdb_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="mdb_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB),
@@ -1120,31 +1124,30 @@ def plotResults():
         "Test on MDB",
         legend=False,
     )
+    # newPlot(
+    #     {
+    #         # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
+    #         # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
+    #         "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_wet_"),
+    #         # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
+    #         # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
+    #         # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
+    #         # "Train on all MZ": map(MZ_ALL_ENSTWET),
+    #         "Train on all MZ good save": map(crnnAll, keyPrefix="enst_wet_"),
+    #         # "Train on all Vogl": map(VOGL_ALL_ENSTWET),
+    #         "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_wet_"),
+    #         # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
+    #         # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
+    #     },
+    #     "Test on ENST wet",
+    #     legend=False,
+    # )
     newPlot(
         {
             # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
             # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
-            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="enst_wet_"),
-            "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_wet_"),
-            # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
-            # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
-            # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
-            # "Train on all MZ": map(MZ_ALL_ENSTWET),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="enst_wet_"),
-            # "Train on all Vogl": map(VOGL_ALL_ENSTWET),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_wet_"),
-            # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
-            # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
-        },
-        "Test on ENST wet",
-        legend=False,
-    )
-    newPlot(
-        {
-            # "Train on ADTOF CC0": map(MZ_CC0_ENSTWET),
-            # "Train on ADTOF CCLog70": map(MZ_CCLog70_ENSTWET),
-            "Train on ADTOF CCLog70 goodsave3": map(crnnADTOFCC3, keyPrefix="enst_sum_"),
             "Train on ADTOF CCLog70 goodsave": map(crnnADTOFCC, keyPrefix="enst_sum_"),
+            "Train on ADTOF CCLog70 NW goodsave": map(crnnADTOFCCNW, keyPrefix="enst_sum_"),
             # "Train on ADTOF RBLog70 goodsave": map(crnnADTOFRB, keyPrefix="enst_wet_"),
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
@@ -1155,9 +1158,9 @@ def plotResults():
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
         },
-        "Test on ENST sum",
+        "Test on ENST",
         legend=False,
-    ) 
+    )
     plt.show()
 
 
