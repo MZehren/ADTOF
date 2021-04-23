@@ -826,7 +826,7 @@ def plotResults():
         crnnADTOFCCJSON = json.load(f)
     crnnADTOFCC = {key: np.mean([values[key] for values in crnnADTOFCCJSON.values()]) for key in crnnADTOFCCJSON["crnn-CC_Fold0"].keys()}
 
-    with open("crnn-ADTOFCC_noClassWeigts.json") as f:
+    with open("crnn-ADTOFCC_lowLR.json") as f:
         crnnADTOFCCJSONNW = json.load(f)
     crnnADTOFCCNW = {
         key: np.mean([values[key] for values in crnnADTOFCCJSONNW.values()]) for key in crnnADTOFCCJSONNW["crnn-CC_Fold0"].keys()
