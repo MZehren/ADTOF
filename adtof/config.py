@@ -491,7 +491,7 @@ ENST_SPLITS = [
     ],
 ]
 
-MDB_SPLITS = [
+MDB_SPLITS_MIX = [
     [
         "MusicDelta_Punk_MIX",
         "MusicDelta_CoolJazz_MIX",
@@ -520,6 +520,38 @@ MDB_SPLITS = [
         "MusicDelta_SpeedMetal_MIX",
         "MusicDelta_Rock_MIX",
         "MusicDelta_Hendrix_MIX",
+    ],
+]
+
+MDB_SPLITS_DRUM_ONLY = [
+    [
+        "MusicDelta_Punk_Drum",
+        "MusicDelta_CoolJazz_Drum",
+        "MusicDelta_Disco_Drum",
+        "MusicDelta_SwingJazz_Drum",
+        "MusicDelta_Rockabilly_Drum",
+        "MusicDelta_Gospel_Drum",
+        "MusicDelta_BebopJazz_Drum",
+    ],
+    [
+        "MusicDelta_FunkJazz_Drum",
+        "MusicDelta_FreeJazz_Drum",
+        "MusicDelta_Reggae_Drum",
+        "MusicDelta_LatinJazz_Drum",
+        "MusicDelta_Britpop_Drum",
+        "MusicDelta_FusionJazz_Drum",
+        "MusicDelta_Shadows_Drum",
+        "MusicDelta_80sRock_Drum",
+    ],
+    [
+        "MusicDelta_Beatles_Drum",
+        "MusicDelta_Grunge_Drum",
+        "MusicDelta_Zeppelin_Drum",
+        "MusicDelta_ModalJazz_Drum",
+        "MusicDelta_Country1_Drum",
+        "MusicDelta_SpeedMetal_Drum",
+        "MusicDelta_Rock_Drum",
+        "MusicDelta_Hendrix_Drum",
     ],
 ]
 # Labels and class weights for the 5 output of the neural network
