@@ -120,7 +120,7 @@ def newPlot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure",
     fullpageWidth = 17.2 * cm
     oneColumn = fullpageWidth / 2
     height = fullpageWidth / 5
-    width = fullpageWidth
+    width = fullpageWidth * 3
     ax = df.plot.bar(edgecolor="black", legend=legend, figsize=(width, width / 5))
 
     # for i, patch in enumerate(ax.patches):
@@ -818,9 +818,17 @@ def plotResults():
         crnnAllJSON = json.load(f)
     crnnAll = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
 
+    with open("crnn-all_withoutMDBSolo.json") as f:
+        crnnAllJSON = json.load(f)
+    crnnAllOld = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
+
     with open("crnn-ptTMIDT.json") as f:
         crnnPtJSON = json.load(f)
     crnnPt = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
+
+    with open("crnn-ptTMIDT_withoutMDBSolo.json") as f:
+        crnnPtJSON = json.load(f)
+    crnnPtOld = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
 
     with open("crnn-ADTOFCC.json") as f:
         crnnADTOFCCJSON = json.load(f)
@@ -1079,7 +1087,9 @@ def plotResults():
             "Train on ADTOF": map(crnnADTOFCC, keyPrefix="adtof_"),
             "Train on ADTOF NW": map(crnnADTOFCCNW, keyPrefix="adtof_"),
             # "Train on all MZ": map(MZ_All_CCLog70),
+            "ALL OLD": map(crnnAllOld, keyPrefix="adtof_"),
             "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefix="adtof_"),
+            "pt old": map(crnnPtOld, keyPrefix="adtof_"),
             "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefix="adtof_"),
             # "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
         },
@@ -1096,8 +1106,10 @@ def plotResults():
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_RBMA),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_RBMA),
             # "Train on all MZ": map(MZ_ALL_RBMA),
+            "allOld": map(crnnAllOld, keyPrefix="rbma_"),
             "Train on all MZ good save": map(crnnAll, keyPrefix="rbma_"),
             # "Train on all Vogl": map(VOGL_ALL_RBMA),
+            "pt Old": map(crnnPtOld, keyPrefix="rbma_"),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="rbma_"),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA),
@@ -1115,9 +1127,11 @@ def plotResults():
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_MDB),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_MDB),
             # "Train on all MZ": map(MZ_ALL_MDB),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="mdb_"),
+            "allOld": map(crnnAllOld, keyPrefix="mdb_"),
+            "Train on all MZ good save": map(crnnAll, keyPrefix="mdb_full_mix_"),
             # "Train on all Vogl": map(VOGL_ALL_MDB),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="mdb_"),
+            "pt old": map(crnnPtOld, keyPrefix="mdb_"),
+            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="mdb_full_mix_"),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB),
         },
@@ -1152,8 +1166,10 @@ def plotResults():
             # "Train on ADTOF RBLog70": map(MZ_RBLog70_ENSTWET),
             # "Train on ADTOF YTLog70": map(MZ_YTLog70_ENSTWET),
             # "Train on all MZ": map(MZ_ALL_ENSTWET),
+            "old": map(crnnAllOld, keyPrefix="enst_sum_"),
             "Train on all MZ good save": map(crnnAll, keyPrefix="enst_sum_"),
             # "Train on all Vogl": map(VOGL_ALL_ENSTWET),
+            "pt old": map(crnnPtOld, keyPrefix="enst_sum_"),
             "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_sum_"),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_ENSTWET),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_ENSTWET),
