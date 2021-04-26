@@ -108,7 +108,7 @@ class Model(object):
                 "context": 9,
                 "labelOffset": 1,
                 "labelRadiation": 1,
-                "learningRate": 0.0001,
+                "learningRate": 0.0005,
                 "normalize": False,
                 "architecture": "CRNN",
                 "fmin": 20,
