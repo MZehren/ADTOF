@@ -9,6 +9,7 @@ from collections import defaultdict, Counter
 import jellyfish
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.lib.function_base import append
 import sklearn
 from random import shuffle
 
@@ -232,21 +233,6 @@ class Converter(object):
         """
         convert all tracks in the good format
         """
-        # debug
-        # from adtof.io.midiProxy import PrettyMidiWrapper
-        # from adtof.converters.phaseShiftConverter import PhaseShiftConverter
-        # basePath = outputFolder + "/" + config.RAW_MIDI + "/"
-        # psc = PhaseShiftConverter()
-        # listOfPath = list(os.listdir(basePath))
-        # shuffle(listOfPath)
-        # for file in listOfPath[:200]:
-        #     start_time = time.time()
-        #     psc.name = file
-        #     midi = PrettyMidiWrapper(basePath + file)
-        #     psc.cleanMidi(midi)
-        #     print("--- %s seconds ---" % (time.time() - start_time))
-        # return "test"
-
         # Get all possible convertible files
         candidates = Converter._getFileCandidates(inputFolder)
         # remove duplicated ones
@@ -256,13 +242,16 @@ class Converter(object):
         candidateName.sort(key=lambda x: x["path"])
         logging.info("number of tracks in the dataset after selection: " + str(len(candidates)))
 
+        # debug
+        Converter.debugCheckAlignmentScore(candidates, outputFolder)
+        print("stop")
         # Do the conversion
         results = []
         if parallelProcess:
             with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
                 futures = [
                     executor.submit(Converter.runConvertors, candidate, outputFolder, trackName)
-                    for trackName, candidate in list(candidates.items())
+                    for trackName, candidate in candidates.items()
                 ]
                 concurrent.futures.wait(futures)
                 results = [f._result for f in futures]
@@ -271,6 +260,60 @@ class Converter(object):
                 results.append(Converter.runConvertors(candidate, outputFolder, trackName))
         logging.info(str(Counter(results)))
         print(str(Counter(results)))
+
+    @staticmethod
+    def getConf(trackName, actThreshold, outputFolder):
+        from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
+        from adtof import config
+
+        beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
+        beatsActivationPath = os.path.join(outputFolder, config.BEATS_ACTIVATION, trackName + ".npy")
+        alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
+        alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
+        alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
+        convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
+        audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
+
+        ca = CorrectAlignmentConverter()
+        return ca.convert(
+            beatsEstimationsPath,
+            beatsActivationPath,
+            convertedMidiPath,
+            alignedDrumAnotationsPath,
+            alignedBeatsAnnotationsPath,
+            alignedMidiAnotationsPath,
+            audioPath=audioPath,
+            actThreshold=actThreshold,
+            debug=True,
+        )
+
+    @staticmethod
+    def debugCheckAlignmentScore(candidates, outputFolder):
+        """
+        check alignment fiability by... TODO
+        """
+
+        for actThreshold in [0.2]:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+                futures = [
+                    executor.submit(Converter.getConf, trackName, actThreshold, outputFolder) for trackName, _ in list(candidates.items())
+                ]
+                concurrent.futures.wait(futures)
+                results = [f._result for f in futures]
+            # results = []
+            # for trackName, _ in list(candidates.items())[55:]:
+            #     try:
+            #         result = Converter.getConf(trackName, actThreshold, outputFolder)
+            #         results.append(result)
+            #     except Exception as e:
+            #         print(e)
+
+            print("With min activation of", actThreshold)
+            print(results)
+            import seaborn as sns
+
+            sns.displot([0 if e is None else e for e in results])
+            plt.show()
 
     @staticmethod
     def runConvertors(candidate, outputFolder, trackName):
@@ -283,7 +326,7 @@ class Converter(object):
             mbc = MadmomBeatConverter()
             ca = CorrectAlignmentConverter()
             psc = PhaseShiftConverter()
-            # # Convert the chart into standard midi
+            # Convert the chart into standard midi
             inputChartPath = candidate["path"]
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")

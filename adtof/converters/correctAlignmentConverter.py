@@ -40,6 +40,8 @@ class CorrectAlignmentConverter(Converter):
         thresholdCorrectionWindow=0.05,
         smoothingCorrectionWindow=5,
         audioPath=None,
+        actThreshold=0.1,
+        debug=False,
     ):
         """
         # TODO: utiliser un jeu de données non aligné pour le test
@@ -94,9 +96,11 @@ class CorrectAlignmentConverter(Converter):
         correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes, thresholdCorrectionWindow)
 
         # Measure if the annotations are of good quality.
-        midiLimit = midi.get_end_time()
-        qualityAct = self.getAnnotationsQualityAct(correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate)
-        qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midiLimit], correctedBeatTimes, sampleRate, fftSize)
+        qualityAct = self.getAnnotationsQualityAct(correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, actThreshold=actThreshold)
+        # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate, fftSize)
+        if debug:
+            return qualityAct
+
         # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
         drumstimesSet = set(drumstimes)
         fishy_corrections = [c for c in correction if np.abs(c["diff"]) > 0.025 and c["time"] in drumstimesSet]
@@ -135,11 +139,9 @@ class CorrectAlignmentConverter(Converter):
         )
         newMidi.write(alignedMidiOutput)
 
-        return qualityAct
-
-    def getAnnotationsQualityAct(self, correctedBeats, correctedOnsets, act, sampleRate, threshold=0.1):
+    def getAnnotationsQualityAct(self, correctedBeats, correctedOnsets, act, sampleRate, actThreshold=0.1):
         """
-        Check the activation amplitude for each position of the annotated beats (after the correction).
+        Check the beat activation amplitude for each position of the annotated beats after the correction.
         This gives an indication of how many beats were effectively next to an audio cue and correctly aligned to it.
         
         Because some beats are in silent times were no audio cues are available, the activation can be low even if the beat is correctly annotated.
@@ -147,23 +149,26 @@ class CorrectAlignmentConverter(Converter):
 
         The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
         """
-        # Round the timings to milliseconds to correct float imprecisions possibly creating an empty intersection
+        # Round the timings to 4 decimals to correct float imprecisions possibly creating an empty intersection
         intersection = set(np.round(correctedBeats, decimals=4)).intersection(np.round(correctedOnsets, decimals=4))
         beatsAct = [act[int(np.round(t * sampleRate))] for t in intersection if int(np.round(t * sampleRate)) < len(act)]
 
         if len(beatsAct) == 0:
             raise ValueError("no score at the position of the midi beats. there is an issue with the computation of the beat")
 
-        return len([1 for ba in beatsAct if ba >= threshold]) / len(beatsAct)
+        confidence = len([1 for ba in beatsAct if ba >= actThreshold]) / len(beatsAct)
+        # if confidence < 0.9:
+        #     self.plotActivation([np.round(i, decimals=2) for i in intersection], act)
+        return confidence
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize):
         """
-        Estimate the quality of the annotations with their precision in relation to the algorithm estimations.
-        It uses a hit rate tolerance computed depending on the FFT size used for preprocessing the data later on
+        Estimate the quality of the annotations with their hit rate to the algorithm estimations.
+        It uses a hit rate window computed depending on the FFT size used for preprocessing the data later on
 
         Limitation: This method doesn't handle octave issues where the beats annotated are twice as fast as the beats estimated.
         When that's the case, the precision drops and the score decreases even though the activation function used to correct the beats migh work.
-        See "getAnntotationQualityAct"
+        See "getAnntotationQualityAct" for an improvement of the method
         """
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
         # toleranceWindow = 1 / (sampleRate * 2)
@@ -276,20 +281,26 @@ class CorrectAlignmentConverter(Converter):
         plt.savefig("alignment.pdf", dpi=600, bbox_inches="tight")
         plt.show()
 
-    def plotActivation(self, audioPath, beatAct):
+    def plotActivation(self, beatLocation, activation):
         """
         Debug Method used to plot the beat activation
         """
-        audio = librosa.load(audioPath)
-        sStart = 5
-        sStop = 7
+        # audio = librosa.load(audioPath)
+        # sStart = 5
+        # sStop = 7
 
-        fig, axs = plt.subplots(2)
-        axs[0].plot(np.arange(0, sStop - sStart, 1 / 22050), audio[0][int(sStart * 22050) : int(sStop * 22050)])
-        axs[0].set(ylabel="Amplitude")
-        axs[1].plot(np.arange(0, sStop - sStart, 1 / 100), beatAct[int(sStart * 100) : int(sStop * 100)])
-        axs[1].set(xlabel="Time (s)", ylabel="Audio cue")
-        plt.show()
+        # fig, axs = plt.subplots(2)
+        # axs[0].plot(np.arange(0, sStop - sStart, 1 / 22050), audio[0][int(sStart * 22050) : int(sStop * 22050)])
+        # axs[0].set(ylabel="Amplitude")
+        # axs[1].plot(np.arange(0, sStop - sStart, 1 / 100), beatAct[int(sStart * 100) : int(sStop * 100)])
+        # axs[1].set(xlabel="Time (s)", ylabel="Audio cue")
+        # plt.show()
+
+        # from automix.model.classes.signal import Signal
+
+        # Signal(activation, sampleRate=100).plot(maxSamples=9999999999999)
+        # Signal(1, times=beatLocation).plot(maxSamples=9999999999999, asVerticalLine=True, show=True)
+        pass
 
     def getEventsMatch(self, onsetsA, onsetsB, window):
         """Compute the closest position in B for each element of A

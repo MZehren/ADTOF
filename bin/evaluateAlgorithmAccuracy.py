@@ -94,7 +94,7 @@ def plot(dict, title, ylim=True, legend=True, sort=False, ylabel="F-measure", te
     # plt.rc("ytick", labelsize="x-small")
 
     if legend:
-        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=1)
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1)
 
     # plt.xticks(ind + width, groups)
     plt.grid(axis="y", linestyle="--")
@@ -312,44 +312,44 @@ def plotResults():
         "sum F 49": np.mean([0.24, 0.5, 0.16]),
     }
 
-    def map(dict, keyPrefix=""):
+    def map(dict, keyPrefixes=[""], score="F"):
         mapping = {
-            "sum F all": "SUM",
-            "sum F 35": "BD",
-            "sum F 38": "SD",
-            "sum F 47": "TT",
-            "sum F 42": "HH",
-            "sum F 49": "CY + RD",
+            "sum " + score + " all": "SUM",
+            "sum " + score + " 35": "BD",
+            "sum " + score + " 38": "SD",
+            "sum " + score + " 47": "TT",
+            "sum " + score + " 42": "HH",
+            "sum " + score + " 49": "CY + RD",
         }
-        return {v: dict[keyPrefix + k] for k, v in mapping.items()}
+        return {v: np.mean([dict[pre + k] for pre in keyPrefixes]) for k, v in mapping.items()}
 
     plot(
         {
-            "Train on ADTOF lowLR": map(crnnADTOF, keyPrefix="adtof_"),
-            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefix="adtof_"),
-            "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefix="adtof_"),
+            "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["adtof_"]),
+            "Train on TMIDT and refinement on ENST, MDB, and RBMA": map(crnnPt, keyPrefixes=["adtof_"]),
+            "Train on ADTOF": map(crnnADTOF, keyPrefixes=["adtof_"]),
             # "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
         },
         "Test on ADTOF",
-        legend=True,
+        legend=False,
     )
     plot(
         {
-            "Train on ADTOF lowLR": map(crnnADTOF, keyPrefix="rbma_"),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="rbma_"),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="rbma_"),
+            "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["rbma_"]),
+            "Train on TMIDT and refinement on ENST, MDB, and RBMA": map(crnnPt, keyPrefixes=["rbma_"]),
+            "Train on ADTOF": map(crnnADTOF, keyPrefixes=["rbma_"]),
             # "Train on all Vogl": map(VOGL_ALL_RBMA),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA),
         },
         "Test on RBMA",
-        legend=False,
+        legend=True,
     )
     plot(
         {
-            "Train on ADTOF lowLR": map(crnnADTOF, keyPrefix="mdb_full_mix_"),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="mdb_full_mix_"),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="mdb_full_mix_"),
+            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["mdb_full_mix_"]),
+            "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefixes=["mdb_full_mix_"]),
+            "Train on ADTOF": map(crnnADTOF, keyPrefixes=["mdb_full_mix_"]),
             # "Train on all Vogl": map(VOGL_ALL_MDB),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB),
@@ -359,11 +359,22 @@ def plotResults():
     )
     plot(
         {
-            "Train on ADTOF lowLR": map(crnnADTOF, keyPrefix="enst_sum_"),
-            "Train on all MZ good save": map(crnnAll, keyPrefix="enst_sum_"),
-            "Train on pt MIDI MZ": map(crnnPt, keyPrefix="enst_sum_"),
+            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["enst_sum_"]),
+            "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(crnnPt, keyPrefixes=["enst_sum_"]),
+            "Train on ADTOF": map(crnnADTOF, keyPrefixes=["enst_sum_"]),
         },
         "Test on ENST",
+        legend=False,
+    )
+    plot(
+        {
+            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]),
+            "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(
+                crnnPt, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]
+            ),
+            "Train on ADTOF": map(crnnADTOF, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]),
+        },
+        "Overall",
         legend=False,
     )
     plt.show()
