@@ -59,7 +59,7 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
         return midi
 
-    def get_beats_with_index(self, ingoreStart=False):
+    def get_beats_with_index(self, ingoreStart=False, stopTime=None):
         """call get_beats and get_downbeats to return the list of beats and the list of beats index
         
         Returns
@@ -79,6 +79,9 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
         if ingoreStart:
             firstNote = self.get_onsets()[0]
+        if stopTime is not None:
+            beats = [t for t in beats if t <= stopTime]
+            beatIdx = beatIdx[: len(beats)]
         return beats, beatIdx
 
     def _load_metadata(self, midi_data):

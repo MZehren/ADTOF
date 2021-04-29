@@ -272,17 +272,14 @@ class Converter(object):
         alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
         alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
         convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
-        audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
 
         ca = CorrectAlignmentConverter()
         return ca.convert(
-            beatsEstimationsPath,
             beatsActivationPath,
             convertedMidiPath,
             alignedDrumAnotationsPath,
             alignedBeatsAnnotationsPath,
             alignedMidiAnotationsPath,
-            audioPath=audioPath,
             actThreshold=actThreshold,
             debug=True,
         )
@@ -294,19 +291,20 @@ class Converter(object):
         """
 
         for actThreshold in [0.2]:
-            with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-                futures = [
-                    executor.submit(Converter.getConf, trackName, actThreshold, outputFolder) for trackName, _ in list(candidates.items())
-                ]
-                concurrent.futures.wait(futures)
-                results = [f._result for f in futures]
-            # results = []
-            # for trackName, _ in list(candidates.items())[55:]:
-            #     try:
-            #         result = Converter.getConf(trackName, actThreshold, outputFolder)
-            #         results.append(result)
-            #     except Exception as e:
-            #         print(e)
+            # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+            #     futures = [
+            #         executor.submit(Converter.getConf, trackName, actThreshold, outputFolder) for trackName, _ in list(candidates.items())
+            #     ]
+            #     concurrent.futures.wait(futures)
+            #     results = [f._result for f in futures]
+            results = []
+            exceptions = []
+            for trackName, _ in list(candidates.items())[55:]:
+                try:
+                    result = Converter.getConf(trackName, actThreshold, outputFolder)
+                    results.append(result)
+                except Exception as e:
+                    exceptions.append(e)
 
             print("With min activation of", actThreshold)
             print(results)
