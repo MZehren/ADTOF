@@ -67,7 +67,7 @@ def train_test_model(hparams, args, fold, model: Model):
     """
     # Get the data
     (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryAllDatasets(
-        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-lowerLR", **hparams
+        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-log71", **hparams
     )
 
     if not model.weightLoadedFlag or args.model == "crnn-ptTMIDT":  # if model is not trained, do the fitting
