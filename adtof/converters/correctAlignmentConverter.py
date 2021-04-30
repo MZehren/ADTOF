@@ -67,7 +67,7 @@ class CorrectAlignmentConverter(Converter):
         # )
 
         # Apply the dynamic offset to beat
-        correctedBeatTimes = self.setDynamicOffset(correction, beats_midi, thresholdCorrectionWindow)
+        correctedBeatTimes = self.setDynamicOffset(correction, beats_midi)
 
         # Apply the dynamic offset to onsets
         if len(midi.instruments) > 1:  # There are multiple drums
@@ -79,45 +79,45 @@ class CorrectAlignmentConverter(Converter):
         drumstimes = [
             note.start for instrument in midi.instruments for note in instrument.notes
         ]  # [note.start for note in midi.instruments[0].notes]
-        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes, thresholdCorrectionWindow)
+        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
 
-        # Measure if the annotations are of good quality.
-        qualityAct = self.getAnnotationsQualityAct(
-            beats_midi, correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, actThreshold=actThreshold
-        )
-        ## Deprecated Method
-        # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate)
-        if debug:
-            return qualityAct
+        # # Measure if the annotations are of good quality.
+        # qualityAct = self.getAnnotationsQualityAct(
+        #     beats_midi, correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, actThreshold=actThreshold
+        # )
+        # ## Deprecated Method
+        # # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate)
+        # if debug:
+        #     return qualityAct
 
-        # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
-        drumstimesSet = set(drumstimes)
-        fishy_corrections = [c for c in correction if np.abs(c["diff"]) > 0.025 and c["time"] in drumstimesSet]
+        # # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
+        # drumstimesSet = set(drumstimes)
+        # fishy_corrections = [c for c in correction if np.abs(c["diff"]) > 0.025 and c["time"] in drumstimesSet]
 
-        # Discard the tracks with a low quality and with extreme corrections (set to 25ms)
-        if qualityAct < thresholdQuality:
-            # debug
-            # print("investigate", os.path.basename(audioPath))
-            # print(
-            #     "odd_Time",
-            #     len([t for t in midi.time_signature_changes if t.numerator != 4]) > 0,
-            #     "/ fast_tempo",
-            #     max(midi.get_tempo_changes()[1]) > 215,
-            # )
-            # print("activation_quality", qualityAct, "/ hitRate_quality", qualityHit)
-            # correctedDrumsTimesSet = set(correctedDrumsTimes)
-            # print("fishy_corrections", [c for c in correction if np.abs(c["diff"]) > 0.03 and c["time"].in(correctedDrumsTimesSet)])
+        # # Discard the tracks with a low quality and with extreme corrections (set to 25ms)
+        # if qualityAct < thresholdQuality:
+        #     # debug
+        #     # print("investigate", os.path.basename(audioPath))
+        #     # print(
+        #     #     "odd_Time",
+        #     #     len([t for t in midi.time_signature_changes if t.numerator != 4]) > 0,
+        #     #     "/ fast_tempo",
+        #     #     max(midi.get_tempo_changes()[1]) > 215,
+        #     # )
+        #     # print("activation_quality", qualityAct, "/ hitRate_quality", qualityHit)
+        #     # correctedDrumsTimesSet = set(correctedDrumsTimes)
+        #     # print("fishy_corrections", [c for c in correction if np.abs(c["diff"]) > 0.03 and c["time"].in(correctedDrumsTimesSet)])
 
-            raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
-        elif len(fishy_corrections) > 2:  # TODO: Why 2 again?
-            # debug
-            # for c in fishy_corrections:
-            #     print(
-            #         "correction",
-            #         np.round(c["diff"], decimals=2),
-            #         str(int(c["time"] // 60)) + ":" + str(np.round(c["time"] % 60, decimals=2)),
-            #     )
-            raise ValueError("Extreme correction needed for this track")
+        #     raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
+        # elif len(fishy_corrections) > 0:  # TODO: Why 2 again?
+        #     # debug
+        #     # for c in fishy_corrections:
+        #     #     print(
+        #     #         "correction",
+        #     #         np.round(c["diff"], decimals=2),
+        #     #         str(int(c["time"] // 60)) + ":" + str(np.round(c["time"] % 60, decimals=2)),
+        #     #     )
+        #     raise ValueError("Extreme correction needed for this track")
 
         # writte the output
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
@@ -150,34 +150,34 @@ class CorrectAlignmentConverter(Converter):
         # # try with a threshold set to the mean of the act
         # actThreshold = np.mean(act)
         pWindow = 1
-        margin = 0.1
+        margin = 0.05
         isPeak = [act[i] + margin >= max(act[max(i - pWindow, 0) : i + 1 + pWindow]) for i in beatsActIdx]
         actThreshold = 0.1
         isAbove = [act[i] >= actThreshold for i in beatsActIdx]
 
-        peakConfidence = len([1 for i in range(len(isPeak)) if isPeak[i] and isAbove[i]]) / len(intersection)
+        peakConfidence = len([1 for i in range(len(isPeak)) if isPeak[i]]) / len(intersection)
         confidence = len([1 for ba in beatsAct if ba >= actThreshold]) / len(beatsAct)
         # if peakConfidence < 0.90:
         #     # self.plotActivation([np.round(i, decimals=2) for i in intersection], act)
         #     from automix.model.classes.signal import Signal
 
         #     Signal(act, sampleRate=100).plot(maxSamples=9999999999999)
-        #     # originalBeats = set([np.round(i, decimals=2) for i in originalBeats])
-        #     # correctedBeats = set([np.round(i, decimals=2) for i in correctedBeats])
-        #     # Signal(1, times=[i for i in originalBeats if i not in correctedBeats]).plot(
-        #     #     maxSamples=9999999999, asVerticalLine=True, color="red"
-        #     # )
-        #     # Signal(1, times=[i for i in correctedBeats if i not in originalBeats]).plot(maxSamples=9999999999, asVerticalLine=True)
-        #     # Signal(1, times=[i for i in correctedBeats if i in originalBeats]).plot(
-        #     #     maxSamples=9999999999, asVerticalLine=True, color="green", show=True
-        #     # )
+        #     originalBeats = set([np.round(i, decimals=2) for i in originalBeats])
+        #     correctedBeats = set([np.round(i, decimals=2) for i in correctedBeats])
+        #     Signal(1, times=[i for i in originalBeats if i not in correctedBeats]).plot(
+        #         maxSamples=9999999999, asVerticalLine=True, color="red"
+        #     )
+        #     Signal(1, times=[i for i in correctedBeats if i not in originalBeats]).plot(maxSamples=9999999999, asVerticalLine=True)
+        #     Signal(1, times=[i for i in correctedBeats if i in originalBeats]).plot(
+        #         maxSamples=9999999999, asVerticalLine=True, color="green", show=True
+        #     )
         #     # Signal(1, times=[time for i, time in enumerate(intersection) if beatsAct[i] <= actThreshold]).plot(
         #     #     maxSamples=9999999999, asVerticalLine=True, show=True, color="red"
         #     # )
 
-        #     Signal(1, times=[intersection[i] for i in range(len(isPeak)) if not isPeak[i] or not isAbove[i]]).plot(
-        #         maxSamples=9999999999, asVerticalLine=True, show=True, color="red"
-        #     )
+        #     # Signal(1, times=[intersection[i] for i in range(len(isPeak)) if not isPeak[i] or not isAbove[i]]).plot(
+        #     #     maxSamples=9999999999, asVerticalLine=True, show=True, color="red"
+        #     # )
         return confidence
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize=2048):
@@ -199,7 +199,7 @@ class CorrectAlignmentConverter(Converter):
         f, p, r = mir_eval.onset.f_measure(np.array(refBeats), np.array(estBeats), window=toleranceWindow)
         return p
 
-    def setDynamicOffset(self, offset, onsets, maxOffsetThreshold):
+    def setDynamicOffset(self, offset, onsets):
         """
         Shift the onsets with the offset linearly interpolated
         
@@ -209,16 +209,22 @@ class CorrectAlignmentConverter(Converter):
 
         x = [o["time"] for o in offset]
         y = [o["diff"] for o in offset]
-        if x[-1] + maxOffsetThreshold < onsets[-1]:
-            raise Exception(
-                "Extrapolation of the annotation is too far from the ground truth with a distance of " + str(onsets[-1] - x[-1])
+        minBeatInter = min(np.diff(x))
+        maxTempo = 60 / minBeatInter
+        if x[-1] + minBeatInter < onsets[-1]:  # Check how far the correction has to be extrapolated
+            raise ValueError(
+                "Extrapolation of the annotation is too far from the ground truth with a distance of {:.2f}s".format(onsets[-1] - x[-1])
             )
-        interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
 
+        interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
         # self.plotCorrection(offset, interp1d(x, y, kind="linear", fill_value=0.0))
 
-        if max(np.abs(interpolation)) > maxOffsetThreshold:
-            raise ValueError("Interpolation of annotations offset seems too extreme " + str(max(np.abs(interpolation))))
+        if max(np.abs(interpolation)) > minBeatInter * 0.25:
+            raise ValueError(
+                "Interpolation of annotations offset seems too extreme ({:.2f}s) wereas the min beat interval is {:.2f}s ({:.2f} bpm)".format(
+                    max(np.abs(interpolation)), minBeatInter, maxTempo
+                )
+            )
 
         converted = onsets - interpolation
         converted[converted < 0] = 0

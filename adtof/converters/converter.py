@@ -242,9 +242,9 @@ class Converter(object):
         candidateName.sort(key=lambda x: x["path"])
         logging.info("number of tracks in the dataset after selection: " + str(len(candidates)))
 
-        # debug
-        Converter.debugCheckAlignmentScore(candidates, outputFolder)
-        print("stop")
+        # # debug
+        # Converter.debugCheckAlignmentScore(candidates, outputFolder)
+        # print("stop")
         # Do the conversion
         results = []
         if parallelProcess:
@@ -343,13 +343,11 @@ class Converter(object):
                 mbc.convert(audioPath, convertedMidiPath, beatsEstimationsPath, beatsActivationPath)
             if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
                 ca.convert(
-                    beatsEstimationsPath,
                     beatsActivationPath,
                     convertedMidiPath,
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,
                     alignedMidiAnotationsPath,
-                    audioPath=audioPath,
                 )
 
             # # Extract Features
