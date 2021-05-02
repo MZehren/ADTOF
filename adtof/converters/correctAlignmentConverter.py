@@ -219,7 +219,7 @@ class CorrectAlignmentConverter(Converter):
         interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
         # self.plotCorrection(offset, interp1d(x, y, kind="linear", fill_value=0.0))
 
-        if max(np.abs(interpolation)) > minBeatInter * 0.25:
+        if max(np.abs(interpolation)) > minBeatInter * 0.5:
             raise ValueError(
                 "Interpolation of annotations offset seems too extreme ({:.2f}s) wereas the min beat interval is {:.2f}s ({:.2f} bpm)".format(
                     max(np.abs(interpolation)), minBeatInter, maxTempo
