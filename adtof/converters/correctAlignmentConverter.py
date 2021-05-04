@@ -22,7 +22,7 @@ from adtof.io.textReader import TextReader
 
 class CorrectAlignmentConverter(Converter):
     """
-    Converter which tries to align the midi file to the music file as close as possible
+    Converter which tries to align the midi file to the audio file as close as possible
     by looking at the difference between annotated MIDI beats and estimated beats from Madmom
     """
 
@@ -33,23 +33,29 @@ class CorrectAlignmentConverter(Converter):
         alignedDrumTextOutput,
         alignedBeatTextOutput,
         alignedMidiOutput,
-        thresholdQuality=0.95,
+        maxDeviation=5,
+        activationThreshold=0.1,
+        thresholdQuality=0.5,
+        maxCorrectionThreshold=0.025,
         sampleRate=100,
-        thresholdCorrectionWindow=0.05,
-        actThreshold=0.1,
-        debug=False,
     ):
         """
         # TODO: utiliser un jeu de données non aligné pour le test
 
         Parameters
         ----------
+        maxDeviation : int, optional
+            Max deviation for the correction computed by tap correct in frames
+            In tap correct, the default is 50, meaning a maximum of 0.5s of correction
+        activationThreshold: float, optional
+            Minimum activation from the beat detection algorithm, at the location of a beat, to consider it well corrected.
+            Only the beats intersecting with an onset are used to ensure that an audio cue is present.
         thresholdQuality : float, optional
-            the limit at which the track will get discarded because there are too many beats annotated are not identified and aligned to the computer estimations
-            TODO: The score uses either the precision of the beats hit rate, or the value of the beat activation function after the alignment, or the maximum correction offset. 
-        thresholdCorrectionWindow : float, optional
-            TODO: see Toward automatically correcting tapped beat... 
-            If the value is too large, the quality score will artificially increase, but the beats are going to be aligned to wrong estimations as well. 
+            The ratio of well aligned beats (with an activation above the activationThreshold) required to keep the track.
+            Below this threshold, the track is considered not well corrected and thus it is discarded.
+            Only the beats intersecting with an onset are used to ensure that an audio cue is present.
+        maxCorrectionThreshold : float, optional
+            maximum distance 
         """
         # Get annotations and estimation data used as reference.
         midi = PrettyMidiWrapper(missalignedMidiInput)
@@ -58,7 +64,7 @@ class CorrectAlignmentConverter(Converter):
         tr = TextReader()
 
         # Compute the dynamic offset for the best alignment
-        correction = self.computeDNNActivationDeviation(beats_midi, beatAct, max_deviation=50)
+        correction = self.computeDNNActivationDeviation(beats_midi, beatAct, max_deviation=maxDeviation)
         ## Deprecated Method
         # smoothingCorrectionWindow = 5
         # beats_audio = [el["time"] for el in tr.getOnsets(refBeatInput, mappingDictionaries=[], group=False)]
@@ -81,43 +87,22 @@ class CorrectAlignmentConverter(Converter):
         ]  # [note.start for note in midi.instruments[0].notes]
         correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
 
-        # # Measure if the annotations are of good quality.
-        # qualityAct = self.getAnnotationsQualityAct(
-        #     beats_midi, correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, actThreshold=actThreshold
-        # )
-        # ## Deprecated Method
-        # # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate)
-        # if debug:
-        #     return qualityAct
+        # Measure if the annotations are of good quality.
+        qualityAct = self.getAnnotationsQualityAct(
+            beats_midi, correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, activationThreshold=activationThreshold
+        )
+        ## Deprecated Method
+        # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate)
 
-        # # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
-        # drumstimesSet = set(drumstimes)
-        # fishy_corrections = [c for c in correction if np.abs(c["diff"]) > 0.025 and c["time"] in drumstimesSet]
+        # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
+        drumstimesSet = set(drumstimes)
+        largeCorrections = [c for c in correction if np.abs(c["diff"]) > maxCorrectionThreshold and c["time"] in drumstimesSet]
 
-        # # Discard the tracks with a low quality and with extreme corrections (set to 25ms)
-        # if qualityAct < thresholdQuality:
-        #     # debug
-        #     # print("investigate", os.path.basename(audioPath))
-        #     # print(
-        #     #     "odd_Time",
-        #     #     len([t for t in midi.time_signature_changes if t.numerator != 4]) > 0,
-        #     #     "/ fast_tempo",
-        #     #     max(midi.get_tempo_changes()[1]) > 215,
-        #     # )
-        #     # print("activation_quality", qualityAct, "/ hitRate_quality", qualityHit)
-        #     # correctedDrumsTimesSet = set(correctedDrumsTimes)
-        #     # print("fishy_corrections", [c for c in correction if np.abs(c["diff"]) > 0.03 and c["time"].in(correctedDrumsTimesSet)])
-
-        #     raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
-        # elif len(fishy_corrections) > 0:  # TODO: Why 2 again?
-        #     # debug
-        #     # for c in fishy_corrections:
-        #     #     print(
-        #     #         "correction",
-        #     #         np.round(c["diff"], decimals=2),
-        #     #         str(int(c["time"] // 60)) + ":" + str(np.round(c["time"] % 60, decimals=2)),
-        #     #     )
-        #     raise ValueError("Extreme correction needed for this track")
+        # Discard the tracks with a low quality and with extreme corrections
+        if qualityAct < thresholdQuality:
+            raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
+        elif len(largeCorrections) > 2:  # TODO: Why 2 again?
+            raise ValueError("Extreme correction needed for this track")
 
         # writte the output
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
@@ -128,12 +113,12 @@ class CorrectAlignmentConverter(Converter):
         )
         newMidi.write(alignedMidiOutput)
 
-    def getAnnotationsQualityAct(self, originalBeats, correctedBeats, correctedOnsets, act, sampleRate, actThreshold=0.1):
+    def getAnnotationsQualityAct(self, originalBeats, correctedBeats, correctedOnsets, act, sampleRate, activationThreshold=0.1):
         """
         Check the beat activation amplitude for each position of the annotated beats after the correction.
         This gives an indication of how many beats were effectively next to an audio cue and correctly aligned to it.
         
-        Because some beats are in silent times were no audio cues are available, the activation can be low even if the beat is correctly annotated.
+        Because some beats are in silent times where no audio cues are available, the activation can be low even if the beat is correctly annotated.
         To take this into account, only the beats intersecting with a drum onset are used. The drum onset insure that the activate will not be zero. 
 
         The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
@@ -142,42 +127,17 @@ class CorrectAlignmentConverter(Converter):
         intersection = list(set(np.round(correctedBeats, decimals=4)).intersection(np.round(correctedOnsets, decimals=4)))
         intersection.sort()
         beatsAct = [act[int(np.round(t * sampleRate))] for t in intersection if int(np.round(t * sampleRate)) < len(act)]
-        beatsActIdx = [int(np.round(t * sampleRate)) for t in intersection if int(np.round(t * sampleRate)) < len(act)]
 
         if len(beatsAct) == 0:
             raise ValueError("no score at the position of the midi beats. there is an issue with the computation of the beat")
 
         # # try with a threshold set to the mean of the act
         # actThreshold = np.mean(act)
-        pWindow = 1
-        margin = 0.05
-        isPeak = [act[i] + margin >= max(act[max(i - pWindow, 0) : i + 1 + pWindow]) for i in beatsActIdx]
-        actThreshold = 0.1
-        isAbove = [act[i] >= actThreshold for i in beatsActIdx]
+        # peakWindow = 1
+        # peakMargin = 0.05
+        # isPeak = [act[i] + peakMargin >= max(act[max(i - peakWindow, 0) : i + 1 + peakWindow]) for i in beatsActIdx]
 
-        peakConfidence = len([1 for i in range(len(isPeak)) if isPeak[i]]) / len(intersection)
-        confidence = len([1 for ba in beatsAct if ba >= actThreshold]) / len(beatsAct)
-        # if peakConfidence < 0.90:
-        #     # self.plotActivation([np.round(i, decimals=2) for i in intersection], act)
-        #     from automix.model.classes.signal import Signal
-
-        #     Signal(act, sampleRate=100).plot(maxSamples=9999999999999)
-        #     originalBeats = set([np.round(i, decimals=2) for i in originalBeats])
-        #     correctedBeats = set([np.round(i, decimals=2) for i in correctedBeats])
-        #     Signal(1, times=[i for i in originalBeats if i not in correctedBeats]).plot(
-        #         maxSamples=9999999999, asVerticalLine=True, color="red"
-        #     )
-        #     Signal(1, times=[i for i in correctedBeats if i not in originalBeats]).plot(maxSamples=9999999999, asVerticalLine=True)
-        #     Signal(1, times=[i for i in correctedBeats if i in originalBeats]).plot(
-        #         maxSamples=9999999999, asVerticalLine=True, color="green", show=True
-        #     )
-        #     # Signal(1, times=[time for i, time in enumerate(intersection) if beatsAct[i] <= actThreshold]).plot(
-        #     #     maxSamples=9999999999, asVerticalLine=True, show=True, color="red"
-        #     # )
-
-        #     # Signal(1, times=[intersection[i] for i in range(len(isPeak)) if not isPeak[i] or not isAbove[i]]).plot(
-        #     #     maxSamples=9999999999, asVerticalLine=True, show=True, color="red"
-        #     # )
+        confidence = len([1 for ba in beatsAct if ba >= activationThreshold]) / len(beatsAct)
         return confidence
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize=2048):
@@ -189,6 +149,9 @@ class CorrectAlignmentConverter(Converter):
         When that's the case, the precision drops and the score decreases even though the activation function used to correct the beats migh work.
         See "getAnntotationQualityAct" for an improvement of the method
         """
+        import warnings
+
+        warnings.warn("deprecated", DeprecationWarning)
         # For the tolerance window, either we want to ensure that the annotation is in the same sample than the actual onset
         # toleranceWindow = 1 / (sampleRate * 2)
         # Or we want to make sure that the fft overlaps with the actual onset
@@ -210,7 +173,7 @@ class CorrectAlignmentConverter(Converter):
         x = [o["time"] for o in offset]
         y = [o["diff"] for o in offset]
         minBeatInter = min(np.diff(x))
-        maxTempo = 60 / minBeatInter
+
         if x[-1] + minBeatInter < onsets[-1]:  # Check how far the correction has to be extrapolated
             raise ValueError(
                 "Extrapolation of the annotation is too far from the ground truth with a distance of {:.2f}s".format(onsets[-1] - x[-1])
@@ -218,13 +181,12 @@ class CorrectAlignmentConverter(Converter):
 
         interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
         # self.plotCorrection(offset, interp1d(x, y, kind="linear", fill_value=0.0))
-
-        if max(np.abs(interpolation)) > minBeatInter * 0.5:
-            raise ValueError(
-                "Interpolation of annotations offset seems too extreme ({:.2f}s) wereas the min beat interval is {:.2f}s ({:.2f} bpm)".format(
-                    max(np.abs(interpolation)), minBeatInter, maxTempo
-                )
-            )
+        # if max(np.abs(interpolation)) > minBeatInter * 0.5:
+        #     raise ValueError(
+        #         "Interpolation of annotations offset seems too extreme ({:.2f}s) wereas the min beat interval is {:.2f}s ({:.2f} bpm)".format(
+        #             max(np.abs(interpolation)), minBeatInter, 60 / minBeatInter
+        #         )
+        #     )
 
         converted = onsets - interpolation
         converted[converted < 0] = 0
@@ -275,8 +237,12 @@ class CorrectAlignmentConverter(Converter):
         Returns:
             [type]: [description]
         """
+        import warnings
+
+        warnings.warn("deprecated", DeprecationWarning)
         # Get the list of unique match between annotations and estimations
-        matches = self.getEventsMatch(beats_midi, beats_audio, matchWindow)
+        matchIdx = mir_eval.util.match_events(beats_midi, beats_audio, matchWindow)
+        matches = np.array([[beats_midi[t[0]], beats_audio[t[1]]] for t in matchIdx])
 
         # annotations - estimations =
         diff = np.array([a - b for a, b in matches])
@@ -315,45 +281,3 @@ class CorrectAlignmentConverter(Converter):
         plt.savefig("alignment.pdf", dpi=600, bbox_inches="tight")
         plt.show()
 
-    def getEventsMatch(self, onsetsA, onsetsB, window):
-        """Compute the closest position in B for each element of A
-
-        Args:
-            onsetsA ([float]): list of positions in A
-            onsetsB ([float]): list of positions in B
-
-        Returns:
-            [(float, float)]: list of tuples with each element of A next to the closest element in B
-        """
-        matchIdx = mir_eval.util.match_events(onsetsA, onsetsB, window)
-        matchPositions = np.array([[onsetsA[t[0]], onsetsB[t[1]]] for t in matchIdx])
-
-        # Get the matches with own method (not single matches)
-        # tuples = [(onsetA, self.findNeighboor(onsetsB, onsetA)) for onsetA in onsetsA]
-        # tuplesThresholded = np.array([[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
-
-        # # Get the matches with DTW (not single matches),
-        # #  This is slower and doesn't change the result since we are using euclidean distances on position for the cost matrix
-        # _, tuples = librosa.sequence.dtw(X=onsetsA, Y=onsetsB)
-        # tuples = [(onsetsA[t[0]], onsetsB[t[1]]) for t in tuples]
-        # tuplesThresholded1 = np.array([[onsets[0], onsets[1]] for onsets in tuples if np.abs(onsets[0] - onsets[1]) < maxThreshold])
-        # tuplesThresholded1 = tuplesThresholded1[::-1]
-        return matchPositions
-
-    def findNeighboor(self, grid, value):
-        """
-        Assumes grid is sorted. Returns closest grid tick to each values.
-        If two ticks are equally close, return the smallest one.
-        """
-        pos = bisect_left(grid, value)
-
-        if pos == 0:
-            return grid[0]
-        if pos == len(grid):
-            return grid[-1]
-        before = grid[pos - 1]
-        after = grid[pos]
-        if after - value < value - before:
-            return after
-        else:
-            return before

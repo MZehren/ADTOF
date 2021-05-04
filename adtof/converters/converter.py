@@ -58,7 +58,7 @@ class Converter(object):
         """
         go recursively inside all folders, identify the format available and list all the tracks
         """
-        # TODO clean the circle dependency by ,oving the code in a better location
+        # TODO clean the circle dependency by moving the code in a better location
         from adtof.converters.archiveConverter import ArchiveConverter
         from adtof.converters.rockBandConverter import RockBandConverter
         from adtof.converters.phaseShiftConverter import PhaseShiftConverter
@@ -80,28 +80,6 @@ class Converter(object):
         genres = defaultdict(list)
         # Check anything convertible
         for root, _, files in os.walk(rootFolder):
-            # if os.path.split(root)[1] == "rbma_13" or (root.split("/")[-2] == "rbma_13" and
-            #                                            root.split("/")[-1] == ""):  # Add rbma files
-            #     midifolder = os.path.join(root, "annotations/drums")
-            #     midiFiles = [os.path.join(midifolder, f) for f in os.listdir(midifolder) if f.endswith(".txt")]
-
-            #     audioFolder = os.path.join(root, "audio")
-            #     audioFiles = [
-            #         os.path.join(audioFolder, f)
-            #         for f in os.listdir(audioFolder)
-            #         if f.endswith(".mp3") or f.endswith(".wav")
-            #     ]
-
-            #     if len(midiFiles) != len(audioFiles):
-            #         raise Exception("the rbma audio files without drums are not removed (6-7-26) ")
-            #     for i, _ in enumerate(midiFiles):
-            #         results[midiFiles[i]].append((midiFiles[i], audioFiles[i], tc))
-            # else:
-            #     for file in files:
-            #         path = os.path.join(root, file)
-            #         if rbc.isConverinputFolder):
-            #             results[rbc.getTrackName(path)].append((path, "", psc))
-
             if psc.isConvertible(root):
                 meta = psc.getMetaInfo(root)
                 if not meta["pro_drums"]:
@@ -242,9 +220,6 @@ class Converter(object):
         candidateName.sort(key=lambda x: x["path"])
         logging.info("number of tracks in the dataset after selection: " + str(len(candidates)))
 
-        # # debug
-        # Converter.debugCheckAlignmentScore(candidates, outputFolder)
-        # print("stop")
         # Do the conversion
         results = []
         if parallelProcess:
@@ -260,58 +235,6 @@ class Converter(object):
                 results.append(Converter.runConvertors(candidate, outputFolder, trackName))
         logging.info(str(Counter(results)))
         print(str(Counter(results)))
-
-    @staticmethod
-    def getConf(trackName, actThreshold, outputFolder):
-        from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
-        from adtof import config
-
-        beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
-        beatsActivationPath = os.path.join(outputFolder, config.BEATS_ACTIVATION, trackName + ".npy")
-        alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
-        alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
-        alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
-        convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
-
-        ca = CorrectAlignmentConverter()
-        return ca.convert(
-            beatsActivationPath,
-            convertedMidiPath,
-            alignedDrumAnotationsPath,
-            alignedBeatsAnnotationsPath,
-            alignedMidiAnotationsPath,
-            actThreshold=actThreshold,
-            debug=True,
-        )
-
-    @staticmethod
-    def debugCheckAlignmentScore(candidates, outputFolder):
-        """
-        check alignment fiability by... TODO
-        """
-
-        for actThreshold in [0.2]:
-            # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-            #     futures = [
-            #         executor.submit(Converter.getConf, trackName, actThreshold, outputFolder) for trackName, _ in list(candidates.items())
-            #     ]
-            #     concurrent.futures.wait(futures)
-            #     results = [f._result for f in futures]
-            results = []
-            exceptions = []
-            for trackName, _ in list(candidates.items())[55:]:
-                try:
-                    result = Converter.getConf(trackName, actThreshold, outputFolder)
-                    results.append(result)
-                except Exception as e:
-                    exceptions.append(e)
-
-            print("With min activation of", actThreshold)
-            print(results)
-            import seaborn as sns
-
-            sns.displot([0 if e is None else e for e in results])
-            plt.show()
 
     @staticmethod
     def runConvertors(candidate, outputFolder, trackName):
@@ -350,39 +273,9 @@ class Converter(object):
                     alignedMidiAnotationsPath,
                 )
 
-            # # Extract Features
-            # featuresExtractedPath = os.path.join(outputFolder, config.FEATURES, trackName + ".npy")
-            # if not Converter.checkPathExists(featuresExtractedPath):
-            #     fe.convert(audioPath, featuresExtractedPath)
-
             return "converted"
 
         except ValueError as e:
-            # 'converted': 2377,
-            # 'Extreme correction needed for this track': 271,
-            # 'Extrapolation of annotations offset seems too extreme ': 107,
-            # "Not enough overlap between track's estimated and annotated beats to ensure alignment": 80,
-            # 'number of drum tracks in the midi file != 1': 58,
-            # None: 26,
-            # 'data byte must be in range 0..127': 7
             logging.warning(trackName + " not converted: " + str(e))
             return str(e)
 
-    @staticmethod
-    def vizDataset(iterator):
-        X, Y = iterator.get_next()
-        plt.matshow(np.array([np.reshape(x[0], 84) for x in X]).T)
-        print(np.sum(Y))
-        for i in range(len(Y[0])):
-            times = [t for t, y in enumerate(Y) if y[i]]
-            plt.plot(times, np.ones(len(times)) * i * 10, "or")
-        plt.show()
-
-    @staticmethod
-    def vizNumpy(X, Y, title="bla"):
-        plt.title(title)
-        plt.matshow(X.T)
-        for i in range(len(Y[0])):
-            times = [t for t, y in enumerate(Y) if y[i]]
-            plt.plot(times, np.ones(len(times)) * i * 10, "or")
-        plt.show()
