@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-Convert the PhaseShift's MIDI file format into real MIDI
-"""
+
 import argparse
-import concurrent.futures
 import logging
 import os
 import shutil
 
 import pandas as pd
-from tensorflow.python.util.lazy_loader import LazyLoader
 from adtof import config
 from adtof.converters.converter import Converter
 from adtof.model.dataLoader import DataLoader
