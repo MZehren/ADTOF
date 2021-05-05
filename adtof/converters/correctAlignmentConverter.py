@@ -33,10 +33,10 @@ class CorrectAlignmentConverter(Converter):
         alignedDrumTextOutput,
         alignedBeatTextOutput,
         alignedMidiOutput,
-        maxDeviation=5,
+        maxDeviation=50,
         activationThreshold=0.1,
-        thresholdQuality=0.5,
-        maxCorrectionThreshold=0.025,
+        thresholdQuality=0,
+        maxCorrectionDistance=1.025,
         sampleRate=100,
     ):
         """
@@ -75,6 +75,13 @@ class CorrectAlignmentConverter(Converter):
         # Apply the dynamic offset to beat
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi)
 
+        # diff = [e["diff"] for e in correction]
+        # plt.plot([e["time"] for e in correction], diff)
+        # plt.title(missalignedMidiInput)
+        # print(missalignedMidiInput)
+        # plt.show()
+        # self.debugPlot(beatAct, beats_midi, correctedBeatTimes)
+
         # Apply the dynamic offset to onsets
         if len(midi.instruments) > 1:  # There are multiple drums
             raise ValueError("multiple drums tracks on the midi file")
@@ -96,7 +103,7 @@ class CorrectAlignmentConverter(Converter):
 
         # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
         drumstimesSet = set(drumstimes)
-        largeCorrections = [c for c in correction if np.abs(c["diff"]) > maxCorrectionThreshold and c["time"] in drumstimesSet]
+        largeCorrections = [c for c in correction if np.abs(c["diff"]) > maxCorrectionDistance and c["time"] in drumstimesSet]
 
         # Discard the tracks with a low quality and with extreme corrections
         if qualityAct < thresholdQuality:
@@ -161,6 +168,14 @@ class CorrectAlignmentConverter(Converter):
         # Since it's ok to have low recall (more beats detected by the computer because of odd time signature or octave problem)
         f, p, r = mir_eval.onset.f_measure(np.array(refBeats), np.array(estBeats), window=toleranceWindow)
         return p
+
+    def debugPlot(self, act, refBeats, corrrectedBeat=None):
+        from automix.model.classes.signal import Signal
+
+        Signal(act, sampleRate=100).plot(maxSamples=9999999)
+        if corrrectedBeat is not None:
+            Signal(1, times=corrrectedBeat).plot(maxSamples=9999999, asVerticalLine=True, color="red")
+        Signal(1, times=refBeats).plot(maxSamples=9999999, asVerticalLine=True, show=True)
 
     def setDynamicOffset(self, offset, onsets):
         """
