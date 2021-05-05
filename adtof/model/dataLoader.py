@@ -32,6 +32,7 @@ class DataLoader(object):
             lazyLoading=True,
             **kwargs,
         )
+        # TODO remove the "removeStart" for the public datasets
         rbma = cls(
             os.path.join(folderPath, "rbma_13/audio"),
             os.path.join(folderPath, "rbma_13/annotations/drums_m"),
@@ -108,39 +109,6 @@ class DataLoader(object):
             "mdb_full_mix": mdb_full_mix,
             "mdb_drum_solo": mdb_drum_solo,
         }
-
-    # @classmethod
-    # def factoryADTOF(cls, folderPath: str, testFold=0, validationFold=0, **kwargs):
-    #     """instantiate a DataLoader following ADTOF folder hierarchy
-
-    #     Parameters
-    #     ----------
-    #     folderPath : path to the root folder of the ADTOF dataset
-    #     """
-    #     # Get the data
-    #     datasets = cls.factoryAll(folderPath, testFold, **kwargs)
-
-    #     # Build tf datasets and generators
-    #     trainGen, valGen, valFullGen, testFullGen = datasets["adtof"].getTrainValTestGens(**kwargs)
-    #     train_dataset = cls._getDataset(trainGen, **kwargs)
-    #     val_dataset = cls._getDataset(valGen, **kwargs)
-
-    #     # Hacky technique to evaluate on the public datasets
-    #     fullGenParams = {k: v for k, v in kwargs.items()}
-    #     fullGenParams["repeat"] = False
-    #     fullGenParams["samplePerTrack"] = None
-    #     namedTestGen = {name: db.getGen(**fullGenParams) for name, db in datasets.items() if name != "adtof"}
-    #     namedTestGen["adtof"] = testFullGen
-
-    #     # return all the datasets for training and evaluation
-    #     return (
-    #         train_dataset,
-    #         val_dataset,
-    #         valFullGen,
-    #         len(datasets["adtof"].trainIndexes),
-    #         len(datasets["adtof"].valIndexes),
-    #         namedTestGen,
-    #     )
 
     @classmethod
     def factoryTMIDT(cls, folderPath: str, testFold=0, validationRatio=0.15, **kwargs):
@@ -332,9 +300,17 @@ class DataLoader(object):
         if lazyLoading == False:
             self.data = [self.readTrack(i, **kwargs) for i in range(len(self.audioPaths))]
 
+    def getTotalDuration(self):
+        """
+        Compute the total duration of the dataset in s
+        """
+
+        return np.sum([librosa.get_duration(filename=f) for f in self.audioPaths])
+
     def readTrack(self, trackIdx, removeStart=True, labelOffset=0, sampleRate=100, **kwargs):
         """
         Read all the info of the track used for training and evaluation
+        Remove start is required in ADTOF set to remove the sonified count-in in the tracks which is not annotated
         """
         name = self.audioPaths[trackIdx]
         x = self.readAudio(trackIdx, sampleRate=sampleRate, **kwargs)
@@ -370,7 +346,7 @@ class DataLoader(object):
 
     def removeStart(self, x, y, sampleRate=100, context=25, **kwargs):
         """
-        Trim X to start and end on notes from notes
+        Trim x to start and end on notes from y
         Change the time of notes to start at 0
         """
         # Trim before the first note to remove count in
