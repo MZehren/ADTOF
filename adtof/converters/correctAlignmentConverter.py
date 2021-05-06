@@ -1,23 +1,13 @@
 import logging
-import os
-from bisect import bisect_left
 
-import librosa
-import madmom
 import matplotlib.pyplot as plt
 import mir_eval
 import numpy as np
-from numpy import ma
-import pandas as pd
-import pretty_midi
 import tapcorrect
-from numpy.lib.function_base import quantile
-from scipy.interpolate import interp1d
-
-from adtof import config
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PrettyMidiWrapper
 from adtof.io.textReader import TextReader
+from scipy.interpolate import interp1d
 
 
 class CorrectAlignmentConverter(Converter):

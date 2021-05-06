@@ -1,7 +1,4 @@
-"""
-Using ffmpeg to sum tracks with identical names in two different folders. 
-Use the weights parameter to specify how loud the tracks from a specific folder are going to be (see Wu et. al.)
-"""
+import argparse
 import os
 
 import ffmpeg
@@ -20,14 +17,21 @@ def main(
 
 
 def mergeTracks(audioFiles, pathOutput, weights="2 1"):
+    """
+    Using ffmpeg to sum tracks with identical names in two different folders. 
+    Use the weights parameter to specify how loud the tracks from a specific folder are going to be (see Wu et. al.)
+    """
     ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles), weights=weights).output(
         pathOutput
     ).global_args("-loglevel", "error").run(overwrite_output=True)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Script used to sum drum and accompaniment files in ENST. Simply copy the ")
+    parser.add_argument("ENSTFolder", type=str, help="Path to ENST dataset.")
+    args = parser.parse_args()
     main(
-        "/Users/mzehren/OneDrive - Umeå universitet/Datasets/drumsTranscription/ENST-drums-public/audio_wet",
-        "/Users/mzehren/OneDrive - Umeå universitet/Datasets/drumsTranscription/ENST-drums-public/audio_accompagniement",
-        "/Users/mzehren/OneDrive - Umeå universitet/Datasets/drumsTranscription/ENST-drums-public/audio_sum",
+        os.path.join(args.ENSTFolder, "audio_wet"),
+        os.path.join(args.ENSTFolder, "audio_accompagniement"),
+        os.path.join(args.ENSTFolder, "audio_sum"),
     )

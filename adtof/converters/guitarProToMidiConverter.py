@@ -1,11 +1,4 @@
-from collections import OrderedDict
-from typing import List
-
-import guitarpro
 import midi
-
-from adtof.io import MidiProxy
-from adtof.io.converters import Converter, PhaseShiftConverter
 
 
 class GuitarProToMidiConverter(Converter):
@@ -21,7 +14,7 @@ class GuitarProToMidiConverter(Converter):
 
     def convert(self, filePath, outputName=None):
 
-        with open(filePath, mode='rb') as file:
+        with open(filePath, mode="rb") as file:
             binary = file.read()
 
         gp = guitarpro.parse(filePath)
@@ -60,7 +53,7 @@ class GuitarProToMidiConverter(Converter):
         # notes.sort(key=lambda note: note[0])
         tempi = [[measure.start, measure.tempo] for measure in measures]
 
-        # 
+        #
         track = midi.Track()
         cursor = 0
         for start, note in notes:

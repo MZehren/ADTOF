@@ -1,13 +1,11 @@
 import logging
 import pickle
 
+import librosa
 import madmom
 import matplotlib.pyplot as plt
 import numpy as np
-
-
 from adtof.converters.converter import Converter
-import librosa
 
 
 class MIR(object):
@@ -105,11 +103,11 @@ class MIR(object):
             callable (path) -> numpy array 
             
         """
-        from madmom.audio.spectrogram import LogarithmicFilteredSpectrogramProcessor, SpectrogramDifferenceProcessor
         from madmom.audio.filters import LogarithmicFilterbank
-        from madmom.audio.signal import SignalProcessor, FramedSignalProcessor
+        from madmom.audio.signal import FramedSignalProcessor, SignalProcessor
+        from madmom.audio.spectrogram import LogarithmicFilteredSpectrogramProcessor, SpectrogramDifferenceProcessor
         from madmom.audio.stft import ShortTimeFourierTransformProcessor
-        from madmom.processors import SequentialProcessor, ParallelProcessor
+        from madmom.processors import ParallelProcessor, SequentialProcessor
 
         sig = SignalProcessor(num_channels=1, sample_rate=self.sampleRate)
         frames = FramedSignalProcessor(frame_size=self.frameSize, fps=self.frameRate)

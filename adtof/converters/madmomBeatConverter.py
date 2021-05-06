@@ -3,7 +3,6 @@ import numpy as np
 
 from adtof.converters.converter import Converter
 from adtof.io.textReader import TextReader
-from adtof.io.midiProxy import PrettyMidiWrapper
 
 
 class MadmomBeatConverter(Converter):

@@ -1,4 +1,3 @@
-import os
 from adtof.converters.converter import Converter
 import subprocess
 from pkg_resources import resource_filename

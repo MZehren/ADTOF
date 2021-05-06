@@ -1,17 +1,7 @@
 import concurrent.futures
 import logging
 import os
-import sys
-import time
-import warnings
 from collections import defaultdict, Counter
-
-import jellyfish
-import matplotlib.pyplot as plt
-import numpy as np
-from numpy.lib.function_base import append
-import sklearn
-from random import shuffle
 
 
 class Converter(object):
