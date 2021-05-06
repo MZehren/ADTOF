@@ -1,15 +1,7 @@
 import logging
 import re
-import warnings
-from collections import defaultdict
 
-import midi
-import mido
-import numpy as np
 import pretty_midi
-from mido import MidiFile
-
-# TODO Remove those two implementations and use only one class with pretty midi
 
 
 def lazy_property(fn):

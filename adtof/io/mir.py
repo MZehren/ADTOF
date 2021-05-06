@@ -5,7 +5,7 @@ import madmom
 import matplotlib.pyplot as plt
 import numpy as np
 
-from adtof import config
+
 from adtof.converters.converter import Converter
 import librosa
 
