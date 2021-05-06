@@ -17,7 +17,6 @@ setuptools.setup(
     # package_data={"adtof": ["converters/mappingDictionaries/*"]},
     install_requires=[
         "librosa",
-        "cython",
         "madmom",
         "sklearn",
         "tensorflow",
@@ -29,7 +28,7 @@ setuptools.setup(
         "ffmpeg",
         "pretty_midi",
         "beautifulsoup4",
-        "tapcorrect @ git+https://github.com/MZehren/tapcorrect#subdirectory=python&egg=tapcorrect"
+        "tapcorrect @ git+https://github.com/MZehren/tapcorrect#subdirectory=python&egg=tapcorrect",
     ],
     classifiers=["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"],
 )
