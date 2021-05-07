@@ -23,10 +23,10 @@ class CorrectAlignmentConverter(Converter):
         alignedDrumTextOutput,
         alignedBeatTextOutput,
         alignedMidiOutput,
-        maxDeviation=50,
-        activationThreshold=0.1,
-        thresholdQuality=0,
-        maxCorrectionDistance=1.025,
+        maxDeviation=10,
+        activationThreshold=0.2,
+        thresholdQuality=0.95,
+        maxCorrectionDistance=0.04,
         sampleRate=100,
     ):
         """
@@ -55,22 +55,9 @@ class CorrectAlignmentConverter(Converter):
 
         # Compute the dynamic offset for the best alignment
         correction = self.computeDNNActivationDeviation(beats_midi, beatAct, max_deviation=maxDeviation)
-        ## Deprecated Method
-        # smoothingCorrectionWindow = 5
-        # beats_audio = [el["time"] for el in tr.getOnsets(refBeatInput, mappingDictionaries=[], group=False)]
-        # correction = self.computeTrackedBeatsDeviation(
-        #     beats_midi, beats_audio, matchWindow=thresholdCorrectionWindow, smoothWindow=smoothingCorrectionWindow
-        # )
 
         # Apply the dynamic offset to beat
         correctedBeatTimes = self.setDynamicOffset(correction, beats_midi)
-
-        # diff = [e["diff"] for e in correction]
-        # plt.plot([e["time"] for e in correction], diff)
-        # plt.title(missalignedMidiInput)
-        # print(missalignedMidiInput)
-        # plt.show()
-        # self.debugPlot(beatAct, beats_midi, correctedBeatTimes)
 
         # Apply the dynamic offset to onsets
         if len(midi.instruments) > 1:  # There are multiple drums
@@ -85,21 +72,9 @@ class CorrectAlignmentConverter(Converter):
         correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
 
         # Measure if the annotations are of good quality.
-        qualityAct = self.getAnnotationsQualityAct(
-            beats_midi, correctedBeatTimes, correctedDrumsTimes, beatAct, sampleRate, activationThreshold=activationThreshold
+        self.getAnnotationsQualityAct(
+            correction, drumstimes, beatAct, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance
         )
-        ## Deprecated Method
-        # qualityHit = self.getAnnotationsQualityHit([t for t in beats_audio if t <= midi.get_end_time()], correctedBeatTimes, sampleRate)
-
-        # Get the beats with a huge correction which doesn't seem correct (intersecting with a drums onset to remove wrong estimations from madmom)
-        drumstimesSet = set(drumstimes)
-        largeCorrections = [c for c in correction if np.abs(c["diff"]) > maxCorrectionDistance and c["time"] in drumstimesSet]
-
-        # Discard the tracks with a low quality and with extreme corrections
-        if qualityAct < thresholdQuality:
-            raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
-        elif len(largeCorrections) > 2:  # TODO: Why 2 again?
-            raise ValueError("Extreme correction needed for this track")
 
         # writte the output
         tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
@@ -110,7 +85,9 @@ class CorrectAlignmentConverter(Converter):
         )
         newMidi.write(alignedMidiOutput)
 
-    def getAnnotationsQualityAct(self, originalBeats, correctedBeats, correctedOnsets, act, sampleRate, activationThreshold=0.1):
+    def getAnnotationsQualityAct(
+        self, correction, originalOnsets, act, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance
+    ):
         """
         Check the beat activation amplitude for each position of the annotated beats after the correction.
         This gives an indication of how many beats were effectively next to an audio cue and correctly aligned to it.
@@ -120,22 +97,36 @@ class CorrectAlignmentConverter(Converter):
 
         The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
         """
+        onsetsSet = set(np.round(originalOnsets, decimals=4))
         # Round the timings to 4 decimals to correct float imprecisions possibly creating an empty intersection
-        intersection = list(set(np.round(correctedBeats, decimals=4)).intersection(np.round(correctedOnsets, decimals=4)))
-        intersection.sort()
-        beatsAct = [act[int(np.round(t * sampleRate))] for t in intersection if int(np.round(t * sampleRate)) < len(act)]
+        correctionAtOnset = [c for c in correction if np.round(c["time"], decimals=4) in onsetsSet]
+        activationAtCorrection = [
+            act[int(np.round((c["time"] - c["diff"]) * sampleRate))]
+            for c in correctionAtOnset
+            if int(np.round(c["time"] * sampleRate)) < len(act)
+        ]
 
-        if len(beatsAct) == 0:
+        if len(activationAtCorrection) == 0:
             raise ValueError("no score at the position of the midi beats. there is an issue with the computation of the beat")
 
-        # # try with a threshold set to the mean of the act
-        # actThreshold = np.mean(act)
-        # peakWindow = 1
-        # peakMargin = 0.05
-        # isPeak = [act[i] + peakMargin >= max(act[max(i - peakWindow, 0) : i + 1 + peakWindow]) for i in beatsActIdx]
+        ratioBeatsWithHighActivation = len([1 for ba in activationAtCorrection if ba >= activationThreshold]) / len(activationAtCorrection)
 
-        confidence = len([1 for ba in beatsAct if ba >= activationThreshold]) / len(beatsAct)
-        return confidence
+        # Discard the tracks with a low quality and with extreme corrections
+        if ratioBeatsWithHighActivation < thresholdQuality:
+            raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
+            self.debugPlot(
+                act,
+                [
+                    correctionAtOnset[i]["time"] - correctionAtOnset[i]["diff"]
+                    for i, ba in enumerate(activationAtCorrection)
+                    if ba <= activationThreshold
+                ],
+            )
+        elif len(correctionAtOnset) / len(correction) < 0.5:
+            raise ValueError("the majority of the beats are not overlapping a drum onset")
+        elif len([c for c in correctionAtOnset if np.abs(c["diff"]) > maxCorrectionDistance]) > 2:  # TODO: Why 2 again?
+            raise ValueError("Extreme correction needed for this track")
+            self.debugPlot(act, [t["time"] for t in correctionAtOnset], [t["time"] - t["diff"] for t in correctionAtOnset])
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize=2048):
         """
