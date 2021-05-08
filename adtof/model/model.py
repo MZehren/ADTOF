@@ -96,7 +96,7 @@ class Model(object):
                 "reduce_patience": 5,
                 "stopping_patience": 10,
             },
-            "crnn-ADTOF-log72": {
+            "crnn-ADTOF-log73": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
