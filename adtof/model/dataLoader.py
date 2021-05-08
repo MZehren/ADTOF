@@ -32,7 +32,6 @@ class DataLoader(object):
             lazyLoading=True,
             **kwargs,
         )
-        # TODO remove the "removeStart" for the public datasets
         rbma = cls(
             os.path.join(folderPath, "rbma_13/audio"),
             os.path.join(folderPath, "rbma_13/annotations/drums_m"),
@@ -44,6 +43,7 @@ class DataLoader(object):
             validationFold=validationRatio,
             testFold=testFold,
             lazyLoading=False,
+            removeStart=False,
             **kwargs,
         )
         mdb_full_mix = cls(
@@ -58,6 +58,7 @@ class DataLoader(object):
             testFold=testFold,
             checkFilesNameMatch=False,
             lazyLoading=False,
+            removeStart=False,
             **kwargs,
         )
         mdb_drum_solo = cls(
@@ -72,6 +73,7 @@ class DataLoader(object):
             testFold=testFold,
             checkFilesNameMatch=False,
             lazyLoading=False,
+            removeStart=False,
             **kwargs,
         )
         enst_sum = cls(
@@ -85,6 +87,7 @@ class DataLoader(object):
             validationFold=validationRatio,
             testFold=testFold,
             lazyLoading=False,
+            removeStart=False,
             **kwargs,
         )
         enst_wet = cls(
@@ -98,6 +101,7 @@ class DataLoader(object):
             validationFold=validationRatio,
             testFold=testFold,
             lazyLoading=False,
+            removeStart=False,
             **kwargs,
         )
 

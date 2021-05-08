@@ -1,4 +1,5 @@
 import logging
+import os
 
 import matplotlib.pyplot as plt
 import mir_eval
@@ -25,8 +26,8 @@ class CorrectAlignmentConverter(Converter):
         alignedMidiOutput,
         maxDeviation=10,
         activationThreshold=0.2,
-        thresholdQuality=0.95,
-        maxCorrectionDistance=0.04,
+        thresholdQuality=0.5,
+        maxCorrectionDistance=0.08,
         sampleRate=100,
     ):
         """
@@ -62,7 +63,7 @@ class CorrectAlignmentConverter(Converter):
         # Apply the dynamic offset to onsets
         if len(midi.instruments) > 1:  # There are multiple drums
             raise ValueError("multiple drums tracks on the midi file")
-            logging.debug("multiple drums tracks on the midi file. They are merged : " + str(midi.instruments))
+
         drumsPitches = [
             note.pitch for instrument in midi.instruments for note in instrument.notes
         ]  # [note.pitch for note in midi.instruments[0].notes]
@@ -73,7 +74,14 @@ class CorrectAlignmentConverter(Converter):
 
         # Measure if the annotations are of good quality.
         self.getAnnotationsQualityAct(
-            correction, drumstimes, beatAct, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance
+            correction,
+            drumstimes,
+            beatAct,
+            sampleRate,
+            activationThreshold,
+            thresholdQuality,
+            maxCorrectionDistance,
+            os.path.basename(missalignedMidiInput),
         )
 
         # writte the output
@@ -86,7 +94,7 @@ class CorrectAlignmentConverter(Converter):
         newMidi.write(alignedMidiOutput)
 
     def getAnnotationsQualityAct(
-        self, correction, originalOnsets, act, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance
+        self, correction, originalOnsets, act, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance, trackName
     ):
         """
         Check the beat activation amplitude for each position of the annotated beats after the correction.
@@ -113,20 +121,21 @@ class CorrectAlignmentConverter(Converter):
 
         # Discard the tracks with a low quality and with extreme corrections
         if ratioBeatsWithHighActivation < thresholdQuality:
-            raise ValueError("Not enough overlap between track's estimated and annotated beats to ensure alignment")
-            self.debugPlot(
-                act,
-                [
-                    correctionAtOnset[i]["time"] - correctionAtOnset[i]["diff"]
-                    for i, ba in enumerate(activationAtCorrection)
-                    if ba <= activationThreshold
-                ],
-            )
+            raise ValueError("Little overlap between track's estimated and annotated beats to ensure alignment on " + trackName)
         elif len(correctionAtOnset) / len(correction) < 0.5:
-            raise ValueError("the majority of the beats are not overlapping a drum onset")
-        elif len([c for c in correctionAtOnset if np.abs(c["diff"]) > maxCorrectionDistance]) > 2:  # TODO: Why 2 again?
-            raise ValueError("Extreme correction needed for this track")
-            self.debugPlot(act, [t["time"] for t in correctionAtOnset], [t["time"] - t["diff"] for t in correctionAtOnset])
+            raise ValueError("The majority of the beats are not overlapping a drum onset on " + trackName)
+        elif len([c for c in correctionAtOnset if np.abs(c["diff"]) > maxCorrectionDistance]) > 2:
+            raise ValueError("Extreme correction applied to align the beat for " + trackName)
+
+        # self.debugPlot(act, [t["time"] for t in correctionAtOnset], [t["time"] - t["diff"] for t in correctionAtOnset])
+        # self.debugPlot(
+        #     act,
+        #     [
+        #         correctionAtOnset[i]["time"] - correctionAtOnset[i]["diff"]
+        #         for i, ba in enumerate(activationAtCorrection)
+        #         if ba <= activationThreshold
+        #     ],
+        # )
 
     def getAnnotationsQualityHit(self, refBeats, estBeats, sampleRate, fftSize=2048):
         """
@@ -168,21 +177,13 @@ class CorrectAlignmentConverter(Converter):
 
         x = [o["time"] for o in offset]
         y = [o["diff"] for o in offset]
-        minBeatInter = min(np.diff(x))
 
-        if x[-1] + minBeatInter < onsets[-1]:  # Check how far the correction has to be extrapolated
+        if x[-1] + np.diff(x)[-1] < onsets[-1]:  # raise an error if the extrapolation is above one beat of length
             raise ValueError(
                 "Extrapolation of the annotation is too far from the ground truth with a distance of {:.2f}s".format(onsets[-1] - x[-1])
             )
 
         interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
-        # self.plotCorrection(offset, interp1d(x, y, kind="linear", fill_value=0.0))
-        # if max(np.abs(interpolation)) > minBeatInter * 0.5:
-        #     raise ValueError(
-        #         "Interpolation of annotations offset seems too extreme ({:.2f}s) wereas the min beat interval is {:.2f}s ({:.2f} bpm)".format(
-        #             max(np.abs(interpolation)), minBeatInter, 60 / minBeatInter
-        #         )
-        #     )
 
         converted = onsets - interpolation
         converted[converted < 0] = 0

@@ -67,10 +67,10 @@ def train_test_model(hparams, args, fold, model: Model):
     """
     # Get the data
     (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryAllDatasets(
-        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-log72", **hparams
+        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-log73", **hparams
     )
 
-    if not model.weightLoadedFlag:  # or args.model == "crnn-ptTMIDT":  # if model is not trained, do the fitting
+    if not model.weightLoadedFlag or (args.model == "crnn-ptTMIDT" and fold != 0):  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each track
         steps_per_epoch = trainTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["training_epoch"]
