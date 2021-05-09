@@ -43,6 +43,7 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
     parser.add_argument("model", type=str, help="name of the nodel to train", default="crnn-ADTOF")
+    # TODO parser.add_argument("retrain", type=bool, help="restart the training of the model", default=False)
     args = parser.parse_args()
 
     for fold in [0, 1, 2]:
@@ -70,7 +71,7 @@ def train_test_model(hparams, args, fold, model: Model):
         args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-log73", **hparams
     )
 
-    if not model.weightLoadedFlag or (args.model == "crnn-ptTMIDT" and fold != 0):  # if model is not trained, do the fitting
+    if not model.weightLoadedFlag:  # if model is not trained, do the fitting
         # number of minibatches per epoch = number of tracks * samples per tracks / samples per bacth
         # This is not really an epoch, since we do see all the tracks, but only a few sample of each track
         steps_per_epoch = trainTracksCount * hparams["samplePerTrack"] / hparams["batchSize"] * hparams["training_epoch"]
