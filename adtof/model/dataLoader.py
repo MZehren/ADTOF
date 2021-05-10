@@ -43,7 +43,7 @@ class DataLoader(object):
             validationFold=validationRatio,
             testFold=testFold,
             lazyLoading=False,
-            removeStart=False,
+            removeStart=False,  # TODO removeStart doesn't work with lazyLoading because "removeStart" arg is not added to kwargs
             **kwargs,
         )
         mdb_full_mix = cls(

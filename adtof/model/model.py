@@ -24,7 +24,7 @@ class Model(object):
         Instantiate and return a model with its hyperparameters.
         """
         models = {
-            "crnn-all": {
+            "crnn-all-log73": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
