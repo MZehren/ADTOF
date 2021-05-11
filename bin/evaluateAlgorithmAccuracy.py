@@ -129,6 +129,10 @@ def plotResults():
         crnnAllJSON = json.load(f)
     crnnAll = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
 
+    with open("evaluation/crnn-all_log73.json") as f:
+        crnnAllJSON = json.load(f)
+    crnnAll73 = {key: np.mean([values[key] for values in crnnAllJSON.values()]) for key in crnnAllJSON["crnn-all_Fold0"].keys()}
+
     with open("evaluation/crnn-ptTMIDT.json") as f:
         crnnPtJSON = json.load(f)
     crnnPt = {key: np.mean([values[key] for values in crnnPtJSON.values()]) for key in crnnPtJSON["crnn-ptTMIDT_Fold0"].keys()}
@@ -345,13 +349,14 @@ def plotResults():
 
     plot(
         {
-            "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["adtof_"]),
-            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt70KeepStart, keyPrefixes=["adtof_"]),
+            # "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["adtof_"]),
+            "Train on ENST, MDB, and RBMA73": map(crnnAll73, keyPrefixes=["adtof_"]),
+            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt, keyPrefixes=["adtof_"]),
             "Train on TMIDT and refinement on ENST, MDB, and RBMA73": map(crnnPt73, keyPrefixes=["adtof_"]),
             # "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["adtof_"]),
-            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["adtof_"]),
             # "Train on ADTOF 71": map(crnnADTOF71, keyPrefixes=["adtof_"]),
             # "Train on ADTOF 72": map(crnnADTOF72, keyPrefixes=["adtof_"]),
+            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["adtof_"]),
             # "Ensemble of models trained on TMIDT, RBMA, MDB, and ENST": map(VOGL_ENSEMBLE_CCLog70),
         },
         "Test on ADTOF",
@@ -359,12 +364,13 @@ def plotResults():
     )
     plot(
         {
-            "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["rbma_"]),
-            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt70KeepStart, keyPrefixes=["rbma_"]),
+            # "Train on ENST, MDB, and RBMA": map(crnnAll, keyPrefixes=["rbma_"]),
+            "Train on ENST, MDB, and RBMA 73": map(crnnAll73, keyPrefixes=["rbma_"]),
+            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt, keyPrefixes=["rbma_"]),
             "Train on TMIDT and refinement on ENST, MDB, and RBMA73": map(crnnPt73, keyPrefixes=["rbma_"]),
             # "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["rbma_"]),
-            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["rbma_"]),
             # "Train on ADTOF72": map(crnnADTOF72, keyPrefixes=["rbma_"]),
+            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["rbma_"]),
             # "Train on all Vogl": map(VOGL_ALL_RBMA),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_RBMA),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_RBMA),
@@ -374,12 +380,13 @@ def plotResults():
     )
     plot(
         {
-            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["mdb_full_mix_"]),
-            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt70KeepStart, keyPrefixes=["mdb_full_mix_"]),
+            # "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["mdb_full_mix_"]),
+            "Train on RBMA, MDB, and ENST 73": map(crnnAll73, keyPrefixes=["mdb_full_mix_"]),
+            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt, keyPrefixes=["mdb_full_mix_"]),
             "Train on TMIDT and refinement on ENST, MDB, and RBMA73": map(crnnPt73, keyPrefixes=["mdb_full_mix_"]),
             # "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["mdb_full_mix_"]),
-            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["mdb_full_mix_"]),
             # "Train on ADTOF72": map(crnnADTOF72, keyPrefixes=["mdb_full_mix_"]),
+            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["mdb_full_mix_"]),
             # "Train on all Vogl": map(VOGL_ALL_MDB),
             # "Train on pt MIDI Vogl": map(VOGL_PTMIDI_MDB),
             # "Train on RBMA, ENST, MDB, and TMIDT": map(VOGL_ALLMIDI_MDB),
@@ -389,32 +396,46 @@ def plotResults():
     )
     plot(
         {
-            "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["enst_sum_"]),
-            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt70KeepStart, keyPrefixes=["enst_sum_"]),
+            # "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["enst_sum_"]),
+            "Train on RBMA, MDB, and ENST 73": map(crnnAll73, keyPrefixes=["enst_sum_"]),
+            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt, keyPrefixes=["enst_sum_"]),
             "Train on TMIDT and refinement on ENST, MDB, and RBMA73": map(crnnPt73, keyPrefixes=["enst_sum_"]),
             # "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["enst_sum_"]),
-            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["enst_sum_"]),
             # "Train on ADTOF71": map(crnnADTOF72, keyPrefixes=["enst_sum_"]),
+            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["enst_sum_"]),
         },
         "Test on ENST",
         legend=False,
     )
-    # plot(
-    #     {
-    #         # "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]),
-    #         "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(
-    #             crnnPt, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]
-    #         ),
-    #         "Train on TMIDT and refinement on RBMA, MDB, and ENST KeepStart": map(
-    #             crnnPt70KeepStart, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]
-    #         ),
-    #         "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
-    #         # "Train on ADTOF 71": map(crnnADTOF71, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
-    #         # "Train on ADTOF 72": map(crnnADTOF72, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
-    #     },
-    #     "Overall public",
-    #     legend=True,
-    # )
+    plot(
+        {
+            # "Train on RBMA, MDB, and ENST": map(crnnAll, keyPrefixes=["enst_sum_"]),
+            "Train on RBMA, MDB, and ENST 73": map(crnnAll73, keyPrefixes=["enst_wet_"]),
+            # "Train on TMIDT and refinement on ENST, MDB, and RBMA70": map(crnnPt, keyPrefixes=["enst_sum_"]),
+            "Train on TMIDT and refinement on ENST, MDB, and RBMA73": map(crnnPt73, keyPrefixes=["enst_wet_"]),
+            # "Train on ADTOF 70": map(crnnADTOF, keyPrefixes=["enst_sum_"]),
+            # "Train on ADTOF71": map(crnnADTOF72, keyPrefixes=["enst_sum_"]),
+            "Train on ADTOF 73": map(crnnADTOF73, keyPrefixes=["enst_wet_"]),
+        },
+        "Test on ENST wet",
+        legend=False,
+    )
+    plot(
+        {
+            "Train on RBMA, MDB, and ENST": map(crnnAll73, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
+            # "Train on TMIDT and refinement on RBMA, MDB, and ENST": map(
+            #     crnnPt, keyPrefixes=["adtof_", "rbma_", "mdb_full_mix_", "enst_sum_"]
+            # ),
+            "Train on TMIDT and refinement on RBMA, MDB, and ENST KeepStart": map(
+                crnnPt73, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]
+            ),
+            "Train on ADTOF": map(crnnADTOF73, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
+            # "Train on ADTOF 71": map(crnnADTOF71, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
+            # "Train on ADTOF 72": map(crnnADTOF72, keyPrefixes=["rbma_", "mdb_full_mix_", "enst_sum_"]),
+        },
+        "Overall public",
+        legend=True,
+    )
     plt.show()
 
 
