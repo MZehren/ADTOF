@@ -1,5 +1,5 @@
 """
-Config file keeping folder name
+Config file to store constants and utility functions
 """
 import logging
 import os
@@ -18,7 +18,6 @@ RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
 BEATS_ACTIVATION = "estimations/beats_activation"  # Madmom's beat DNN output
 MANUAL_SUBSTRACTION = "annotations/manual_substraction"  # Files to remove after manual check
-SPLIT = "split"
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

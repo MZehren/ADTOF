@@ -48,7 +48,7 @@ class Model(object):
                 "reduce_patience": 10,
                 "stopping_patience": 25,
             },
-            "crnn-ptTMIDT": {
+            "crnn-ptTMIDTVal": {
                 "labels": config.LABELS_5,
                 "classWeights": config.WEIGHTS_5 / 10,
                 "emptyWeight": 1,
@@ -476,6 +476,7 @@ class Model(object):
         ppp = peakPicking.getPPProcess(**kwargs)
         dl = DataLoader(inputFolder, crossValidation=False, lazyLoading=True)
 
+        # Create a generator yielding full tracks one by one
         predictParam = {k: v for k, v in kwargs.items()}
         predictParam["repeat"] = False
         predictParam["samplePerTrack"] = None

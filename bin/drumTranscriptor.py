@@ -33,6 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("inputPath", type=str, help="Path to music or folder containing music to transcribe")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
+    parser.add_argument("model", type=str, help="name of the nodel to train, possible choice", default="crnn-ADTOF")
     args = parser.parse_args()
 
     # Get the model
