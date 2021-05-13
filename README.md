@@ -30,13 +30,13 @@ TODO: add the 2x bass versions
 
     downloadRhythmGamingWorld.py [-h] outputFolder
 
-    Download custom charts fron the website https://rhythmgamingworld.com/
-
-    positional arguments:
-      outputFolder  Path to the destination folder where the files are downloaded.
-
-    optional arguments:
-      -h, --help    show this help message and exit
+> Download custom charts fron the website https://rhythmgamingworld.com/
+> 
+> positional arguments:
+>     outputFolder  Path to the destination folder where the files are downloaded.
+> 
+> optional arguments:
+>     -h, --help    show this help message and exit
 
 ### 2. Convert the custom charts to the `PhaseShift` file format
 Rhythm Gaming World lists custom charts for different Rhythm games in different formats. But `ADTOF` requires that the charts downloaded are following specifically the `PhaseShift` file format (i.e. a folder containing a *song.ogg* and a *notes.mid* file). You can easily convert the charts downloaded to the good file format with the software [C3 CON Tools](https://rhythmgamingworld.com/forums/topic/c3-con-tools-v401-8142020-weve-only-just-begun/) (tested on Windows 10). After downloading and lauching C3 CON Tools, the conversion is done with a graphical user interface following this procedure:
@@ -49,15 +49,15 @@ The custom charts dowloaded can now be converted into a usable dataset with the 
 
     buildDataset.py [-h] [-p] inputFolder outputFolder
 
-    Process a chart folder with the automatic cleaning procedure
-
-    positional arguments:
-    inputFolder     Path to the chart folder.
-    outputFolder    Path to the destination folder.
-
-    optional arguments:
-    -h, --help      show this help message and exit
-    -p, --parallel  Set to run the cleaning in parallel
+> Process a chart folder with the automatic cleaning procedure
+> 
+> positional arguments:
+> inputFolder     Path to the chart folder.
+> outputFolder    Path to the destination folder.
+> 
+> optional arguments:
+> -h, --help      show this help message and exit
+> -p, --parallel  Set to run the cleaning in parallel
 
 
 ## Models
@@ -65,17 +65,17 @@ Trained models are available in the folder [/adtof/models/](./adtof/models). You
 
     drumTranscriptor.py [-h] [-m MODEL] inputPath outputPath
 
-    Use one of the three trained model to perform ADT
-
-    positional arguments:
-      inputPath             Path to a music file or folder containing music
-      outputPath            Path to output folder
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -m MODEL, --model MODEL
-                            Name of the pre-trained model used for the transcription. Values: crnn-ADTOF,
-                            crnn-all, crnn-ptTMIDT. (default: crnn-ADTOF)
+> Use one of the three trained model to perform ADT
+> 
+> positional arguments:
+>     inputPath             Path to a music file or folder containing music
+>     outputPath            Path to output folder
+> 
+> optional arguments:
+>     -h, --help            show this help message and exit
+>     -m MODEL, --model MODEL
+>                         Name of the pre-trained model used for the transcription. Values: crnn-ADTOF,
+>                         crnn-all, crnn-ptTMIDT. (default: crnn-ADTOF)
 
 ## Raw results
 The folder [/evaluation](./evaluation) contains the raw results of the cross validation. The plots in the paper are created with the script [/bin/plotAlgorithmAccuracy.py](/bin/plotAlgorithmAccuracy.py).
