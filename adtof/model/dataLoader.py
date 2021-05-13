@@ -618,7 +618,6 @@ class DataLoader(object):
         Approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights, adapted to compute class weights
         Compute the inverse estimated entropy of each label activity distribution
         """
-        raise NotImplementedError()
         tr = TextReader()
 
         tracks = config.getFilesInFolder(self.folderPath, config.AUDIO)

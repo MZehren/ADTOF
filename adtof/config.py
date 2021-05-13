@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 cwd = os.path.abspath(os.path.dirname(__file__))
-CHECKPOINT_DIR = os.path.join(cwd, "..", "models")
+CHECKPOINT_DIR = os.path.join(cwd, "models")
 
 
 def getFilesInFolder(*path, allowedExtension=set([".mp3", ".ogg", ".wav", ".mid", ".txt"])):

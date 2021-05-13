@@ -2,18 +2,14 @@ import datetime
 import logging
 import os
 import time
-from collections import defaultdict
-from os import stat
-
 
 import numpy as np
-import pandas as pd
 import pretty_midi
 import tensorflow as tf
 from adtof import config
 from adtof.io.mir import MIR
 from adtof.io.textReader import TextReader
-from adtof.model import eval, peakPicking
+from adtof.model import peakPicking
 from adtof.model.dataLoader import DataLoader
 
 

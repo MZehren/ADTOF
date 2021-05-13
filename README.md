@@ -21,9 +21,10 @@ A copy of the `ADTOF` dataset is available in the [/dataset](/dataset) without t
 - [/estimations/beats/](./dataset/estimations/beats): beats estimated by [madmom](https://github.com/CPJKU/madmom)
 - [/estimations/beats_activation/](./dataset/estimations/beats_activation): activation output of madmom's beats estimation model
 
-You can build th 
-### 1. Download Custom charts
-To build the dataset you will first need custom charts. The following script allows to download charts from the website [Rhythm Gaming World](https://rhythmgamingworld.com/).
+You can build your copy of the dataset (with audio files) with scripts shares in the {/bin}(/bin) folder.
+
+### 1. Download custom charts
+To build the dataset you will first need custom charts. The script {downloadRhythmGamingWorld.py}(/bin/downloadRhythmGamingWorld.py) allows to download charts from the website [Rhythm Gaming World](https://rhythmgamingworld.com/):
 TODO: add the 2x bass versions
 >usage: downloadRhythmGamingWorld.py [-h] outputFolder
 >
@@ -41,12 +42,11 @@ Rhythm Gaming World lists custom charts for multiple games, but `ADTOF` requires
 2. Click on **Change Input Folder** and select the folder containing the custom charts to convert
 3. Click on **Begin**
 
-
-### 2. Cleaning
-TODO HANDLE LOGS
+### 2. Automatic grooming
+The custom charts dowloaded can now be converted into a usable dataset with the script {buildDataset.py}(/bin/buildDataset.py):
 >usage: buildDataset.py [-h] [-p] inputFolder outputFolder
 >
->Process a chart folder with the automatic cleaning
+>Process a chart folder with the automatic cleaning procedure
 >
 >positional arguments:
 >  inputFolder     Path to the chart folder.
@@ -58,21 +58,23 @@ TODO HANDLE LOGS
 
 
 ## Models
-Trained models are available in the [/adtof/models](./adtof/models) folder. You can use them directly with the [drumTranscriptor](/bin/drumTranscriptor.py) script:
->drumTranscriptor.py [-h] inputPath outputPath model
+Trained models are available in the folder [/adtof/models/](./adtof/models). You can use them directly with the script [drumTranscriptor](/bin/drumTranscriptor.py):
+>usage: drumTranscriptor.py [-h] [-m MODEL] inputPath outputPath
 >
->todo
+>Use one of the three trained model to perform ADT
 >
 >positional arguments:
->  inputPath   Path to music or folder containing music to transcribe
->  outputPath  Path to output folder
->  model       name of the nodel to train, possible choice
+>  inputPath             Path to music or folder containing music
+>  outputPath            Path to output folder
 >
 >optional arguments:
->  -h, --help  show this help message and exit
+>  -h, --help            show this help message and exit
+>  -m MODEL, --model MODEL
+>                        Name of the pre-trained model used for the transcription. Values: crnn-ADTOF,
+>                        crnn-all, crnn-ptTMIDT. (default: crnn-ADTOF)
 
 ## Raw results
-The folder [/evaluatuion](./evaluation) contains the raw results of the cross validation. The plots in the paper are created with the script [plotAlgorithmAccuracy](/bin/plotAlgorithmAccuracy.py)
+The folder [/evaluation](./evaluation) contains the raw results of the cross validation. The plots in the paper are created with the script [plotAlgorithmAccuracy](/bin/plotAlgorithmAccuracy.py)
 
 ## License
 TODO
