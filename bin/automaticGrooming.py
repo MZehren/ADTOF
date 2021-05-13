@@ -13,9 +13,9 @@ def main():
     Parse the arguments and call the conversion
     """
     logging.basicConfig(level=logging.DEBUG)
-    parser = argparse.ArgumentParser(description="Process a chart folder with the automatic cleaning")
+    parser = argparse.ArgumentParser(description="Process a chart folder with the automatic cleaning procedure")
     parser.add_argument("inputFolder", type=str, help="Path to the chart folder.")
-    parser.add_argument("outputFolder", type=str, help="Path to the destination folder.")
+    parser.add_argument("outputFolder", type=str, help="Path to the destination folder of the dataset.")
     parser.add_argument("-p", "--parallel", action="store_true", help="Set to run the cleaning in parallel")
     args = parser.parse_args()
 

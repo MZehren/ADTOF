@@ -13,7 +13,7 @@ To build the dataset or use the pre-trained ADT models, you will first need to i
 
 
 ## Dataset
-A copy of the `ADTOF` dataset is available in the folder [/dataset](/dataset) without the audio files containing copyrighted content. The dataset has the following structure:
+A copy of the `ADTOF` dataset is available in the folder [/dataset](/dataset). This copy is shared without the audio files containing copyrighted content. The dataset has the following structure:
 - [/annotations/aligned_beats/](./dataset/annotations/aligned_beats/): text files with the time corrected beats location
 - [/annotations/aligned_drum/](./dataset/annotations/aligned_drum/): text files with the time corrected drum onsets location
 - [/annotations/aligned_drum/[raw/converted/aligned]_midi/](./dataset/annotations/): contains intermediate files kept for debuging purposes
@@ -25,60 +25,62 @@ A copy of the `ADTOF` dataset is available in the folder [/dataset](/dataset) wi
 You can build your copy of the dataset (with audio files) by following the next three steps.
 
 ### 1. Download custom charts
-To build the dataset you will first need custom charts. The script [/bin/downloadRhythmGamingWorld.py](/bin/downloadRhythmGamingWorld.py) allows to download charts from the website [Rhythm Gaming World](https://rhythmgamingworld.com/):
-TODO: add the 2x bass versions
+To build the dataset you will first need to download custom charts. We recommend to use the script [/bin/downloadRhythmGamingWorld.py](/bin/downloadRhythmGamingWorld.py) which downloads automatically charts from the website [Rhythm Gaming World](https://rhythmgamingworld.com/):
 
     downloadRhythmGamingWorld.py [-h] outputFolder
 
-> Download custom charts fron the website https://rhythmgamingworld.com/
-> 
-> positional arguments:
->     outputFolder  Path to the destination folder where the files are downloaded.
-> 
-> optional arguments:
->     -h, --help    show this help message and exit
+
+    Download custom charts fron the website https://rhythmgamingworld.com/
+    
+    positional arguments:
+        outputFolder  Path to the destination folder where the files are downloaded.
+    
+    optional arguments:
+        -h, --help    show this help message and exit
 
 ### 2. Convert the custom charts to the `PhaseShift` file format
-Rhythm Gaming World lists custom charts for different Rhythm games in different formats. But `ADTOF` requires that the charts downloaded are following specifically the `PhaseShift` file format (i.e. a folder containing a *song.ogg* and a *notes.mid* file). You can easily convert the charts downloaded to the good file format with the software [C3 CON Tools](https://rhythmgamingworld.com/forums/topic/c3-con-tools-v401-8142020-weve-only-just-begun/) (tested on Windows 10). After downloading and lauching C3 CON Tools, the conversion is done with a graphical user interface following this procedure:
+The charts you downloaded from Rhythm Gaming World in the previous step are in different formats meant for different rhythm games. But `ADTOF` requires that the charts downloaded are following specifically the `PhaseShift` file format (i.e. a folder containing a *song.ogg* and a *notes.mid* file). You can easily convert the charts downloaded to the good file format with the software [C3 CON Tools](https://rhythmgamingworld.com/forums/topic/c3-con-tools-v401-8142020-weve-only-just-begun/) (tested on Windows 10). After downloading and lauching C3 CON Tools, the conversion is done on the graphical user interface following this procedure:
 1. Click on **Phase Shift Converter**
 2. Click on **Change Input Folder** and select the folder containing the custom charts previous downloaded
 3. Click on **Begin**
 
 ### 3. Automatic grooming
-The custom charts dowloaded can now be converted into a usable dataset with the script [/bin/buildDataset.py](/bin/buildDataset.py):
+The custom charts you dowloaded and transformed into the `PhaseShift` file format can now be converted into a usable dataset (similar to the copy [/dataset](/dataset)) with the script [/bin/automaticGrooming.py](/bin/automaticGrooming.py):
 
-    buildDataset.py [-h] [-p] inputFolder outputFolder
+    automaticGrooming.py [-h] [-p] inputFolder outputFolder
 
-> Process a chart folder with the automatic cleaning procedure
-> 
-> positional arguments:
-> inputFolder     Path to the chart folder.
-> outputFolder    Path to the destination folder.
-> 
-> optional arguments:
-> -h, --help      show this help message and exit
-> -p, --parallel  Set to run the cleaning in parallel
+
+    Process a chart folder with the automatic cleaning procedure
+
+    positional arguments:
+    inputFolder     Path to the chart folder.
+    outputFolder    Path to the destination folder of the dataset.
+
+    optional arguments:
+    -h, --help      show this help message and exit
+    -p, --parallel  Set to run the cleaning in parallel
 
 
 ## Models
-Trained models are available in the folder [/adtof/models/](./adtof/models). You can use them directly with the script [/bin/drumTranscriptor.py](/bin/drumTranscriptor.py):
+We also include the pre-trained models we evaluated in the folder [/adtof/models/](./adtof/models). You can use the models directly to transcribe audio tracks with the script [/bin/drumTranscriptor.py](/bin/drumTranscriptor.py):
 
     drumTranscriptor.py [-h] [-m MODEL] inputPath outputPath
 
-> Use one of the three trained model to perform ADT
-> 
-> positional arguments:
->     inputPath             Path to a music file or folder containing music
->     outputPath            Path to output folder
-> 
-> optional arguments:
->     -h, --help            show this help message and exit
->     -m MODEL, --model MODEL
->                         Name of the pre-trained model used for the transcription. Values: crnn-ADTOF,
->                         crnn-all, crnn-ptTMIDT. (default: crnn-ADTOF)
+
+    Use one of trained model to perform ADT
+    
+    positional arguments:
+        inputPath             Path to a music file or folder containing music
+        outputPath            Path to output folder
+    
+    optional arguments:
+        -h, --help            show this help message and exit
+        -m MODEL, --model MODEL
+                            Name of the pre-trained model used for the transcription. Values: crnn-ADTOF,
+                            crnn-all, crnn-ptTMIDT. (default: crnn-ADTOF)
 
 ## Raw results
-The folder [/evaluation](./evaluation) contains the raw results of the cross validation. The plots in the paper are created with the script [/bin/plotAlgorithmAccuracy.py](/bin/plotAlgorithmAccuracy.py).
+The raw results of the cross-validation are shared in the folder [/evaluation](./evaluation). The plots available in the paper are created with the script [/bin/plotAlgorithmAccuracy.py](/bin/plotAlgorithmAccuracy.py).
 
 ## License
 TODO

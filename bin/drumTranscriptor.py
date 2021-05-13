@@ -6,7 +6,7 @@ from adtof.model.model import Model
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Use one of the three trained model to perform ADT")
+    parser = argparse.ArgumentParser(description="Use one of trained model to perform ADT")
     parser.add_argument("inputPath", type=str, help="Path to a music file or folder containing music")
     parser.add_argument("outputPath", type=str, default="./", help="Path to output folder")
     parser.add_argument(
