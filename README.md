@@ -6,13 +6,22 @@ The state-of-the-art methods for Automatic Drum Transcription (ADT) are machine 
 
 ## Installation
 To build the dataset or use the pre-trained ADT models, you will first need to install the scripts shared in this repository. This can be done with the [setup.py](./setup.py) script with the following command line:
-> pip3 install -e .
+> pip3 install .
 
-TODO: add the version of the other scripts
-| :warning: This repository has been tested on macOS Catalina with **Python 3.8** and **pip 20.3** |
+| :warning: This repository has been tested on macOS Catalina with **Python 3.8** and **pip 21.1** |
 | ------------------------------------------------------------------------------------------------ |
 
-## Build the dataset
+## Dataset
+A copy of the `ADTOF` dataset is available in the [/dataset](/dataset) without the audio files containing copyrighted content. The dataset has the following structure:
+- [/annotations/aligned_beats/](./dataset/annotations/aligned_beats/): text files with the time corrected beats location
+- [/annotations/aligned_drum/](./dataset/annotations/aligned_drum/): text files with the time corrected drum onsets location
+- [/annotations/aligned_drum/[raw/converted/aligned]_midi/](./dataset/annotations/): contains intermediate files kept for debuging purposes
+- [/annotations/aligned_drum/manual_substraction](./dataset/annotations/manual_substraction): list of files removed from the dataset 
+- [/audio/audio/](./dataset/audio/audio): audio files 
+- [/estimations/beats/](./dataset/estimations/beats): beats estimated by [madmom](https://github.com/CPJKU/madmom)
+- [/estimations/beats_activation/](./dataset/estimations/beats_activation): activation output of madmom's beats estimation model
+
+You can build th 
 ### 1. Download Custom charts
 To build the dataset you will first need custom charts. The following script allows to download charts from the website [Rhythm Gaming World](https://rhythmgamingworld.com/).
 TODO: add the 2x bass versions
@@ -47,16 +56,23 @@ TODO HANDLE LOGS
 >  -h, --help      show this help message and exit
 >  -p, --parallel  Set to run the cleaning in parallel
 
-This script will parse all the files and create the dataset with the following hierarchy:
-- *annotations*
-    - *aligned_beats*: text files with the time corrected beats location
-    - *aligned_drum*: text files with the time corrected drum onsets location
-    - *raw_midi*/*converted_midi*/*aligned_midi*: contains intermediate files kept for debuging purposes
-- *audio*
-    - *audio*: audio files
-- *estimations*
-    - *beats*: beats estimated by [madmom](https://github.com/CPJKU/madmom)
-    - *beats_activation*: activation output of madmom's beats estimation model
-### Transcribe
+
+## Models
+Trained models are available in the [/adtof/models](./adtof/models) folder. You can use them directly with the [drumTranscriptor](/bin/drumTranscriptor.py) script:
+>drumTranscriptor.py [-h] inputPath outputPath model
+>
+>todo
+>
+>positional arguments:
+>  inputPath   Path to music or folder containing music to transcribe
+>  outputPath  Path to output folder
+>  model       name of the nodel to train, possible choice
+>
+>optional arguments:
+>  -h, --help  show this help message and exit
+
+## Raw results
+The folder [/evaluatuion](./evaluation) contains the raw results of the cross validation. The plots in the paper are created with the script [plotAlgorithmAccuracy](/bin/plotAlgorithmAccuracy.py)
 
 ## License
+TODO
