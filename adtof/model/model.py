@@ -24,33 +24,32 @@ class Model(object):
         Instantiate and return a model with its hyperparameters.
         """
         models = {
-            "crnn-all-log73-goodVal": {
-                "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
-                "emptyWeight": 1,
-                "sampleRate": 100,
-                "diff": True,
-                "samplePerTrack": 1,
-                "trainingSequence": 400,
-                "batchSize": 8,
-                "context": 9,
-                "labelOffset": 1,
-                "labelRadiation": 1,
-                "learningRate": 0.001,
-                "normalize": False,
-                "architecture": "CRNN",
-                "fmin": 20,
-                "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
-                "validation_epoch": 10,
-                "training_epoch": 10,
-                "reduce_patience": 10,
-                "stopping_patience": 25,
+            "crnn-all": {
+                "labels": config.LABELS_5,  # Classes to predict
+                "classWeights": config.WEIGHTS_5,  # Weights applied to the classes during training
+                "emptyWeight": 1,  # weight of a sample without any onset
+                "sampleRate": 100,  # sample rate of the predictions
+                "diff": True,  # stacking the spectrogram input with its first order difference
+                "samplePerTrack": 1,  # Number of training sequence per track extracted before going to the next track during training
+                "trainingSequence": 400,  # How many Fourier transforms constitue a training sequence
+                "batchSize": 8,  # How many training sequences per minibatch.
+                "context": 9,  # Number of samples given to the Convolutional layer (only 9 supported atm)
+                "labelOffset": 1,  # How many samples to offset the ground truth labels to make sure the attack is not missed
+                "labelRadiation": 1,  # How many samples from the target have a non-null value
+                "learningRate": 0.001,  # Learning rate
+                "normalize": False,  # Normalizing the network input per track
+                "architecture": "CRNN",  # What model architecture is used
+                "fmin": 20,  # Min frequency limit to the Fourier transform
+                "fmax": 20000,  # Max frequency limit to the Fourier transform
+                "validation_epoch": 10,  # how many training sequence per track of the validation set has to be seen to consider an epoch
+                "training_epoch": 10,  # how many training sequence per track of the training set has to be seen to consider an epoch
+                "reduce_patience": 10,  # how many epoch without improvement on validation before reducing the lr
+                "stopping_patience": 25,  # how many epoch without improvement on validation before stopping the training
+                "peakThreshold": 0.1,  # peakThreshold computed on the validation set
             },
-            "crnn-ptTMIDTVal": {
+            "crnn-ptTMIDT": {
                 "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
+                "classWeights": config.WEIGHTS_5,
                 "emptyWeight": 1,
                 "sampleRate": 100,
                 "diff": True,
@@ -65,16 +64,15 @@ class Model(object):
                 "architecture": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
                 "validation_epoch": 10,
                 "training_epoch": 10,
                 "reduce_patience": 10,
                 "stopping_patience": 25,
+                "peakThreshold": 0.16999999999999998,
             },
             "crnn-TMIDT": {
                 "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
+                "classWeights": config.WEIGHTS_5,
                 "emptyWeight": 1,
                 "sampleRate": 100,
                 "diff": True,
@@ -89,16 +87,14 @@ class Model(object):
                 "architecture": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
                 "validation_epoch": 0.5,
                 "training_epoch": 0.5,
                 "reduce_patience": 5,
                 "stopping_patience": 10,
             },
-            "crnn-ADTOF-log73": {
+            "crnn-ADTOF": {
                 "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
+                "classWeights": config.WEIGHTS_5,
                 "emptyWeight": 1,
                 "sampleRate": 100,
                 "diff": True,
@@ -113,12 +109,11 @@ class Model(object):
                 "architecture": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
                 "validation_epoch": 1,
                 "training_epoch": 1,
                 "reduce_patience": 10,
                 "stopping_patience": 25,
+                "peakThreshold": 0.22999999999999995,
             },
         }
 
@@ -321,9 +316,7 @@ class Model(object):
         https://www.tensorflow.org/api_docs/python/tf/keras/layers/RNN#masking_2
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
-        TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
-        TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 64 filters, then 32
-        TODO: How to construct the GT since the trainingSequence is 400, but the output is 388/392 depending on the context.
+        TODO: Why is the conv blocks inversed. Vogl's article explains 32 filters then 64 filters, the code has 64 filters, then 32
         """
         # Compte the input size
         xWindowSize = context + (trainingSequence - 1)
@@ -360,11 +353,8 @@ class Model(object):
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
         timeSerieDim = xWindowSize - (context - 1)
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 32
-        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one.
-        # This
+        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one.s
         tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))
-        # return the whole sequence for the next layers with return_sequence
-        # TODO check the activation function. There shouldn't be any, whereas by default in TF it's Tanh
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))

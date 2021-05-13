@@ -1,10 +1,10 @@
 import logging
+import os
+from pathlib import Path
 from urllib.parse import quote
 from urllib.request import urlopen, urlretrieve
-import os
+
 from bs4 import BeautifulSoup
-import re
-from pathlib import Path
 
 
 def scrapIndex(rangeToParse=range(1, 100), path=""):
@@ -29,7 +29,7 @@ def scrapIndex(rangeToParse=range(1, 100), path=""):
             hasDrums = len(rows[track + 1].select("div:nth-of-type(3) span")) == 0
             fileName = artist + " - " + title
             if hasDrums:
-                print(fileName, downloadCustom(link, path))
+                logging.info(fileName + " " + str(downloadCustom(link, path)))
 
 
 def pickLink(soup):
@@ -77,7 +77,7 @@ def downloadCustom(url, folderPath):
             dl(downloadUrl)
             return True
     except Exception as e:
-        logging.error("url not working: " + url)
-        logging.error("exception raised: " + e)
+        logging.error("url not working: " + str(url))
+        logging.error("exception raised: " + str(e))
 
     return False

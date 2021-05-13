@@ -558,5 +558,7 @@ LABELS_5 = [35, 38, 47, 42, 49]
 LABELS_3 = [35, 38, 42]
 
 # Vogl weights Bass drum (1.0), snare drum (4.0), and hi-hat (1.5)
-WEIGHTS_5 = np.array([10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326])
+# Our set of weights computed with the approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights
+# Compute the inverse estimated entropy of each label activity distribution
+WEIGHTS_5 = np.array([1.0780001453213364, 1.3531086684241876, 3.413723052423422, 1.144276962353584, 1.76755104053326])
 

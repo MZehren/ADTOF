@@ -3,18 +3,8 @@
 
 import argparse
 import logging
-import os
-import shutil
 
-import pandas as pd
-from adtof import config
 from adtof.converters.converter import Converter
-from adtof.model.dataLoader import DataLoader
-
-cwd = os.path.abspath(os.path.dirname(__file__))
-all_logs = os.path.join(cwd, "..", "logs/")
-Converter.checkPathExists(all_logs)
-logging.basicConfig(filename=os.path.join(all_logs, "buildDataset.log"), level=logging.DEBUG, filemode="w")
 
 
 def main():

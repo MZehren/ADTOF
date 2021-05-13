@@ -24,7 +24,7 @@ setuptools.setup(
         "mir_eval",
         "jellyfish",
         "pyunpack",
-        "ffmpeg",
+        "ffmpeg-python",
         "pretty_midi",
         "beautifulsoup4",
         "tapcorrect @ git+https://github.com/MZehren/tapcorrect#subdirectory=python&egg=tapcorrect",
