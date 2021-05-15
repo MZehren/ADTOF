@@ -65,11 +65,3 @@ class GuitarProToMidiConverter(Converter):
         pattern = midi.Pattern()
         pattern.append(track)
         return pattern
-
-
-g = GuitarProToMidiConverter()
-miskdf = g.convert(
-    "/home/mickael/Documents/Datasets/drumsTranscription/Transcriptions [By Alex Rudinger]/01 AAL/01 GuitarPro Files/01 Tempting Time.gp5"
-)
-midi.write_midifile("/home/mickael/Documents/Datasets/drumsTranscription/Transcriptions [By Alex Rudinger]/01 AAL/test.mid", miskdf)
-# g.convert("E:/ADTSets/Transcriptions [By Alex Rudinger]/01 AAL/01 GuitarPro Files/01 Tempting Time.gp5")

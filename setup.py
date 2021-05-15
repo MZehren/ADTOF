@@ -10,7 +10,7 @@ setuptools.setup(
     scripts=glob.glob("bin/*"),
     author="anonymous",
     author_email="anonymous",
-    description="Additional material for the paper 'ADTOF: A large dataset of real western music annotated for automatic drum transcription by anonymous.'",
+    description="Additional material for the paper 'ADTOF: A large dataset of non-synthetic music for automatic drum transcription'",
     long_description=long_description,
     url="https://github.com/anonymous",
     packages=setuptools.find_packages(),

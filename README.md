@@ -1,5 +1,5 @@
 # ADTOF
-This repository contains additional material for the paper **ADTOF: A large dataset of real western music annotated for automatic drum transcription** by anonymous.
+This repository contains additional material for the paper **ADTOF: A large dataset of non-synthetic music for automatic drum transcription** by anonymous.
 
 ## Abstract
 The state-of-the-art methods for Automatic Drum Transcription (ADT) are machine learning models trained in a supervised manner, which means that they rely on labeled datasets. The problem is that the available public datasets are limited either in size or in realism, and are thus suboptimal for training purposes. Indeed, the best results are currently obtained via a rather convoluted multi-step training process that involves both real and synthetic datasets. To address this issue, starting from the observation that the communities of rhythm games players provide a large amount of annotated data, we curated a new dataset of crowdsourced drum transcriptions. This dataset contains real-world music, is manually annotated, and is about two orders of magnitude larger than any other non-synthetic dataset, making it a prime candidate for training purposes. However, due to crowdsourcing, the initial annotations contain mistakes. We discuss how the quality of the dataset can be improved by automatically correcting different types of mistakes. When used to train a popular ADT model, the dataset yields a performance that matches that of the state-of-the-art for ADT, thus demonstrating the quality of the annotations.
@@ -15,12 +15,19 @@ To build the dataset or use the pre-trained ADT models, you will first need to i
 ## Dataset
 A copy of the `ADTOF` dataset is available in the folder [/dataset](/dataset). This copy is shared without the audio files containing copyrighted content. The dataset has the following structure:
 - [/annotations/aligned_beats/](./dataset/annotations/aligned_beats/): text files with the time corrected beats location
-- [/annotations/aligned_drum/](./dataset/annotations/aligned_drum/): text files with the time corrected drum onsets location
+- [/annotations/aligned_drum/](./dataset/annotations/aligned_drum/): text files with the time corrected drum onsets location. 
 - [/annotations/aligned_drum/[raw/converted/aligned]_midi/](./dataset/annotations/): contains intermediate files kept for debuging purposes
-- [/annotations/aligned_drum/manual_substraction](./dataset/annotations/manual_substraction): list of files removed from the dataset 
+- [/annotations/aligned_drum/manual_substraction](./dataset/annotations/manual_substraction): list of files manually removed from the dataset 
 - [/audio/audio/](./dataset/audio/audio): audio files 
 - [/estimations/beats/](./dataset/estimations/beats): beats estimated by [madmom](https://github.com/CPJKU/madmom)
 - [/estimations/beats_activation/](./dataset/estimations/beats_activation): activation output of madmom's beats estimation model
+
+All the text files in the dataset are in a [tab-separated values](https://en.wikipedia.org/wiki/Tab-separated_values) format. The drum instruments are named according to the [standard midi](https://en.wikipedia.org/wiki/General_MIDI#Percussive) pitches like so:
+ - 35: Bass drum
+ - 38: Snare drum 
+ - 47: Tom
+ - 42: Hi-hat
+ - 49: Crash and ride cymbal
 
 You can build your copy of the dataset (with audio files) by following the next three steps.
 
@@ -62,7 +69,7 @@ The custom charts you dowloaded and transformed into the `PhaseShift` file forma
 
 
 ## Models
-We also include the pre-trained models we evaluated in the folder [/adtof/models/](./adtof/models). You can use the models directly to transcribe audio tracks with the script [/bin/drumTranscriptor.py](/bin/drumTranscriptor.py):
+You can access the pre-trained models we evaluated in the folder [/adtof/models/](./adtof/models). You can use the models directly to transcribe audio tracks with the script [/bin/drumTranscriptor.py](/bin/drumTranscriptor.py):
 
     drumTranscriptor.py [-h] [-m MODEL] inputPath outputPath
 
@@ -82,5 +89,3 @@ We also include the pre-trained models we evaluated in the folder [/adtof/models
 ## Raw results
 The raw results of the cross-validation are shared in the folder [/evaluation](./evaluation). The plots available in the paper are created with the script [/bin/plotAlgorithmAccuracy.py](/bin/plotAlgorithmAccuracy.py).
 
-## License
-TODO
