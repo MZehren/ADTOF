@@ -43,7 +43,7 @@ def main():
     parser = argparse.ArgumentParser(description="todo")
     parser.add_argument("folderPath", type=str, help="Path to the training dataset.")
     parser.add_argument("model", type=str, help="name of the nodel to train", default="crnn-ADTOF")
-    parser.add_argument("-r", "--retrain", action="store_true", help="DO the training regardless if the model is already trained or not.")
+    parser.add_argument("-r", "--retrain", action="store_true", help="Do the training regardless if the model is already trained or not.")
     args = parser.parse_args()
 
     for fold in [0, 1, 2]:
@@ -68,7 +68,7 @@ def train_test_model(hparams, args, fold, model: Model):
     """
     # Get the data
     (dataset_train, dataset_val, valFullGen, trainTracksCount, valTracksCount, testFullNamedGen,) = DataLoader.factoryAllDatasets(
-        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF-log73", **hparams
+        args.folderPath, testFold=fold, trainPublic=args.model != "crnn-ADTOF", **hparams
     )
 
     if not model.weightLoadedFlag or args.retrain:  # if model is not trained, do the fitting

@@ -27,8 +27,12 @@ def mergeTracks(audioFiles, pathOutput, weights="2 1"):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Script used to sum drum and accompaniment files in ENST. Simply copy the ")
-    parser.add_argument("ENSTFolder", type=str, help="Path to ENST dataset.")
+    parser = argparse.ArgumentParser(description="Script to sum drum and accompaniment files in ENST.")
+    parser.add_argument(
+        "ENSTFolder",
+        type=str,
+        help="Path to a location containing an 'audio_wet' and 'audio_accompagniement' sub-folders. Then merge the matching audio files",
+    )
     args = parser.parse_args()
     main(
         os.path.join(args.ENSTFolder, "audio_wet"),

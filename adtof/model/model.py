@@ -504,7 +504,7 @@ class Model(object):
     def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
-        The dataset needs to be full tracks and not independant 
+        The dataset needs to return full tracks and not independant samples  
         """
         predictions = []
         Y = []
