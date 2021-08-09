@@ -8,11 +8,10 @@ setuptools.setup(
     name="ADTOF",
     version="1.0",
     scripts=glob.glob("bin/*"),
-    author="anonymous",
-    author_email="anonymous",
+    author="Mickael Zehren",
     description="Additional material for the paper 'ADTOF: A large dataset of non-synthetic music for automatic drum transcription'",
     long_description=long_description,
-    url="https://github.com/anonymous",
+    url="https://github.com/MZehren/ADTOF",
     packages=setuptools.find_packages(),
     package_data={"adtof": ["models/*"]},
     install_requires=[
@@ -30,5 +29,5 @@ setuptools.setup(
         "beautifulsoup4",
         "tapcorrect @ git+https://github.com/MZehren/tapcorrect#subdirectory=python&egg=tapcorrect",
     ],
-    classifiers=["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"],
+    classifiers=["Programming Language :: Python :: 3", "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"],
 )
