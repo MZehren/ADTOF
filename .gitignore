@@ -1,0 +1,29 @@
+#Visual Studio Code files
+.vscode
+.style.yapf
+.DS_store
+
+# pycharm files
+.idea
+
+# Compiled Python files
+*.pyc
+build
+*.egg-info
+dist
+notebooks
+venv
+logs
+models/old
+evaluation/old
+bin/profile
+
+# Sphinx documentation
+/docs/_build/
+
+# vendors
+/vendors/*
+
+# plots generated
+*.png
+*.pdf
