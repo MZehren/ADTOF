@@ -8,13 +8,14 @@
 
 # Compiled Python files
 *.pyc
-/build
+build
 *.egg-info
-/dist
-/notebooks
-/venv
-/logs
-/models
+dist
+notebooks
+venv
+logs
+models/old
+evaluation/old
 bin/profile
 
 # Sphinx documentation

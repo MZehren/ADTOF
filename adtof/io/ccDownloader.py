@@ -1,32 +1,42 @@
-""" Module for downloading customcreators customs """
 import logging
+import os
+from pathlib import Path
 from urllib.parse import quote
 from urllib.request import urlopen, urlretrieve
-import os
+
 from bs4 import BeautifulSoup
-import re
 
 
-def scrapIndex(rangeToParse=range(20, 100), perPage=50, path="E:/ADTSets/adtof/raw/c3Download/"):
-    for i in rangeToParse:
-        logging.info("page :" + str(i))
-        url = (
-            "http://customscreators.com/index.php?/page/index.html?sort_col=rating_value&sort_order=desc&per_page="
-            + str(perPage)
-            + "&filters%5B18%5D%5B1%2C2%2C3%2C4%2C5%2C6%2C7%5D=1&filters%5B23%5D%5B1%2C2%2C3%2C4%2C5%2C6%2C7%5D=1&st="
-            + str(i * perPage)
-        )
+def scrapIndex(rangeToParse=range(1, 100), path=""):
+    """Download the custom charts from Rhythm Gaming world website
+
+    Parameters
+    ----------
+    rangeToParse : range, optional
+        The range of pages to download, by default range(1, 100)
+    path : str, optional
+        folder where to store the downloaded files, by default ""
+    """
+    for page in rangeToParse:
+        logging.info("page :" + str(page))
+        url = "https://db.c3universe.com/songs?page=" + str(page)
         soup = BeautifulSoup(urlopen(url), "html.parser")
-        for soupLinks in [row.findAll("td") for row in soup.findAll("tr", {"class": "dbrow"})]:
-            name = soupLinks[1].find("a").text + "_" + soupLinks[2].find("a").text
-            link = pickLink(soupLinks[5])
-            print(link, downloadCustom(link, path, name))
+        rows = soup.find("table", id="database").select("tbody tr")
+        for track in range(0, len(rows), 2):
+            link = rows[track].select("td:nth-of-type(2) a")[0]["href"]
+            artist = rows[track].select("td:nth-of-type(3) a")[0].text[1:-1]
+            title = rows[track].select("td:nth-of-type(4) a")[0].find("div", {"class", "todo-tasklist-item-title"}).text[1:-1]
+            hasDrums = len(rows[track + 1].select("div:nth-of-type(3) span")) == 0
+            fileName = artist + " - " + title
+            if hasDrums:
+                logging.info(fileName + " " + str(downloadCustom(link, path)))
 
 
 def pickLink(soup):
     """
     from all the versions that exists from a file, download the best one.
     """
+    raise DeprecationWarning("pickLink is a deprecated method not useful with the current version of the dataset")
     types = ["RB 2x", "PS 2x", "RB", "PS"]
     titles = [
         "Download this custom for Xbox 360 (2x BASS PEDAL)",
@@ -40,40 +50,34 @@ def pickLink(soup):
             return link["href"]  # , types[i]
 
 
-def downloadCustom(url, folderPath, fileName):
+def downloadCustom(url, folderPath):
     """
     Download the annoation from the url and return True if succeeded
 
     Url: url of the page hosting the chart
     fodlerPath: path to the folder where the file has to be downloaded
-    fileName: name of the file to prevent downloading twice the same file
-    /\*:?"<>|
     """
-    fileName = re.sub('[\/\\\*\:\?"\<\>\|]+', "", fileName)  # fileName.replace("/", "").replace(":", "")
-
-    def dl(downloadUrl):
-        urlretrieve(quote(downloadUrl, ":/"), folderPath + fileName)
 
     try:
-        if os.path.exists(folderPath + fileName) == True:
-            return True
-        elif url is None:
+        Path(folderPath).mkdir(parents=True, exist_ok=True)
+        if url is None:
             return False
         elif "c3universe.com/" in url:
             soup = BeautifulSoup(urlopen(url), "html.parser")
             downloadUrl = soup.find("a", {"class": "btn-warning"})["href"]
-            dl(downloadUrl)
+            fileName = downloadUrl.split("/")[-1]
+            filePath = os.path.join(folderPath, fileName)
+            if os.path.exists(filePath) == False:
+                urlretrieve(quote(downloadUrl, ":/"), filePath)
             return True
         elif "mediafire.com/" in url:
+            raise DeprecationWarning("Mediafire is not supported anymore")
             soup = BeautifulSoup(urlopen(url), "html.parser")
             downloadUrl = soup.find("a", {"aria-label": "Download file"})["href"]
             dl(downloadUrl)
             return True
-    except:
-        logging.error("url not working: " + url)
+    except Exception as e:
+        logging.error("url not working: " + str(url))
+        logging.error("exception raised: " + str(e))
 
     return False
-
-
-if __name__ == "__main__":
-    scrapIndex()

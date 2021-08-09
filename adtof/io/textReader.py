@@ -35,10 +35,16 @@ class TextReader(object):
         time = float(time)
         pitch = self.castInt(pitch)
 
-        return time, pitch
+        return (time, pitch)
 
     def getOnsets(
-        self, txtFilePath, mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5], group=True, sep="\t", removeIfClassUnknown=False
+        self,
+        txtFilePath,
+        mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
+        group=True,
+        sep="\t",
+        removeIfClassUnknown=False,
+        **kwargs
     ):
         """
             Parse the text file following Mirex encoding:
@@ -58,8 +64,8 @@ class TextReader(object):
             for line in f:
                 try:
                     time, pitch = self.decode(line, sep)
-                except:
-                    print("Line couldn't be decoded, passing.", line)
+                except Exception as e:
+                    print("Line couldn't be decoded, passing.", repr(line), str(e))
                     continue
 
                 pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=removeIfClassUnknown)

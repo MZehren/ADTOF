@@ -1,98 +1,52 @@
-import logging
-import time
-from collections import defaultdict
-from os import stat
-import os
 import datetime
-from madmom.audio.signal import energy
-import pandas as pd
+import logging
+import os
+import time
 
-import madmom
-from markdown.test_tools import Kwargs
-import matplotlib.pyplot as plt
 import numpy as np
+import pretty_midi
 import tensorflow as tf
-from numpy.core.defchararray import mod
-from tensorflow.keras import layers
-from tensorflow.python.eager.monitoring import Sampler
-
 from adtof import config
-from adtof.model import eval
-from adtof.model import peakPicking
 from adtof.io.mir import MIR
+from adtof.io.textReader import TextReader
+from adtof.model import peakPicking
+from adtof.model.dataLoader import DataLoader
 
 
 class Model(object):
     @staticmethod
-    def modelFactory(fold=0):
+    def modelFactory(modelName="crnn-ADTOF", fold=0):
         """
-        Yield models with different hyperparameters to be trained
+        Instantiate and return a model with its hyperparameters.
         """
         models = {
-            # "cnn-stride(1,3)-shuffledinput": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 2,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 20,
-            #     "batchSize": 100,
-            #     "context": 25,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "tracksLimit": None,
-            # },
-            # "TCN": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 2,
-            #     "sampleRate": 100,
-            #     "diff": False,
-            #     "samplePerTrack": 20,
-            #     "batchSize": 100,
-            #     "context": 8193,
-            #     "labelOffset": 8193 // 2,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "TCN",
-            #     "fmin": 30,
-            #     "fmax": 17000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "tracksLimit": None,
-            # },
-            # "crnn-YTlog70-rad1-diff-": {
-            #     "labels": config.LABELS_5,
-            #     "classWeights": config.WEIGHTS_5 / 10,
-            #     "sampleRate": 100,
-            #     "diff": True,
-            #     "samplePerTrack": 1,
-            #     "trainingSequence": 400,
-            #     "batchSize": 8,
-            #     "context": 9,
-            #     "labelOffset": 1,
-            #     "labelRadiation": 1,
-            #     "learningRate": 0.0001,
-            #     "normalize": False,
-            #     "model": "CRNN",
-            #     "fmin": 20,
-            #     "fmax": 20000,
-            #     "pad": False,
-            #     "beat_targ": False,
-            #     "validation_epoch": 1,
-            #     "peakThreshold": 0.21999999999999995
-            #     # "peakThreshold": 0.2599999999999999
-            #     # "peakThreshold": 0.25,  # 0.24, on CC   0.24999999999999992 on YT
-            # },
-            "crnn-YTlog70-rad0-diff": {
+            "crnn-all": {
+                "labels": config.LABELS_5,  # Classes to predict
+                "classWeights": config.WEIGHTS_5,  # Weights applied to the classes during training
+                "emptyWeight": 1,  # weight of a sample without any onset
+                "sampleRate": 100,  # sample rate of the predictions
+                "diff": True,  # stacking the spectrogram input with its first order difference
+                "samplePerTrack": 1,  # Number of training sequence per track extracted before going to the next track during training
+                "trainingSequence": 400,  # How many Fourier transforms constitue a training sequence
+                "batchSize": 8,  # How many training sequences per minibatch.
+                "context": 9,  # Number of samples given to the Convolutional layer (only 9 supported atm)
+                "labelOffset": 1,  # How many samples to offset the ground truth labels to make sure the attack is not missed
+                "labelRadiation": 1,  # How many samples from the target have a non-null value
+                "learningRate": 0.001,  # Learning rate
+                "normalize": False,  # Normalizing the network input per track
+                "architecture": "CRNN",  # What model architecture is used
+                "fmin": 20,  # Min frequency limit to the Fourier transform
+                "fmax": 20000,  # Max frequency limit to the Fourier transform
+                "validation_epoch": 10,  # how many training sequence per track of the validation set has to be seen to consider an epoch
+                "training_epoch": 10,  # how many training sequence per track of the training set has to be seen to consider an epoch
+                "reduce_patience": 10,  # how many epoch without improvement on validation before reducing the lr
+                "stopping_patience": 25,  # how many epoch without improvement on validation before stopping the training
+                "peakThreshold": 0.1,  # peakThreshold computed on the validation set
+            },
+            "crnn-ptTMIDT": {
                 "labels": config.LABELS_5,
-                "classWeights": config.WEIGHTS_5 / 10,
+                "classWeights": config.WEIGHTS_5,
+                "emptyWeight": 1,
                 "sampleRate": 100,
                 "diff": True,
                 "samplePerTrack": 1,
@@ -100,22 +54,67 @@ class Model(object):
                 "batchSize": 8,
                 "context": 9,
                 "labelOffset": 1,
-                "labelRadiation": 0,
-                "learningRate": 0.0001,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
                 "normalize": False,
-                "model": "CRNN",
+                "architecture": "CRNN",
                 "fmin": 20,
                 "fmax": 20000,
-                "pad": False,
-                "beat_targ": False,
+                "validation_epoch": 10,
+                "training_epoch": 10,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
+                "peakThreshold": 0.16999999999999998,
+            },
+            "crnn-TMIDT": {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.001,
+                "normalize": False,
+                "architecture": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
+                "validation_epoch": 0.5,
+                "training_epoch": 0.5,
+                "reduce_patience": 5,
+                "stopping_patience": 10,
+            },
+            "crnn-ADTOF": {
+                "labels": config.LABELS_5,
+                "classWeights": config.WEIGHTS_5,
+                "emptyWeight": 1,
+                "sampleRate": 100,
+                "diff": True,
+                "samplePerTrack": 1,
+                "trainingSequence": 400,
+                "batchSize": 8,
+                "context": 9,
+                "labelOffset": 1,
+                "labelRadiation": 1,
+                "learningRate": 0.0005,
+                "normalize": False,
+                "architecture": "CRNN",
+                "fmin": 20,
+                "fmax": 20000,
                 "validation_epoch": 1,
-                "peakThreshold": 0.19,
+                "training_epoch": 1,
+                "reduce_patience": 10,
+                "stopping_patience": 25,
+                "peakThreshold": 0.22999999999999995,
             },
         }
 
-        for modelName, hparams in models.items():
-            modelName += "_Fold" + str(fold)
-            yield (Model(modelName, **hparams), hparams)
+        hparams = models[modelName]
+        return (Model(modelName + "_Fold" + str(fold), **hparams), hparams)
 
     def __init__(self, name, **kwargs):
         """
@@ -313,9 +312,7 @@ class Model(object):
         https://www.tensorflow.org/api_docs/python/tf/keras/layers/RNN#masking_2
         https://adgefficiency.com/tf2-lstm-hidden/
         https://www.tensorflow.org/tutorials/structured_data/time_series
-        TODO: How to handle mini_batch of size 8 with training sequence of 400 instances and context of 13
-        TODO: Why is the conv blocks inversed. His article explains 32 filters then 64 filters, the code has 64 filters, then 32
-        TODO: How to construct the GT since the trainingSequence is 400, but the output is 388/392 depending on the context.
+        TODO: Why is the conv blocks inversed. Vogl's article explains 32 filters then 64 filters, the code has 64 filters, then 32
         """
         # Compte the input size
         xWindowSize = context + (trainingSequence - 1)
@@ -352,11 +349,8 @@ class Model(object):
         # tfModel.add(tf.keras.layers.Flatten())  replace the flatten by a reshape to [batchSize, timeSerieDim, featureDim]
         timeSerieDim = xWindowSize - (context - 1)
         featureDim = ((n_bins - 2 * 2) // 3 - 2 * 2) // 3 * 32
-        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one.
-        # This
+        # TODO change to a stride layer to actually collapse the context into one value, even if the convolution doesn't reduce the size to one.s
         tfModel.add(tf.keras.layers.Reshape((-1, featureDim)))
-        # return the whole sequence for the next layers with return_sequence
-        # TODO check the activation function. There shouldn't be any, whereas by default in TF it's Tanh
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
         tfModel.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(50, stateful=False, return_sequences=True)))
@@ -366,7 +360,7 @@ class Model(object):
         return tfModel
 
     def _createModel(
-        self, model="cnn", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, trainingSequence=100, **kwargs
+        self, architecture="CRNN", context=25, n_bins=168, output=5, learningRate=0.001 / 2, batchSize=100, trainingSequence=100, **kwargs
     ):
         """Return a tf model based 
         
@@ -384,14 +378,14 @@ class Model(object):
         # TODO How to handle the bidirectional aggregation ? by default in tf.keras it's sum
         # Between each miniBatch the recurent units lose their state by default,
         # Prevent that if we feed the same track across multiple mini-batches
-        if model == "CNN":
+        if architecture == "CNN":
             tfModel = self._getCNN(context, n_bins, output)
-        elif model == "CRNN":
+        elif architecture == "CRNN":
             tfModel = self._getCRNN(context, n_bins, output, batchSize, trainingSequence)
-        elif model == "TCN":
+        elif architecture == "TCN":
             tfModel = self._getTCNSequential(context, n_bins, output)
         else:
-            raise ValueError("%s not known", model)
+            raise ValueError("%s not known", architecture)
 
         # Very interesting read on loss functions: https://gombru.github.io/2018/05/23/cross_entropy_loss/
         # How softmax cross entropy can be used in multilabel classification,
@@ -403,44 +397,41 @@ class Model(object):
         )
         return tfModel
 
-    def fit(self, dataset_train, dataset_val, log_dir, steps_per_epoch, validation_steps, **kwargs):
+    def fit(self, dataset_train, dataset_val, log_dir, steps_per_epoch, validation_steps, reduce_patience=3, stopping_patience=6, **kwargs):
         """
         Fits the model to the train dataset and validate on the val dataset to reduce LR on plateau and do an earlystopping. 
         """
         logging.info("Training model %s", self.name)
 
         callbacks = [
-            tf.keras.callbacks.TensorBoard(
-                log_dir=log_dir + self.name + datetime.datetime.now().strftime("%d-%m-%H:%M"),
-                histogram_freq=0,
-                write_graph=False,
-                write_images=False,
-            ),
-            tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True,),
-            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=4),
-            tf.keras.callbacks.EarlyStopping(monitor="val_loss", min_delta=0.0001, patience=12, verbose=1, restore_best_weights=True),
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir + self.name + datetime.datetime.now().strftime("%d-%m-%H:%M")),
+            tf.keras.callbacks.ModelCheckpoint(self.path, save_weights_only=True, save_best_only=True),
+            tf.keras.callbacks.ReduceLROnPlateau(factor=0.2, verbose=1, patience=reduce_patience),
+            tf.keras.callbacks.EarlyStopping(min_delta=0.0001, patience=stopping_patience, verbose=1, restore_best_weights=True),
             # tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_layer_activation(epoch, viz_example, model, activation_model, file_writer))
         ]
         self.model.fit(
             dataset_train,
             epochs=1000,  # Very high number of epoch to stop only with ealy stopping
-            initial_epoch=0,
             steps_per_epoch=steps_per_epoch,
             callbacks=callbacks,
             validation_data=dataset_val,
-            validation_steps=validation_steps
-            # class_weight=classWeight
+            validation_steps=validation_steps,
         )
 
-    def predict(self, x, trainingSequence=1, **kwargs):
+    def predict(self, x, trainingSequence=1, limitInputSize=60000, **kwargs):
         """
         Call model.predict if possible
         If the model is a CRNN and can't utilize the batch parallelisation, call directly the model 
+
+        limitInputSize:
+            Set a limit to 10 minutes otherwise a segmentation Fault might be raised! 
+            TODO: could split the input in two to prevent that
         """
         if trainingSequence == 1:
             return self.model.predict(x, **kwargs)
         else:
-            if len(x) > 60000:  # Set a limit to 10 minutes otherwise a segmentation Fault might be raised!
+            if len(x) > limitInputSize:
                 raise ValueError("The input array is too big")
             # Put everyting in the first batch
             return np.array(self.model(np.array([x]), training=False)[0])
@@ -452,33 +443,69 @@ class Model(object):
         """
         return aggregation([model.predict(x) for model in models], axis=0)
 
-    # def predictMultiple(self, X, trainingSequence):
-    #     """
-    #     call in parallel a predict for each input in X
-    #     (useful for BRNN where a batch parallelisation is not feasible)
-    #     """
-    #     import concurrent.futures
+    def predictFolder(self, inputFolder, outputFolder, writeMidi=True, **kwargs):
+        """
+        Run the model prediction followed by the peak picking procedure on all the tracks from the folder.
+        Write a text file with the prediction in the output folder. 
+        If writeMidi=True, write also a midi file containing the predictions
 
-    #     futures = []
-    #     result = -1
-    #     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-    #         # result = executor.map(self.predict, X, [trainingSequence for x in X])
-    #         futures = [executor.submit(self.predict, x, trainingSequence) for x in X]
-    #         concurrent.futures.wait(futures)
+        Parameters
+        ----------
+        inputFolder : 
+            Path to a folder containing music or one specific music
+        outputFolder : 
+            Path to the location where to store the output
+        writeMidi : bool, optional
+           if a midi file for the prediction should be written as well, by default True
+        """
+        logging.info("prediction folder " + str(inputFolder))
+        ppp = peakPicking.getPPProcess(**kwargs)
+        dl = DataLoader(inputFolder, crossValidation=False, lazyLoading=True)
 
-    #     return [f.result() for f in futures]
-    #     return result
+        # Create a generator yielding full tracks one by one
+        predictParam = {k: v for k, v in kwargs.items()}
+        predictParam["repeat"] = False
+        predictParam["samplePerTrack"] = None
+        tracks = dl.getGen(**predictParam)
 
-    # def evaluateDebug(self, x, y, peakThreshold=None, **kwargs):
-    #     predictions = self.predict(x, **kwargs)
-    #     return peakPicking.fitPeakPicking([predictions], [y], peakPickingSteps=[peakThreshold], **kwargs)
+        # Predict the file and write the output
+        for (x, _), track in zip(tracks(), dl.audioPaths):
+            try:
+                if not os.path.exists(outputFolder):
+                    os.makedirs(outputFolder)
+                outputTrackPath = os.path.join(outputFolder, config.getFileBasename(track) + ".txt")
+                if os.path.exists(outputTrackPath):
+                    continue
+
+                Y = self.predict(x, **kwargs)
+                sparseResultIdx = peakPicking.peakPicking(
+                    Y, ppProcess=ppp, timeOffset=kwargs["labelOffset"] / kwargs["sampleRate"], **kwargs
+                )
+
+                # write text
+                formatedOutput = [(time, pitch) for pitch, times in sparseResultIdx.items() for time in times]
+                formatedOutput.sort(key=lambda x: x[0])
+                TextReader().writteBeats(outputTrackPath, formatedOutput)
+
+                #  write midi
+                if writeMidi:
+                    midi = pretty_midi.PrettyMIDI()
+                    instrument = pretty_midi.Instrument(program=1, is_drum=True)
+                    midi.instruments.append(instrument)
+                    for pitch, notes in sparseResultIdx.items():
+                        for i in notes:
+                            note = pretty_midi.Note(velocity=100, pitch=pitch, start=i, end=i)
+                            instrument.notes.append(note)
+                    midi.write(os.path.join(outputFolder, config.getFileBasename(track) + ".mid"))
+
+            except Exception as e:
+                logging.error(str(e))
 
     def evaluate(self, dataset, peakThreshold=None, context=20, trainingSequence=1, batchSize=32, **kwargs):
         """
         Run model.predict on the dataset followed by madmom.peakpicking. Find the best threshold for the peak 
-        The dataset needs to be full tracks and not independant 
+        The dataset needs to return full tracks and not independant samples  
         """
-        gen = dataset()
         predictions = []
         Y = []
 
@@ -490,7 +517,7 @@ class Model(object):
             for i in range(0, totalSamples - batch, batch):
                 yield np.array([seq[i + j : i + j + sequence] for j in range(batch)])
 
-        for i, (x, y) in enumerate(gen):
+        for i, (x, y) in enumerate(dataset):
             try:
                 startTime = time.time()
                 if trainingSequence == 1:  # TODO put that into the predict method?

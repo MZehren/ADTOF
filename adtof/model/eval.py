@@ -88,7 +88,7 @@ def runEvaluation(groundTruths, estimations, paths=[], distanceThreshold=0.05, r
 
 def getF1(tp, fp, fn):
     """Compute the precision, recall and F-Measure from the number of true positives,
-    false positives and false negatives. Based on Madmom implementatio which is different from mir_eval
+    false positives and false negatives. Based on Madmom implementation which is different from mir_eval
 
     Args:
         tp (int): true positives

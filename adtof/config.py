@@ -1,5 +1,5 @@
 """
-Config file keeping folder name
+Config file to store constants and utility functions
 """
 import logging
 import os
@@ -18,16 +18,15 @@ RV_ESTIMATIONS = "estimations/RV_CRNN8"  # Richard Vogl's CRNN8 estimations
 BEATS_ESTIMATIONS = "estimations/beats"  # Madmom's beat estimations
 BEATS_ACTIVATION = "estimations/beats_activation"  # Madmom's beat DNN output
 MANUAL_SUBSTRACTION = "annotations/manual_substraction"  # Files to remove after manual check
-SPLIT = "split"
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 cwd = os.path.abspath(os.path.dirname(__file__))
-CHECKPOINT_DIR = os.path.join(cwd, "..", "models")
+CHECKPOINT_DIR = os.path.join(cwd, "models")
 
 
-def getFilesInFolder(*path):
+def getFilesInFolder(*path, allowedExtension=set([".mp3", ".ogg", ".wav", ".mid", ".txt"])):
     """
     Get the files in the folder, or the file pointed by the path
     """
@@ -37,6 +36,7 @@ def getFilesInFolder(*path):
         return np.array([os.path.join(*path)])
     else:  # if it's a folder
         result = [os.path.join(*path, f) for f in os.listdir(os.path.join(*path)) if os.path.isfile(os.path.join(*path, f))]
+        result = [path for path in result if os.path.splitext(os.path.basename(path))[1] in allowedExtension]
         result.sort()
         return np.array(result)
 
@@ -380,11 +380,185 @@ ENST_MIDI = {
     #'ltr': -1,
 }
 
+# SPLITS
+RBMA_SPLITS = [
+    [
+        "RBMA-13-Track-02",
+        "RBMA-13-Track-08",
+        "RBMA-13-Track-13",
+        "RBMA-13-Track-22",
+        "RBMA-13-Track-04",
+        "RBMA-13-Track-11",
+        "RBMA-13-Track-30",
+        "RBMA-13-Track-25",
+        "RBMA-13-Track-21",
+    ],
+    [
+        "RBMA-13-Track-12",
+        "RBMA-13-Track-29",
+        "RBMA-13-Track-19",
+        "RBMA-13-Track-14",
+        "RBMA-13-Track-24",
+        "RBMA-13-Track-10",
+        "RBMA-13-Track-05",
+        "RBMA-13-Track-15",
+        "RBMA-13-Track-27",
+    ],
+    [
+        "RBMA-13-Track-01",
+        "RBMA-13-Track-03",
+        "RBMA-13-Track-16",
+        "RBMA-13-Track-18",
+        "RBMA-13-Track-20",
+        "RBMA-13-Track-09",
+        "RBMA-13-Track-28",
+        "RBMA-13-Track-23",
+        "RBMA-13-Track-17",
+    ],
+]
 
+ENST_SPLITS = [
+    [
+        "143_MIDI-minus-one_fusion-125_sticks",
+        "107_minus-one_salsa_sticks",
+        "108_minus-one_rock-60s_sticks",
+        "109_minus-one_metal_sticks",
+        "110_minus-one_musette_brushes",
+        "111_minus-one_funky_rods",
+        "112_minus-one_funk_rods",
+        "113_minus-one_charleston_sticks",
+        "114_minus-one_celtic-rock_brushes",
+        "115_minus-one_bossa_brushes",
+        "121_MIDI-minus-one_bigband_brushes",
+        "123_MIDI-minus-one_blues-102_sticks",
+        "125_MIDI-minus-one_country-120_brushes",
+        "127_MIDI-minus-one_disco-108_sticks",
+        "129_MIDI-minus-one_funk-101_sticks",
+        "131_MIDI-minus-one_grunge_sticks",
+        "133_MIDI-minus-one_nu-soul_sticks",
+        "135_MIDI-minus-one_rock-113_sticks",
+        "137_MIDI-minus-one_rock'n'roll-188_sticks",
+        "139_MIDI-minus-one_soul-120-marvin-gaye_sticks",
+        "141_MIDI-minus-one_soul-98_sticks",
+    ],
+    [
+        "152_MIDI-minus-one_fusion-125_sticks",
+        "115_minus-one_salsa_sticks",
+        "116_minus-one_rock-60s_sticks",
+        "117_minus-one_metal_sticks",
+        "118_minus-one_musette_brushes",
+        "119_minus-one_funky_sticks",
+        "120_minus-one_funk_sticks",
+        "121_minus-one_charleston_sticks",
+        "122_minus-one_celtic-rock_sticks",
+        "123_minus-one_celtic-rock-better-take_sticks",
+        "124_minus-one_bossa_sticks",
+        "130_MIDI-minus-one_bigband_sticks",
+        "132_MIDI-minus-one_blues-102_sticks",
+        "134_MIDI-minus-one_country-120_sticks",
+        "136_MIDI-minus-one_disco-108_sticks",
+        "138_MIDI-minus-one_funk-101_sticks",
+        "140_MIDI-minus-one_grunge_sticks",
+        "142_MIDI-minus-one_nu-soul_sticks",
+        "144_MIDI-minus-one_rock-113_sticks",
+        "146_MIDI-minus-one_rock'n'roll-188_sticks",
+        "148_MIDI-minus-one_soul-120-marvin-gaye_sticks",
+        "150_MIDI-minus-one_soul-98_sticks",
+    ],
+    [
+        "162_MIDI-minus-one_fusion-125_sticks",
+        "126_minus-one_salsa_sticks",
+        "127_minus-one_rock-60s_sticks",
+        "128_minus-one_metal_sticks",
+        "129_minus-one_musette_sticks",
+        "130_minus-one_funky_sticks",
+        "131_minus-one_funk_sticks",
+        "132_minus-one_charleston_sticks",
+        "133_minus-one_celtic-rock_sticks",
+        "134_minus-one_bossa_sticks",
+        "140_MIDI-minus-one_bigband_sticks",
+        "142_MIDI-minus-one_blues-102_sticks",
+        "144_MIDI-minus-one_country-120_sticks",
+        "146_MIDI-minus-one_disco-108_sticks",
+        "148_MIDI-minus-one_funk-101_sticks",
+        "150_MIDI-minus-one_grunge_sticks",
+        "152_MIDI-minus-one_nu-soul_sticks",
+        "154_MIDI-minus-one_rock-113_sticks",
+        "156_MIDI-minus-one_rock'n'roll-188_sticks",
+        "158_MIDI-minus-one_soul-120-marvin-gaye_sticks",
+        "160_MIDI-minus-one_soul-98_sticks",
+    ],
+]
+
+MDB_SPLITS_MIX = [
+    [
+        "MusicDelta_Punk_MIX",
+        "MusicDelta_CoolJazz_MIX",
+        "MusicDelta_Disco_MIX",
+        "MusicDelta_SwingJazz_MIX",
+        "MusicDelta_Rockabilly_MIX",
+        "MusicDelta_Gospel_MIX",
+        "MusicDelta_BebopJazz_MIX",
+    ],
+    [
+        "MusicDelta_FunkJazz_MIX",
+        "MusicDelta_FreeJazz_MIX",
+        "MusicDelta_Reggae_MIX",
+        "MusicDelta_LatinJazz_MIX",
+        "MusicDelta_Britpop_MIX",
+        "MusicDelta_FusionJazz_MIX",
+        "MusicDelta_Shadows_MIX",
+        "MusicDelta_80sRock_MIX",
+    ],
+    [
+        "MusicDelta_Beatles_MIX",
+        "MusicDelta_Grunge_MIX",
+        "MusicDelta_Zeppelin_MIX",
+        "MusicDelta_ModalJazz_MIX",
+        "MusicDelta_Country1_MIX",
+        "MusicDelta_SpeedMetal_MIX",
+        "MusicDelta_Rock_MIX",
+        "MusicDelta_Hendrix_MIX",
+    ],
+]
+
+MDB_SPLITS_DRUM_ONLY = [
+    [
+        "MusicDelta_Punk_Drum",
+        "MusicDelta_CoolJazz_Drum",
+        "MusicDelta_Disco_Drum",
+        "MusicDelta_SwingJazz_Drum",
+        "MusicDelta_Rockabilly_Drum",
+        "MusicDelta_Gospel_Drum",
+        "MusicDelta_BebopJazz_Drum",
+    ],
+    [
+        "MusicDelta_FunkJazz_Drum",
+        "MusicDelta_FreeJazz_Drum",
+        "MusicDelta_Reggae_Drum",
+        "MusicDelta_LatinJazz_Drum",
+        "MusicDelta_Britpop_Drum",
+        "MusicDelta_FusionJazz_Drum",
+        "MusicDelta_Shadows_Drum",
+        "MusicDelta_80sRock_Drum",
+    ],
+    [
+        "MusicDelta_Beatles_Drum",
+        "MusicDelta_Grunge_Drum",
+        "MusicDelta_Zeppelin_Drum",
+        "MusicDelta_ModalJazz_Drum",
+        "MusicDelta_Country1_Drum",
+        "MusicDelta_SpeedMetal_Drum",
+        "MusicDelta_Rock_Drum",
+        "MusicDelta_Hendrix_Drum",
+    ],
+]
 # Labels and class weights for the 5 output of the neural network
 LABELS_5 = [35, 38, 47, 42, 49]
 LABELS_3 = [35, 38, 42]
-# measure frequency {0: 5.843319324520516, 1: 7.270538125118844, 2: 50.45626814462919, 3: 3.5409710967670245, 4: 24.28284008637114}
+
 # Vogl weights Bass drum (1.0), snare drum (4.0), and hi-hat (1.5)
-WEIGHTS_5 = np.array([10.780001453213364, 13.531086684241876, 34.13723052423422, 11.44276962353584, 17.6755104053326])
+# Our set of weights computed with the approach from https://markcartwright.com/files/cartwright2018increasing.pdf section 3.4.1 Task weights
+# Compute the inverse estimated entropy of each label activity distribution
+WEIGHTS_5 = np.array([1.0780001453213364, 1.3531086684241876, 3.413723052423422, 1.144276962353584, 1.76755104053326])
 

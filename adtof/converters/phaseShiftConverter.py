@@ -10,14 +10,11 @@ from typing import List, Tuple
 import ffmpeg
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.lib.function_base import angle
 import pandas as pd
 from adtof import config
 from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_8
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PrettyMidiWrapper
-from sklearn.metrics import multilabel_confusion_matrix
-from sklearn.preprocessing import MultiLabelBinarizer
 
 
 class PhaseShiftConverter(Converter):
