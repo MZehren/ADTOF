@@ -1,3 +1,6 @@
+### Update
+Clear mapping from different datasets (e.g., [Slakh](https://github.com/ethman/slakh-generation)) to General MIDI has been added in the file [instrumentsMapping.py](./adtof/ressources/instrumentsMapping.py)
+
 # ADTOF
 This repository contains additional material for the paper **ADTOF: A large dataset of non-synthetic music for automatic drum transcription** by Mickaël Zehren, Marco Alunno, and Paolo Bientinesi.
 
