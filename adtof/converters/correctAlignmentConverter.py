@@ -21,6 +21,7 @@ class CorrectAlignmentConverter(Converter):
         self,
         refBeatActivationInput,
         missalignedMidiInput,
+        convertedDrumTextOutput,
         alignedDrumTextOutput,
         alignedBeatTextOutput,
         alignedMidiOutput,
@@ -31,7 +32,6 @@ class CorrectAlignmentConverter(Converter):
         sampleRate=100,
     ):
         """
-        # TODO: utiliser un jeu de données non aligné pour le test
 
         Parameters
         ----------
@@ -46,7 +46,7 @@ class CorrectAlignmentConverter(Converter):
             Below this threshold, the track is considered not well corrected and thus it is discarded.
             Only the beats intersecting with an onset are used to ensure that an audio cue is present.
         maxCorrectionThreshold : float, optional
-            maximum distance 
+            maximum distance
         """
         # Get annotations and estimation data used as reference.
         midi = PrettyMidiWrapper(missalignedMidiInput)
@@ -64,15 +64,13 @@ class CorrectAlignmentConverter(Converter):
         if len(midi.instruments) > 1:  # There are multiple drums
             raise ValueError("multiple drums tracks on the midi file")
 
-        drumsPitches = [
-            note.pitch for instrument in midi.instruments for note in instrument.notes
-        ]  # [note.pitch for note in midi.instruments[0].notes]
-        drumstimes = [
-            note.start for instrument in midi.instruments for note in instrument.notes
-        ]  # [note.start for note in midi.instruments[0].notes]
-        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
+        # Get the notes from the midi and writte the original alignment
+        drumsNotes = [note for instrument in midi.instruments for note in instrument.notes]  # [note.pitch for note in midi.instruments[0].notes]
+        drumstimes = [note.start for instrument in midi.instruments for note in instrument.notes]  # [note.start for note in midi.instruments[0].notes]
+        tr.writteBeats(convertedDrumTextOutput, [(drumstimes[i], drumsNotes[i].pitch) for i in range(len(drumstimes))])
 
-        # Measure if the annotations are of good quality.
+        # Compute the alignment and measure if it worked
+        correctedDrumsTimes = self.setDynamicOffset(correction, drumstimes)
         self.getAnnotationsQualityAct(
             correction,
             drumstimes,
@@ -84,35 +82,29 @@ class CorrectAlignmentConverter(Converter):
             os.path.basename(missalignedMidiInput),
         )
 
-        # writte the output
-        tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))])
+        # writte the aligned output
+        tr.writteBeats(alignedDrumTextOutput, [(correctedDrumsTimes[i], drumsNotes[i].pitch) for i in range(len(correctedDrumsTimes))])
         tr.writteBeats(alignedBeatTextOutput, [(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))])
         newMidi = PrettyMidiWrapper.fromListOfNotes(
-            [(correctedDrumsTimes[i], drumsPitches[i]) for i in range(len(correctedDrumsTimes))],
+            [(correctedDrumsTimes[i], drumsNotes[i]) for i in range(len(correctedDrumsTimes))],
             beats=[(correctedBeatTimes[i], beatIdx[i]) for i in range(len(correctedBeatTimes))],
         )
         newMidi.write(alignedMidiOutput)
 
-    def getAnnotationsQualityAct(
-        self, correction, originalOnsets, act, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance, trackName
-    ):
+    def getAnnotationsQualityAct(self, correction, originalOnsets, act, sampleRate, activationThreshold, thresholdQuality, maxCorrectionDistance, trackName):
         """
         Check the beat activation amplitude for each position of the annotated beats after the correction.
         This gives an indication of how many beats were effectively next to an audio cue and correctly aligned to it.
-        
+
         Because some beats are in silent times where no audio cues are available, the activation can be low even if the beat is correctly annotated.
-        To take this into account, only the beats intersecting with a drum onset are used. The drum onset insure that the activate will not be zero. 
+        To take this into account, only the beats intersecting with a drum onset are used. The drum onset insure that the activate will not be zero.
 
         The threshold specifies the minimum activation value on each annotation to consider the beat correctly annotated
         """
         onsetsSet = set(np.round(originalOnsets, decimals=4))
         # Round the timings to 4 decimals to correct float imprecisions possibly creating an empty intersection
         correctionAtOnset = [c for c in correction if np.round(c["time"], decimals=4) in onsetsSet]
-        activationAtCorrection = [
-            act[int(np.round((c["time"] - c["diff"]) * sampleRate))]
-            for c in correctionAtOnset
-            if int(np.round(c["time"] * sampleRate)) < len(act)
-        ]
+        activationAtCorrection = [act[int(np.round((c["time"] - c["diff"]) * sampleRate))] for c in correctionAtOnset if int(np.round(c["time"] * sampleRate)) < len(act)]
 
         if len(activationAtCorrection) == 0:
             raise ValueError("no score at the position of the midi beats. there is an issue with the computation of the beat")
@@ -170,7 +162,7 @@ class CorrectAlignmentConverter(Converter):
     def setDynamicOffset(self, offset, onsets):
         """
         Shift the onsets with the offset linearly interpolated
-        
+
         Raises an exception if the interpolation is outside of the range of known values (should correspond to the length of the audio)
         Raises an exception if the interpolation is above a maxOffsetThreshold
         """
@@ -179,9 +171,7 @@ class CorrectAlignmentConverter(Converter):
         y = [o["diff"] for o in offset]
 
         if x[-1] + np.diff(x)[-1] < onsets[-1]:  # raise an error if the extrapolation is above one beat of length
-            raise ValueError(
-                "Extrapolation of the annotation is too far from the ground truth with a distance of {:.2f}s".format(onsets[-1] - x[-1])
-            )
+            raise ValueError("Extrapolation of the annotation is too far from the ground truth with a distance of {:.2f}s".format(onsets[-1] - x[-1]))
 
         interpolation = interp1d(x, y, kind="linear", fill_value="extrapolate")(onsets)
 
@@ -215,9 +205,7 @@ class CorrectAlignmentConverter(Converter):
         D_pre, list_iois_pre = tapcorrect.tapcorrection.compute_deviation_matrix(act, beats_midi, fs_act, max_deviation)
         # compute deviation sequence
         dev_sequence = tapcorrect.tapcorrection.compute_score_maximizing_dev_sequence(D_pre, lambda_transition)
-        final_beat_times, mu, sigma = tapcorrect.tapcorrection.convert_dev_sequence_to_corrected_tap_times(
-            dev_sequence, beats_midi, max_deviation, fs_act
-        )
+        final_beat_times, mu, sigma = tapcorrect.tapcorrection.convert_dev_sequence_to_corrected_tap_times(dev_sequence, beats_midi, max_deviation, fs_act)
         result = [{"time": beats_midi[i], "diff": beats_midi[i] - final_beat_times[i]} for i in range(len(beats_midi))]
         # plt.plot([r["diff"] for r in result], label=str(max_deviation))
         # plt.legend()
@@ -277,4 +265,3 @@ class CorrectAlignmentConverter(Converter):
         plt.xlabel("Position (s)")
         plt.savefig("alignment.pdf", dpi=600, bbox_inches="tight")
         plt.show()
-

@@ -2,6 +2,11 @@ import concurrent.futures
 import logging
 import os
 from collections import defaultdict, Counter
+import re
+import jellyfish
+import matplotlib.pyplot as plt
+from adtof.config import plot
+import pandas as pd
 
 
 class Converter(object):
@@ -20,28 +25,6 @@ class Converter(object):
         return wether the path is a suitable input
         """
         raise NotImplementedError()
-
-    @staticmethod
-    def checkPathExists(path):
-        """ 
-        return if the path exists and generate the tree of folder if they doesn't
-        """
-        directory = os.path.dirname(path)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        return os.path.exists(path)
-
-    @staticmethod
-    def checkAllPathsExist(*outputs):
-        """
-        Check if all the paths exist and generate the tree of folders if they doesn't
-        (see checkPathExists)
-        """
-        allPathsExist = True
-        for output in outputs:
-            if not Converter.checkPathExists(output):
-                allPathsExist = False
-        return allPathsExist
 
     @staticmethod
     def _getFileCandidates(rootFolder):
@@ -80,20 +63,10 @@ class Converter(object):
                 #     genres["pro_drums:True"].append(root)
                 genres[meta["genre"]].append(root)
                 results[meta["name"]].append({"path": root, "convertor": psc})
-
         # # Plot
-        # values = [[k, len(v)] for k, v in genres.items()]
-        # values.sort(key=lambda e: -e[1])
-        # cm = 1 / 2.54  # centimeters in inches
-        # width = 17.2 * cm
-        # plt.figure(figsize=(width, width * 0.4))
-        # plt.bar(range(len(values)), [v[1] for v in values], edgecolor="black")
-        # plt.grid(axis="y", linestyle="--")
-        # plt.xticks(range(len(values)), [v[0] for v in values], rotation=90)
-        # plt.ylabel("Count")
-        # # plt.gcf().subplots_adjust(bottom=0.4)
-        # plt.savefig("Genre distribution.pdf", dpi=600, bbox_inches="tight")
-        return results
+        values = [[k, len(v)] for k, v in genres.items()]
+        values.sort(key=lambda e: -e[1])
+        return results, values
 
     @staticmethod
     def _cleanName(name):
@@ -133,20 +106,19 @@ class Converter(object):
             return name.replace(" ", ""), 10000
 
     @staticmethod
-    def _mergeFileNames(candidates, similitudeThreshold=0.9):
+    def _mergeFileNames(candidates, similitudeThreshold=1):
         """
         Merge the multiple version of the tracks between "foo_expert" and "foo_expert+"
         1: remove the keywords like "expert" or "(double_bass)"
         2: look at the distance between the names
         3: group the track with similar names and keep the highest priority one (double bass > single bass)
-
-        TODO: make it clear
         """
         names = candidates.keys()
         names = [n for n in names if n is not None]
         cleanedNames = [Converter._cleanName(name) for name in names]
         analysed = set([])
         group = []
+        # Group names by similitude
         for i, a in enumerate(names):
             if i in analysed:
                 continue
@@ -158,12 +130,13 @@ class Converter(object):
                     continue
 
                 bClean, priorityB = cleanedNames[j]
-                # similitude = jellyfish.jaro_distance(aClean, bClean)
-                if aClean == bClean:  # similitude > similitudeThreshold:
+                similitude = jellyfish.jaro_distance(aClean, bClean)
+                if similitude >= similitudeThreshold:  # aClean == bClean:
                     analysed.add(j)
                     row.append((b, priorityB))
             group.append(row)
 
+        # Select the best version of each track when there are duplicates
         result = {}
         for row in group:
             if len(row) == 1:
@@ -179,7 +152,7 @@ class Converter(object):
         """
         in case there are multiple version of the same track, pick the best version to use
         PhaseShift > rockBand
-        PhaseShift with more notes > Phase shift with less notes 
+        PhaseShift with more notes > Phase shift with less notes
         """
         from adtof.converters.phaseShiftConverter import PhaseShiftConverter
 
@@ -197,12 +170,100 @@ class Converter(object):
         return candidates
 
     @staticmethod
-    def convertAll(inputFolder, outputFolder, parallelProcess=False):
+    def plotGenres(inputFolders):
+        dist = [Converter._getFileCandidates(inputFolder)[1] for inputFolder in inputFolders]
+        genres = [set([genre[0] for genre in genres]) for genres in dist]
+        genreMap = {
+            "(9)": "Other",
+            "1": "Other",
+            "Alternative": "Alternative",
+            "Alternative Rock": "Alternative",
+            "Blues": "Rock",
+            "Breakcore": "Metal",
+            "Classic Rock": "Rock",
+            "Classical": "Other",
+            "Country": "Rock",
+            "Death Metal": "Metal",
+            "Deathcore": "Metal",
+            "Djent": "Metal",
+            "Easycore": "Metal",
+            "Emo": "Metal",
+            "Fusion": "Jazz",
+            "Glam": "Metal",
+            "Grunge": "Rock",
+            "Hard Rock": "Rock",
+            "Hardcore": "Metal",
+            "Heavy Metal": "Metal",
+            "Hip-Hop/Rap": "Hip-Hop/Rap",
+            "Indie Rock": "Rock",
+            "Inspirational": "Alternative",
+            "J-Rock": "Rock",
+            "Jazz": "Jazz",
+            "Math Rock": "Rock",
+            "Mathcore": "Rock",
+            "Melodic Death Metal": "Metal",
+            "Meoldic Death Metal": "Metal",
+            "Metal": "Metal",
+            "Metal5": "Metal",
+            "Metalcore": "Metal",
+            "New Wave": "New Wave",
+            None: "Other",
+            "Novelty": "Other",
+            "Nu-Metal": "Metal",
+            "Other": "Other",
+            "Pop Punk": "Punk",
+            "Pop-Rock": "Pop-Rock",
+            "Pop/Dance/Electronic": "Pop/Dance/Electronic",
+            "Post-Hardcore": "Metal",
+            "Post-Metal": "Metal",
+            "Power Metal": "Metal",
+            "Prog": "Prog",
+            "Prog Metal": "Metal",
+            "Prog Rock": "Rock",
+            "Progressive Death Metal": "Metal",
+            "Progressive Metal": "Metal",
+            "Progressive Rock": "Rock",
+            "Progressive Thrash Metal": "Metal",
+            "Punk": "Punk",
+            "R&B/Soul/Funk": "R&B/Soul/Funk",
+            "Reggae/Ska": "Other",
+            "Rock": "Rock",
+            "Rock Fusion": "Rock",
+            "Southern Rock": "Rock",
+            "Symphonic Metal": "Metal",
+            "Tech Death": "Metal",
+            "Techdeath": "Metal",
+            "Thrash Metal": "Metal",
+            "Video Game": "Other",
+            "World": "Other",
+        }
+
+        plotData = {}
+        for name, d in zip(["ADTOF-YT", "ADTOF-RGW"], dist):
+            mappedGenres = defaultdict(int)
+            for genre, count in d:
+                mappedGenres[genreMap[genre]] += count
+
+            # Relative frequency
+            mappedGenres = {k: v / sum(mappedGenres.values()) for k, v in mappedGenres.items()}
+            plotData[name] = mappedGenres
+
+        plotData["ADTOF-YT"] = {k: v for k, v in sorted(plotData["ADTOF-YT"].items(), key=lambda x: plotData["ADTOF-YT"][x[0]] + plotData["ADTOF-RGW"][x[0]], reverse=True)}
+        # Rotate the x-axis labels
+        plot(plotData, "", sort=False, ylabel="Relative frequency", text=False, ylim=False)
+        plt.xticks(rotation=90)
+        plt.ylim(0, 0.8)
+        plt.title("")
+        plt.legend(["ADTOF-YT", "ADTOF-RGW"], loc="upper right")
+        plt.savefig("GenreDist.pdf", bbox_inches="tight")
+
+    @staticmethod
+    def convertAll(inputFolder, outputFolder, parallelProcess=False, **kwargs):
         """
         convert all tracks in the good format
         """
         # Get all possible convertible files
-        candidates = Converter._getFileCandidates(inputFolder)
+        candidates, _ = Converter._getFileCandidates(inputFolder)
         # remove duplicated ones
         candidates = Converter._mergeFileNames(candidates)
         candidates = Converter._pickVersion(candidates)
@@ -214,20 +275,18 @@ class Converter(object):
         results = []
         if parallelProcess:
             with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-                futures = [
-                    executor.submit(Converter.runConvertors, candidate, outputFolder, trackName)
-                    for trackName, candidate in candidates.items()
-                ]
+                raise DeprecationWarning("parallel process is likely not working with the added optional kwargs")
+                futures = [executor.submit(Converter.runConvertors, candidate, outputFolder, trackName, **kwargs) for trackName, candidate in candidates.items()]
                 concurrent.futures.wait(futures)
                 results = [f._result for f in futures]
         else:
             for i, (trackName, candidate) in enumerate(list(candidates.items())):
-                results.append(Converter.runConvertors(candidate, outputFolder, trackName))
+                results.append(Converter.runConvertors(candidate, outputFolder, trackName, **kwargs))
         logging.info(str(Counter(results)))
         print(str(Counter(results)))
 
     @staticmethod
-    def runConvertors(candidate, outputFolder, trackName):
+    def runConvertors(candidate, outputFolder, trackName, **kwargs):
         try:
             from adtof.converters.madmomBeatConverter import MadmomBeatConverter
             from adtof.converters.correctAlignmentConverter import CorrectAlignmentConverter
@@ -242,22 +301,24 @@ class Converter(object):
             convertedMidiPath = os.path.join(outputFolder, config.CONVERTED_MIDI, trackName + ".midi")
             rawMidiPath = os.path.join(outputFolder, config.RAW_MIDI, trackName + ".midi")
             audioPath = os.path.join(outputFolder, config.AUDIO, trackName + ".ogg")
-            if not Converter.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
-                psc.convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath)
+            if not config.checkAllPathsExist(convertedMidiPath, rawMidiPath, audioPath):
+                psc.convert(inputChartPath, convertedMidiPath, rawMidiPath, audioPath, debug=True, **kwargs)
 
             # Align the annotations by looking at the average beat estimation difference
             # RVDrumsEstimationPath = os.path.join(outputFolder, config.RV_ESTIMATIONS, trackName + ".drums.txt")
             beatsEstimationsPath = os.path.join(outputFolder, config.BEATS_ESTIMATIONS, trackName + ".txt")
             beatsActivationPath = os.path.join(outputFolder, config.BEATS_ACTIVATION, trackName + ".npy")
+            convertedDrumAnotationsPath = os.path.join(outputFolder, config.CONVERTED_DRUM, trackName + ".txt")
             alignedBeatsAnnotationsPath = os.path.join(outputFolder, config.ALIGNED_BEATS, trackName + ".txt")
             alignedDrumAnotationsPath = os.path.join(outputFolder, config.ALIGNED_DRUM, trackName + ".txt")
             alignedMidiAnotationsPath = os.path.join(outputFolder, config.ALIGNED_MIDI, trackName + ".midi")
-            if not Converter.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
+            if not config.checkAllPathsExist(beatsEstimationsPath, beatsActivationPath):
                 mbc.convert(audioPath, convertedMidiPath, beatsEstimationsPath, beatsActivationPath)
-            if not Converter.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath):
+            if not config.checkAllPathsExist(alignedDrumAnotationsPath, alignedBeatsAnnotationsPath, alignedMidiAnotationsPath, convertedDrumAnotationsPath):
                 ca.convert(
                     beatsActivationPath,
                     convertedMidiPath,
+                    convertedDrumAnotationsPath,
                     alignedDrumAnotationsPath,
                     alignedBeatsAnnotationsPath,
                     alignedMidiAnotationsPath,
@@ -265,7 +326,6 @@ class Converter(object):
 
             return "converted"
 
-        except ValueError as e:
+        except Exception as e:
             logging.warning(trackName + " not converted: " + str(e))
             return str(e)
-

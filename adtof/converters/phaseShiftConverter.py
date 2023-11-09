@@ -12,9 +12,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from adtof import config
-from adtof.config import ANIMATIONS_MIDI, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_8
+from adtof.ressources.instrumentsMapping import ANIMATIONS_MIDI, ANIMATIONS_VELOCITY, EXPERT_MIDI, MIDI_REDUCED_5, MIDI_REDUCED_7, MIDI_REDUCED_8, DEFAULT_VELOCITY
 from adtof.converters.converter import Converter
 from adtof.io.midiProxy import PrettyMidiWrapper
+from adtof.model.eval import plotPseudoConfusionMatrices, plotPseudoConfusionMatricesFromDense
 
 
 class PhaseShiftConverter(Converter):
@@ -36,7 +37,7 @@ class PhaseShiftConverter(Converter):
     EXPERT_KEY = []
     HAS_ANIM = []
 
-    def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True):
+    def convert(self, inputFolder, outputMidiPath, outputRawMidiPath, outputAudioPath, addDelay=True, **kwargs):
         """
         Read the ini file and convert the midi file to the standard events
         """
@@ -59,11 +60,10 @@ class PhaseShiftConverter(Converter):
         midi = PrettyMidiWrapper(inputMidiPath)
 
         # clean the midi
-        debug = self.cleanMidi(midi)
+        debug = self.cleanMidi(midi, **kwargs)
 
         # Write the resulting file
         if outputMidiPath:
-
             _, audioFiles, _ = self.getConvertibleFiles(inputFolder)
 
             inputAudioFiles = [os.path.join(inputFolder, audioFile) for audioFile in audioFiles]
@@ -78,18 +78,21 @@ class PhaseShiftConverter(Converter):
         Copy the audio file or generate one from multi inputs
         If there is a delay in the song.ini, trim the beginning of the audio (delaying the midi file was harder)
         """
-        if len(audioFiles) == 1 and delay == 0:
+        if config.checkPathExists(outputAudioPath):  # File already exists
+            return
+        if len(audioFiles) == 1 and delay == 0:  # If it's only one file, copy it
             copyfile(os.path.join(audioFiles[0]), outputAudioPath)
-        else:
-            outputArgs = {"b:a": "128k"}  # TODO can we keep the original bitrate?
+        else:  # If it's multiple audio file, merge them
+            # Not sure of those parameters, it seems that libopus might have a better quality, and increasing the bitrate helps reducing the difference from the merged sources
+            outputArgs = {"c:a": "libopus", "b:a": "256k"}
             if delay > 0:
                 outputArgs["ss"] = str(delay)
             elif delay < 0:
                 raise ValueError("midi delay is negative")
 
-            ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles)).filter(
-                "volume", len(audioFiles)
-            ).output(outputAudioPath, **outputArgs).global_args("-loglevel", "error").run(overwrite_output=True)
+            ffmpeg.filter([ffmpeg.input(audioFile) for audioFile in audioFiles], "amix", inputs=len(audioFiles)).filter("volume", len(audioFiles)).output(
+                outputAudioPath, **outputArgs
+            ).global_args("-loglevel", "error").run(overwrite_output=True)
 
     def isConvertible(self, inputFolder):
         """
@@ -104,9 +107,7 @@ class PhaseShiftConverter(Converter):
         ini = self.readIni(os.path.join(inputFolder, PhaseShiftConverter.INI_NAME))
 
         meta = {
-            "name": ini["artist"].replace("/", "-") + " - " + ini["name"].replace("/", "-")
-            if "name" in ini and "artist" in ini
-            else os.path.basename(inputFolder),
+            "name": ini["artist"].replace("/", "-") + " - " + ini["name"].replace("/", "-") if "name" in ini and "artist" in ini else os.path.basename(inputFolder),
             "genre": ini["genre"] if "genre" in ini else None,
             "pro_drums": ini["pro_drums"] if "pro_drums" in ini else None,
         }
@@ -116,7 +117,7 @@ class PhaseShiftConverter(Converter):
         return self.getMetaInfo(inputFolder)["name"]
 
     def getFirstOccurenceOfIntersection(self, A: list, B: list):
-        """ Util function to select the first file"""
+        """Util function to select the first file"""
 
         def myIn(a: str, B: List[str]):
             """
@@ -135,16 +136,14 @@ class PhaseShiftConverter(Converter):
 
     def getConvertibleFiles(self, inputFolder) -> Tuple[str, List[str], str]:
         """
-        Return the files from 
+        Return the files from
         """
         if os.path.isdir(inputFolder) == False:
             return None, None, None
 
         files = os.listdir(inputFolder)
         midiFile = self.getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_MIDI_NAMES, files)
-        audioFiles = [
-            file for file in files if ".ogg" in file and file != "preview.ogg"
-        ]  # getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
+        audioFiles = [file for file in files if ".ogg" in file and file != "preview.ogg"]  # getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_AUDIO_NAMES, files)
         iniFile = PhaseShiftConverter.INI_NAME if PhaseShiftConverter.INI_NAME in files else None
         return midiFile, audioFiles, iniFile
 
@@ -164,7 +163,7 @@ class PhaseShiftConverter(Converter):
             items = [row.split(" = ") for row in rows]
             return {item[0]: item[1] for item in items if len(item) == 2}
 
-    def cleanMidi(self, midi):
+    def cleanMidi(self, midi, **kwargs):
         """
         Clean the midi file to a standard file with standard pitches, only one drum track, and remove the duplicated events.
 
@@ -175,7 +174,7 @@ class PhaseShiftConverter(Converter):
         self.removeUnwantedTracks(midi)
 
         # Convert the pitches
-        self.convertTrack(midi)
+        self.convertTrack(midi, **kwargs)
 
     def removeUnwantedTracks(self, midi):
         """Delete tracks without drums
@@ -192,7 +191,7 @@ class PhaseShiftConverter(Converter):
         tracksName = [instrument.name for instrument in midi.instruments]
         drumTrack = self.getFirstOccurenceOfIntersection(PhaseShiftConverter.PS_DRUM_TRACK_NAMES, tracksName)
         if drumTrack is None:
-            raise ValueError("ERROR: No drum track in the MIDI file " + midi)
+            raise ValueError("ERROR: No drum track in the MIDI file " + self.name)
         tracksToRemove = [i for i, trackName in enumerate(tracksName) if trackName != None and trackName != drumTrack]
         for trackId in sorted(tracksToRemove, reverse=True):
             del midi.instruments[trackId]
@@ -206,7 +205,7 @@ class PhaseShiftConverter(Converter):
             for trackId in sorted(range(1, len(midi.instruments)), reverse=True):
                 del midi.instruments[trackId]
 
-    def convertTrack(self, midi, debug=False):
+    def convertTrack(self, midi, useAnimation=False, task="5", debug=False):
         """Convert the pitches from the midi tracks
 
         Parameters
@@ -216,6 +215,13 @@ class PhaseShiftConverter(Converter):
         """
         from pretty_midi.containers import Note
 
+        if task == "5":
+            map = MIDI_REDUCED_5
+        elif task == "7":
+            map = MIDI_REDUCED_7
+        else:
+            raise ValueError("task should be 5 or 7")
+
         # Add the discoFlip events as notes
         track = midi.instruments[0]
         events = [note for note in track.notes] + midi.discoFlip
@@ -224,8 +230,10 @@ class PhaseShiftConverter(Converter):
         events += [Note(0, 0, events[-1].start + 1, events[-1].end + 1)]
 
         # Check if the track has "annimation" annotations or only "expert" ones
+        hasAnimation = len([1 for event in track.notes if event.pitch in ANIMATIONS_MIDI]) > 100
+        if useAnimation and not hasAnimation:
+            raise ValueError("The track has no animation annotations")
         if debug:
-            hasAnimation = len([1 for event in track.notes if event.pitch in config.ANIMATIONS_MIDI]) > 100
             PhaseShiftConverter.HAS_ANIM.append(int(hasAnimation))
 
         # Convert all the pitches
@@ -240,10 +248,15 @@ class PhaseShiftConverter(Converter):
                 cursor = event.start
 
                 # Convert the note on events to the same pitches
-                animConversions, conversions = self.convertPitches(notesOn.keys())
+                animConversions, conversions, velocity, invertTiming = self.convertPitches(notesOn.keys(), map)
                 for pitch, passedEvent in notesOn.items():
                     # convert the pitch, if the note is not converted we set it to 0 and remove it later
-                    passedEvent.pitch = conversions.get(pitch, 0)
+                    if useAnimation:
+                        passedEvent.pitch = animConversions.get(pitch, 0)
+                        passedEvent.velocity = velocity.get(pitch, DEFAULT_VELOCITY)
+                        passedEvent.invert = invertTiming.get(pitch, False)
+                    else:
+                        passedEvent.pitch = conversions.get(pitch, 0)
 
                 # Save the discrepancies between "expert" and "animation" for debugging
                 if debug and hasAnimation:
@@ -257,15 +270,24 @@ class PhaseShiftConverter(Converter):
 
             # Keep track of the notes currently playing
             # don't register duplicate note on the same location
+            # TODO: there are notes duplicated after the conversion, depending on the mapping (e.g. 47+45 happening together tranlated to two 47 notes)
             if notePitch not in notesOn:
                 notesOn[notePitch] = event
 
         if debug:
-            self._plotDebugMatrices()
+            # self._plotDebugMatrices()
+            # plotPseudoConfusionMatricesFromDense(PhaseShiftConverter.EXPERT, PhaseShiftConverter.ANIM, ylabel="Expert", xlabel="Anim", distanceThreshold=0.01)
+            pass
+
         # Remove empty events with a pitch set to 0 from the convertPitches method:
         track.notes = [note for note in track.notes if note.pitch != 0]  # TODO change the method to be pure?
 
-    def convertPitches(self, pitches):
+        # Set the start of HH pedal event to the closing time
+        # for note in track.notes:
+        #     if hasattr(note, "invert") and note.invert:
+        #         note.start = note.end
+
+    def convertPitches(self, pitches, map):
         """
         Return a mapping converting the notes from a list of simultaneous events to standard pitches.
         The events which should be removed are not mapped.
@@ -276,10 +298,13 @@ class PhaseShiftConverter(Converter):
         - When provided, the animations are not always accurate
         - The expert annotations have innacuracies to enhance the gameplay
             In RB set
-            - Open HH is played as a crash (+2000 occurences)
-            - Flam is played as Snare + tom (+2000 occurences)
-            In YT set
-            - The annimations seems to have been automatically created from the expert with errors
+            - Open HH is played as an expert CY but animation OH (+2000 occurences)
+            - Flam is played as expert SN + TT but animation SN (+2000 occurences)
+            In YT set: I recommend using expert with automatic correction from animation
+            - The annimations seems to have been automatically created from the expert with errors (i.e.: no left BD, but other errors too making me not willing to trust this set)
+            - The RD can be wrongly annotated and used for a third crash
+            - The OH can be wrongly annotated as a CH
+            - The ghost note have a low recall (often annotated as standard velocity), and even not a perfect precision (some normal notes are annotated as ghost)
             In CC set
             - Open HH is played as a crash (+2000 occurences)
         """
@@ -287,9 +312,12 @@ class PhaseShiftConverter(Converter):
         # Get the animation and expert notes mapped to standard events
         animation = config.getPitchesRemap(pitches, ANIMATIONS_MIDI)
         expert = config.getPitchesRemap(pitches, EXPERT_MIDI)
+        velocity = config.getPitchesRemap(pitches, ANIMATIONS_VELOCITY)
+        invertTiming = {}
+
         # Reduce the vocabulary to only 5 classes to remove ambiguity
-        animation = {k: MIDI_REDUCED_5[v] for k, v in animation.items() if v in MIDI_REDUCED_5}
-        expert = {k: MIDI_REDUCED_5[v] for k, v in expert.items() if v in MIDI_REDUCED_5}
+        animation = {k: map[v] for k, v in animation.items() if v in map}
+        expert = {k: map[v] for k, v in expert.items() if v in map}
         animationValues = set(animation.values())
         expertValues = set(expert.values())
 
@@ -301,15 +329,14 @@ class PhaseShiftConverter(Converter):
                 animation[k] = v
 
             # Real open HH on pads CY
-            if v == 49 and 49 not in animationValues and 42 in animationValues:
+            if v == 49 and 49 not in animationValues and 46 in animationValues:
                 expert[k] = 42
 
             # Real double CY on pads CY + HH
-            # TODO: add "49 in expertValues"?
             if v == 42 and 42 not in animationValues and 49 in animationValues:
                 expert[k] = 49
 
-            # Real flam on SD on pads TT + SD
+            # Real flam SD on pads TT + SD
             if v == 47 and 47 not in animationValues and 38 in animationValues:
                 expert[k] = 38
 
@@ -320,8 +347,16 @@ class PhaseShiftConverter(Converter):
                 delAnim.append(k)
 
             # Real TT on RD because of issue? (converted to CY with 5 classes vocabulary)
-            if v == 49 and 49 not in expertValues and 47 in expertValues:
+            # TODO double check the validity
+            if (v == 49 or v == 51) and 49 not in expertValues and 47 in expertValues:
                 animation[k] = 47
+
+            # Flam annotated with both hand on the snare
+            # if k == 27 and 26 in animation:
+
+            # HH pedal in anim starts when openning and ends on closing. In MIDI it should only be when closing
+            if k == 25:
+                invertTiming[k] = True
         for k in delAnim:
             del animation[k]
 
@@ -331,40 +366,4 @@ class PhaseShiftConverter(Converter):
         if RB and len(expert) == 0 and len(animation) > 0:
             expert = animation
 
-        return animation, expert
-
-    def _plotDebugMatrices(self):
-        """
-        Plot expert and anim mismatches
-        """
-        logging.debug("ratio of tracks with annimation", np.mean(PhaseShiftConverter.HAS_ANIM))
-
-        difference = defaultdict(lambda: defaultdict(int))
-        for i in range(len(PhaseShiftConverter.EXPERT)):
-            if PhaseShiftConverter.EXPERT[i] != PhaseShiftConverter.ANIM[i]:  # and len(PhaseShiftConverter.ANIM[i]) > 0
-                # difference[str(PhaseShiftConverter.ANIM_KEY[i])][str(PhaseShiftConverter.EXPERT_KEY[i])] += 1
-                difference[str(PhaseShiftConverter.ANIM[i])][str(PhaseShiftConverter.EXPERT[i])] += 1
-        df = pd.DataFrame(difference)
-        # df = df.div(df.sum(axis=1), axis=0)  # norm
-        # df.sort_index(level=0, ascending=True, inplace=True)
-        df = df.fillna(0)
-        logging.debug(
-            "Expert / Anim matching ratio", len(PhaseShiftConverter.EXPERT) / (df._values.sum() + len(PhaseShiftConverter.EXPERT)),
-        )
-        plt.ion()
-        plt.show()
-
-        plt.pcolor(df)
-
-        plt.yticks(np.arange(0.5, len(df.index), 1), df.index)
-        plt.xticks(np.arange(0.5, len(df.columns), 1), df.columns, rotation=90)
-        plt.ylabel("Expert")
-        plt.xlabel("Anim")
-
-        # Change minor ticks for grid
-        # plt.yticks(np.arange(0, len(df.index), 1), df.index, minor=True)
-        # plt.xticks(np.arange(0, len(df.columns), 1), df.columns, minor=True)
-        plt.grid(color="grey", linestyle="--", linewidth=1)
-        plt.draw()
-
-        plt.pause(0.001)
+        return animation, expert, velocity, invertTiming

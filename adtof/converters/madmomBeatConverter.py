@@ -24,10 +24,13 @@ class MadmomBeatConverter(Converter):
         # tempi = PrettyMidiWrapper(missalignedMidiInput).get_tempo_changes()[1]
         # maxBpm = max(tempi) + 20
         # minBpm = min(tempi) - 20
+        # MIN_BPM = 55.
+        # MAX_BPM = 215.
 
         act = madmom.features.RNNDownBeatProcessor()(audioInputPath)
         accuAct = act[:, 0] + act[:, 1]  # accumulate beat and down-beat activation curves
-        np.save(beatActivationOutputPath, accuAct)
+        if beatActivationOutputPath is not None:
+            np.save(beatActivationOutputPath, accuAct)
         proc = madmom.features.DBNDownBeatTrackingProcessor(
             beats_per_bar=[3, 4],
             fps=fps,

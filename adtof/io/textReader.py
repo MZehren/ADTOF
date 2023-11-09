@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 
-import argparse
-import json
-import logging
-import os
-import sys
-import warnings
+
 from collections import defaultdict
 
-import pkg_resources
-
 from adtof import config
+from adtof.ressources import instrumentsMapping
 
 
 class TextReader(object):
@@ -29,59 +23,33 @@ class TextReader(object):
             return s
 
     def decode(self, line, sep):
-        time, pitch = line.replace("\r\n", "").replace("\n", "").split(sep)
-        time = time.replace(" ", "")
-        pitch = pitch.replace(" ", "")
+        values = line.replace("\r\n", "").replace("\n", "").split(sep)
+        values = [v.replace(" ", "") for v in values]
+        time = values[0]
+        pitch = values[1]
         time = float(time)
         pitch = self.castInt(pitch)
+        velocity = float(values[2]) if len(values) > 2 else 1
 
-        return (time, pitch)
+        return {"time": time, "pitch": pitch, "velocity": velocity}
 
-    def getOnsets(
-        self,
-        txtFilePath,
-        mappingDictionaries=[config.RBMA_MIDI_8, config.MIDI_REDUCED_5],
-        group=True,
-        sep="\t",
-        removeIfClassUnknown=False,
-        **kwargs
-    ):
+    def getOnsets(self, txtFilePath, sep="\t", **kwargs):
         """
-            Parse the text file following Mirex encoding:
-            [time]\t[class]\n 
-
-        Args:
-            txtFilePath (string): path to the text file.
-            mappingDictionaries (list, optional): Mapping to convert the class of events into other classes (ie: config.RBMA_MIDI_8 mapping class 0 to 35). 
-            It is a list of dictionaries to chain multiple mappings one after the other.
-            group (bool, optional): If true, returns {class: [position]}. Else, returns [{position: class}] . Defaults to True.
-
-        Returns:
-            Dictionary of the shape {class: [positions]}
+        Parse the text file following Mirex encoding:
+        [time]\t[class]\t[velocity]\n
         """
         events = []
         with open(txtFilePath, "r") as f:
             for line in f:
                 try:
-                    time, pitch = self.decode(line, sep)
+                    events.append(self.decode(line, sep))
                 except Exception as e:
                     print("Line couldn't be decoded, passing.", repr(line), str(e))
                     continue
 
-                pitch = config.remapPitches(pitch, mappingDictionaries, removeIfUnknown=removeIfClassUnknown)
-                if pitch != None:
-                    events.append({"time": time, "pitch": pitch})
-
-        if group is False:
-            return events
-        result = defaultdict(list)
-        for e in events:
-            result[e["pitch"]].append(e["time"])
-        return result
+        return events
 
     def writteBeats(self, path, beats):
-        """
-
-        """
+        """ """
         with open(path, "w") as f:
             f.write("\n".join([str(time) + "\t" + str(beatNumber) for time, beatNumber in beats]))

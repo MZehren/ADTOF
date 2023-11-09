@@ -1,7 +1,14 @@
 import logging
 import re
+from bisect import bisect_left
+from collections import namedtuple
+from collections import defaultdict
 
+import numpy as np
 import pretty_midi
+
+from adtof import config
+from adtof.ressources import instrumentsMapping
 
 
 def lazy_property(fn):
@@ -22,13 +29,27 @@ def lazy_property(fn):
 
 class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
     @classmethod
+    def fromDict(cls, sparseResultIdx):
+        """
+        Write
+        """
+        midi = cls()
+        instrument = pretty_midi.Instrument(program=1, is_drum=True)
+        midi.instruments.append(instrument)
+        for pitch, notes in sparseResultIdx.items():
+            for i in notes:
+                note = pretty_midi.Note(velocity=100, pitch=pitch, start=i, end=i + 0.1)
+                instrument.notes.append(note)
+        return midi
+
+    @classmethod
     def fromListOfNotes(cls, notes, beats=[]):
-        """Instantiate a pretty_midi.PrettyMIDI class with the list of notes. 
+        """Instantiate a pretty_midi.PrettyMIDI class with the list of notes.
         TODO: If the beats are provided, set tempo events as well
 
         Parameters
         ----------
-        notes : [(position, pitch)]
+        notes : [(position, pretttyMidi.Note)]
             list of tuples with a position and pitch
         beats : [(position, beatNumber)], optional
             List of position and beat number in the bar (ie. 1 to 4), by default []
@@ -41,19 +62,19 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
         midi = cls()
         instrument = pretty_midi.Instrument(program=1, is_drum=True)
         midi.instruments.append(instrument)
-        for time, pitch in notes:
-            note = pretty_midi.Note(velocity=100, pitch=pitch, start=time, end=time)
+        for time, note in notes:
+            note = pretty_midi.Note(velocity=note.velocity, pitch=note.pitch, start=time, end=time + 0.1)
             instrument.notes.append(note)
 
         for time, beatIdx in beats:
-            note = pretty_midi.Note(velocity=100, pitch=beatIdx, start=time, end=time)
+            note = pretty_midi.Note(velocity=100, pitch=beatIdx, start=time, end=time + 0.1)
             instrument.notes.append(note)
 
         return midi
 
     def get_beats_with_index(self, ingoreStart=False, stopTime=None):
         """call get_beats and get_downbeats to return the list of beats and the list of beats index
-        
+
         Returns
         -------
         (list, list)
@@ -78,13 +99,13 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
 
     def _load_metadata(self, midi_data):
         """
-        Call base class load_meatadata 
-        
+        Call base class load_meatadata
+
         This implementation add text events as well to search for discoflip events:
         See: http://docs.c3universe.com/rbndocs/index.php?title=Drum_Authoring#Pro_Drum_and_Disco_Flip
 
         looking for [mix <difficulty> drums<configuration>] text events
-        <difficulty> is a value, 0 through 3, where 0 is Easy, 1 is Medium, 2 is Hard, and 3 is Expert: 
+        <difficulty> is a value, 0 through 3, where 0 is Easy, 1 is Medium, 2 is Hard, and 3 is Expert:
         We only look for expert difficulty: 3
 
         <configuration> refers to the configuration of the drum audio streams.
@@ -99,16 +120,12 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
             flipStart = None
             for event in track:
                 if event.type == "text":
-
                     if re.search("\[mix 3 drums[0-4]d\]", event.text) is not None:
                         if flipStart is not None:
                             raise ValueError("DiscoFlip event before the end of the previous one")
 
                         flipStart = self._PrettyMIDI__tick_to_time[event.time]
-                    elif (
-                        re.search("\[mix 3 drums[0-4]dnoflip\]", event.text) is not None
-                        or re.search("\[mix 3 drums[0-4]\]", event.text) is not None
-                    ):
+                    elif re.search("\[mix 3 drums[0-4]dnoflip\]", event.text) is not None or re.search("\[mix 3 drums[0-4]\]", event.text) is not None:
                         # assert flipStart != None
                         if flipStart != None:
                             self.discoFlip.append(Note(0, "disco", flipStart, self._PrettyMIDI__tick_to_time[event.time]))
@@ -169,3 +186,62 @@ class PrettyMidiWrapper(pretty_midi.PrettyMIDI):
         #                 decrement -= event.tick
         #                 event.tick = 0
 
+    def quantizeNotes(self, subdivision=12):
+        """
+        Quantize the notes to the closest beat subdivision specified in parameters
+        """
+        notes = self.instruments[0].notes
+        beats = self.get_beats()
+        grid = []
+        for i in range(len(beats) - 1):
+            step = (beats[i + 1] - beats[i]) / subdivision
+            grid += [beats[i] + j * step for j in range(subdivision)]
+
+        for note in notes:
+            note.start = self._take_closest(grid, note.start)
+
+    def _take_closest(self, myList, myNumber):
+        """
+        Assumes myList is sorted. Returns closest value to myNumber.
+        If two numbers are equally close, return the smallest number.
+        """
+        pos = bisect_left(myList, myNumber)
+        if pos == 0:
+            return myList[0]
+        if pos == len(myList):
+            return myList[-1]
+        before = myList[pos - 1]
+        after = myList[pos]
+        if after - myNumber < myNumber - before:
+            return after
+        else:
+            return before
+
+    def getNotesGroup(self, grid):
+        """
+        return the notes in between the ticks of the grid.
+        return the position of the note as a ratio relative to the ticks interval
+        """
+        notes = self.instruments[0].notes
+        groups = {}
+        Note = namedtuple("Note", ["start", "pitch"])
+        for i in range(len(grid) - 1):
+            start = grid[i]
+            stop = grid[i + 1]
+            group = [note for note in notes if note.start >= start and note.start < stop and note.velocity]
+            groupRelative = [Note(np.round((note.start - start) / (stop - start), decimals=2), note.pitch) for note in group]
+            groups[start] = groupRelative
+        return groups
+
+    def getOnsets(self, checkInstrumentIsDrum=True, **kwargs):
+        """
+        Returns:
+            Dictionary of the shape {class: [positions]}
+        """
+        # Get all notes from all instruments
+        events = []
+        for instrument in [instrument for instrument in self.instruments if instrument.is_drum or not checkInstrumentIsDrum]:
+            for note in instrument.notes:
+                events.append({"time": note.start, "pitch": note.pitch, "velocity": note.velocity / 127})
+
+        return events
