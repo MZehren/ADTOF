@@ -1,8 +1,7 @@
 # ADTOF
 This repository contains additional material for the papers:
 - M. Zehren, M. Alunno, and P. Bientinesi, “ADTOF: A large dataset of non-synthetic music for automatic drum transcription,” in Proceedings of the 22st International Society for Music Information Retrieval Conference, Online, 2021, pp. 818–824.
-- Zehren, M.; Alunno, M.; Bientinesi, P. High-Quality and Reproducible Automatic Drum Transcription From Crowdsourced Data. Signals 2023, 1, 1–21.
-
+- Zehren, M.; Alunno, M.; Bientinesi, P. High-Quality and Reproducible Automatic Drum Transcription from Crowdsourced Data. Signals 2023, 4, 768-787. https://doi.org/10.3390/signals4040042
 <!-- Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa] -->
 
 The content of this repository is licensed under a
@@ -16,7 +15,12 @@ The content of this repository is licensed under a
 
 
 ## Transcription
-The easiest way to test the trained model is to access our [Colab Notebook](https://colab.research.google.com/drive/1G_UeWav_AMaaqfJxR4cVgH5EdrvsDQGT?usp=sharing).
+The easiest way to test the trained model is our [Colab Notebook](https://colab.research.google.com/drive/1G_UeWav_AMaaqfJxR4cVgH5EdrvsDQGT?usp=sharing) which produces the following example:
+
+> https://github.com/MZehren/ADTOF/assets/4046348/e2972fcb-021e-4b7b-a7a0-9f18266107df
+> 
+> Original video generously provided by Thomas Crémier: [Crémier, Thomas. "Sunshine - Psygnosis [Official Drum Playthrough by Thomas Crémier]." YouTube](https://youtu.be/goQsFt5e6CI?si=6Fgn8qbGaNyF3Ojb)
+
 Alternatively, you can run the transcription locally with this [Jupyter Notebook](/bin/drumTranscriptor.ipynb).
 
 ## Datasets
