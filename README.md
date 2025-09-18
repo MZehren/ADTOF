@@ -13,6 +13,9 @@ The content of this repository is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
+### Alternative for Pytorch users
+
+[ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch) is a separate project that can also be used for transcription inference, with only a slight loss in performance (approx -0.2% F-measure). It only requires pytorch to be installed (no tensorflow, keras or madmom).
 
 ## Transcription
 The easiest way to test the trained model is our [Colab Notebook](https://colab.research.google.com/drive/1G_UeWav_AMaaqfJxR4cVgH5EdrvsDQGT?usp=sharing) which produces the following example:
